@@ -82,5 +82,57 @@ Deno.serve(async (req) => {
     return json({ coins: data.coins, wins: data.wins, plushId, count: data.count });
   }
 
+  // ---- estado que antes ficava só no aparelho (migração 0006) ----
+  const int = (v: unknown, lo: number, hi: number) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n >= lo && n <= hi ? n : null;
+  };
+  const num = (v: unknown) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
+  };
+  const call = async (fn: string, args: Record<string, unknown>, rejected: string) => {
+    const { data, error } = await admin.rpc(fn, { p_user: userId, ...args }).single();
+    if (error || !data) return json({ error: rejected, detail: error?.message ?? null }, 400);
+    return json(data);
+  };
+
+  if (body.action === "buy") {
+    const item = typeof body.item === "string" ? body.item : "";
+    if (item !== "food" && !/^stone_[0-7]$/.test(item)) return json({ error: "bad_item" }, 400);
+    return call("rpc_buy", { p_item: item }, "buy_rejected");
+  }
+  if (body.action === "swap") return call("rpc_swap", {}, "swap_rejected");
+  if (body.action === "giant_round_start") return call("rpc_giant_round_start", {}, "giant_round_rejected");
+  if (body.action === "giant_capture") {
+    const p = int(body.plushId, 0, 19);
+    if (p === null) return json({ error: "bad_plush_id" }, 400);
+    return call("rpc_giant_capture", { p_plush: p }, "giant_capture_rejected");
+  }
+  if (body.action === "sell_giant") {
+    const p = int(body.plushId, 0, 19);
+    if (p === null) return json({ error: "bad_plush_id" }, 400);
+    return call("rpc_sell_giant", { p_plush: p }, "sell_giant_rejected");
+  }
+  if (body.action === "giant_evolve" || body.action === "use_stone") {
+    const p = int(body.plushId, 0, 19), st = int(body.stone, 0, 7);
+    if (p === null || st === null) return json({ error: "bad_request" }, 400);
+    return call(body.action === "giant_evolve" ? "rpc_giant_evolve" : "rpc_use_stone", { p_plush: p, p_stone: st }, body.action + "_rejected");
+  }
+  if (body.action === "care") {
+    const p = int(body.plushId, 0, 42), kind = body.kind;
+    if (p === null || !["f", "l", "p"].includes(kind)) return json({ error: "bad_request" }, 400);
+    return call("rpc_care", { p_plush: p, p_kind: kind, p_f: num(body.f), p_l: num(body.l), p_p: num(body.p) }, "care_rejected");
+  }
+  if (body.action === "battle") {
+    const p = int(body.plushId, 0, 42);
+    if (p === null) return json({ error: "bad_plush_id" }, 400);
+    return call("rpc_battle", { p_plush: p, p_win: body.win === true }, "battle_rejected");
+  }
+  if (body.action === "import_local") {
+    const d = body.data && typeof body.data === "object" ? body.data : {};
+    return call("rpc_import_local", { p_data: d }, "import_rejected");
+  }
+
   return json({ error: "unknown_action" }, 400);
 });

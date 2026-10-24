@@ -28,8 +28,13 @@ O carregador do `index.html` busca os `data/*.json` e só depois carrega `js/gar
 3. Antes de adicionar algo novo, decidir: é estado do jogador (Supabase) ou conteúdo do jogo (arquivo)?
 4. Repositório único: **github.com/joaobazanela/garro-app**. O repositório antigo Alexandre-Mendes151/garro não recebe mais commits.
 
-### Ainda guardado só no aparelho (falta levar para o Supabase)
-Moedas gastas/ganhas fora do servidor (loja, Gigante, venda de especiais e gigante, troca da máquina, batalha), inventário de comida e pedras, nível/XP/cuidado, gigantes capturados e evoluídos, limite de moedas da batalha.
+### Estado do jogador no Supabase (migração 0006)
+- Tabelas novas, só estado: `inventory` (comida e pedras), `plush_care` (XP e barras de cada pelúcia), `giants` (gigantes e se evoluíram). Leitura só da própria linha (RLS); escrita só pela `sync-estado`.
+- Ações novas na `sync-estado`: `buy`, `swap`, `giant_round_start`, `giant_capture`, `sell_giant`, `giant_evolve`, `use_stone`, `care`, `battle`, `import_local`. Preços e XP ficam no código das funções (precisam bater com `data/regras.json`).
+- **Corrige um erro antigo:** `rpc_round_start` e `rpc_refill` (0002) falhavam com "column reference coins is ambiguous", então a jogada nunca marcava `pending_round` e as capturas eram recusadas pelo servidor. Na 0006 as duas foram reescritas.
+- Na primeira entrada depois disso, o jogo manda UMA vez o que estava guardado no aparelho (`import_local`), com limites: até 50 comidas, 10 pedras de cada, XP até o máximo, 3 de cada pelúcia, 3 de cada gigante.
+- Continua só no aparelho, de propósito: preferências (modo dev, aviso "como brincar"). Sem login (demo/artefato) tudo continua salvo no aparelho.
+- Teste local das migrações: `supabase/tests/estado_do_jogador.sql`.
 
 ## Jogar
 **Link:** https://alexandre-mendes151.github.io/garro/

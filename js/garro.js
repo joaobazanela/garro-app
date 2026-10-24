@@ -37,10 +37,26 @@ async function carregarEstado(){
   try{const {data:{session:s0}}=await sb.auth.getSession();DEV=!!(s0&&s0.user&&DEV_EMAILS.includes((s0.user.email||'').toLowerCase()))}catch(e){}
   const {data:ps}=await sb.from('player_state').select('coins,wins').single();
   const {data:colRows}=await sb.from('collection').select('plush_id,count');
-  coins=(ps?ps.coins:15)+bonus;
+  ONL=true;bonus=0;saveBonus();// logado: moedas só do servidor
+  coins=(ps?ps.coins:15);
   coll={};
   (colRows||[]).forEach(r=>{coll[r.plush_id]=r.count});
-  for(const k in XCOLL)coll[k]=Math.max(coll[k]||0,XCOLL[k]);
+  await carregarEstadoExtra();
+}
+// estado do jogador que vive no Supabase (migração 0006): inventário, XP/cuidado e gigantes.
+// Na primeira vez, manda UMA vez o que estava guardado no aparelho (o servidor aplica limites).
+async function carregarEstadoExtra(){
+  try{
+    const {data:st}=await sb.from('player_state').select('imported_local').single();
+    if(st&&st.imported_local===false){const d={food:INV.food,stones:INV.st,xp:{},giants:GCOLL,giants_evolved:GEVO,coll:XCOLL};for(const k in CARE)d.xp[k]=CARE[k].xp|0;
+      await syncEstado('import_local',{data:d});const {data:c2}=await sb.from('collection').select('plush_id,count');if(c2){coll={};c2.forEach(r=>{coll[r.plush_id]=r.count})}}
+    const {data:inv,error:e1}=await sb.from('inventory').select('item,qty');
+    if(inv&&!e1){INV.food=0;INV.st=INV.st.map(()=>0);inv.forEach(r=>{if(r.item==='food')INV.food=r.qty;else{const k=+r.item.split('_')[1];if(k>=0&&k<INV.st.length)INV.st[k]=r.qty}});saveInv()}
+    const {data:pc,error:e2}=await sb.from('plush_care').select('plush_id,xp,f,l,p,updated_at');
+    if(pc&&!e2){CARE={};pc.forEach(r=>{CARE[r.plush_id]={xp:r.xp,f:r.f,l:r.l,p:r.p,t:Date.parse(r.updated_at)||Date.now()}});saveCare()}
+    const {data:gs,error:e3}=await sb.from('giants').select('plush_id,count,evolved');
+    if(gs&&!e3){GCOLL={};GEVO={};gs.forEach(r=>{if(r.count>0){GCOLL[r.plush_id]=r.count;if(r.evolved)GEVO[r.plush_id]=1}});saveG()}
+  }catch(e){console.warn('estado extra',e)}
 }
 
 async function entrarComGoogle(){
@@ -161,7 +177,7 @@ function setMachine(m){if(m===MACH)return;if(claw.state!=='ready'){banner('Esper
 
 function swapMachine(){if(claw.state!=='ready'){banner('Espere a garra voltar');return}
   if(!canPay(SWAP_COST)){banner('Moedas insuficientes','Trocar custa '+SWAP_COST+' 🪙');return}
-  spend(SWAP_COST);for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(MACH===2)placeGiant();else settlePile();sinceDrop=0;
+  pay(SWAP_COST,'swap');for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(MACH===2)placeGiant();else settlePile();sinceDrop=0;
   audio();[523,659,784].forEach((f,k)=>setTimeout(()=>tone(f,.12,'triangle',.09),k*90));banner('Bichinhos trocados!',DEV?'grátis (dev)':'-'+SWAP_COST+' 🪙',true);hud()}
 
 /* ---------- claw ---------- */
@@ -292,7 +308,11 @@ const DEV_EMAILS=GD.regras.DEV_EMAILS;let DEV=false;
 // cópia de teste dos devs (artefato): já abre com moedas infinitas; 7 toques no contador desligam
 try{const g=localStorage.getItem('garro-dev');if(window.GARRO_OFFLINE&&(g==='1'||(window.GARRO_DEVDEFAULT&&g!=='0')))DEV=true}catch(e){if(window.GARRO_DEVDEFAULT)DEV=true}
 const canPay=n=>DEV||coins>=n;
+let ONL=false;// true quando logado (estado vem do Supabase)
 function spend(n){if(DEV)return;coins-=n;bonus-=n;saveBonus()}
+// pagar algo: logado -> o servidor desconta (e devolve o saldo certo); sem login -> guarda no aparelho
+function pay(n,action){if(DEV)return;if(!ONL){spend(n);return}coins-=n;hud();syncEstado(action).then(r=>{if(r&&typeof r.coins==='number'){coins=r.coins;hud()}})}
+function srv(action,extra,ok){if(!ONL||DEV)return;syncEstado(action,extra).then(r=>{if(r&&!r.error&&ok)ok(r)})}
 function saveBonus(){try{localStorage.setItem('garro-bonus',String(bonus))}catch(e){}}
 
 let bannerT=0;
@@ -311,7 +331,7 @@ function showGrab(p,force,closed){
 function start(){
   if(claw.state!=='ready')return false;
   if(MACH===2){if(!canPay(GCOST)){$('hint').textContent='A máquina gigante custa '+GCOST+' moedas por jogada.';banner('Moedas insuficientes','Gigante: '+GCOST+' 🪙 por jogada');return false}
-    claw.state='move';roundTime=ROUND;roundWin=false;spend(GCOST);claw.force=losses>=3?1250+Math.random()*150:700+Math.random()*600;
+    claw.state='move';roundTime=ROUND;roundWin=false;pay(GCOST,'giant_round_start');claw.force=losses>=3?1250+Math.random()*150:700+Math.random()*600;
     $('hint').textContent='Mire no meio do gigante e aperte PEGAR';click(500);hud();return true}
   if(!DEV&&coins<=0){$('hint').textContent='Sem moedas. Toque em +15 moedas abaixo.';banner('Sem moedas');return false}
   claw.state='move';roundTime=ROUND;roundWin=false;
@@ -350,7 +370,7 @@ function stress(){return claw.held?claw.held.plush.g/claw.hold:0}
 
 function won(b){
   const p=b.plush;if(p.stone!==undefined){INV.st[p.stone]++;saveInv();roundWin=true;losses=0;banner(p.name+'!','Pedra rara! Use no bicho do mesmo elemento',true);fanfare();hud();return}
-  if(p.giant){coll[p.i]=(coll[p.i]||0)+1;saveX();GCOLL[p.i]=(GCOLL[p.i]||0)+1;saveG();shakeWin(10);boom();for(let k=0;k<3;k++)setTimeout(()=>puff(40+Math.random()*60,FLOOR-40,26,['#ffd23c','#ff5a8a','#5ad1ff','#8aff6a','#ffffff'],true),k*300);const c0=careOf(p.i);c0.xp+=60;saveCare();syncEstado('capture',{plushId:p.i}  );
+  if(p.giant){coll[p.i]=(coll[p.i]||0)+1;saveX();GCOLL[p.i]=(GCOLL[p.i]||0)+1;saveG();shakeWin(10);boom();for(let k=0;k<3;k++)setTimeout(()=>puff(40+Math.random()*60,FLOOR-40,26,['#ffd23c','#ff5a8a','#5ad1ff','#8aff6a','#ffffff'],true),k*300);const c0=careOf(p.i);c0.xp+=60;saveCare();srv('giant_capture',{plushId:p.i},r=>{coll[p.i]=r.count;GCOLL[p.i]=r.giants;careOf(p.i).xp=r.xp;saveX();saveG();saveCare();renderShelf()});
     roundWin=true;losses=0;banner('🏆 GIGANTE! '+p.name,'+60 XP · selo de gigante na coleção',true);fanfare();setTimeout(fanfare,700);renderShelf(p.i);hud();return}
   coll[p.i]=(coll[p.i]||0)+1;saveX();const dup=coll[p.i]>1,evo=p.i<CH0;if(dup){const c0=careOf(p.i);c0.xp+=evo?20:5;saveCare()}
   syncEstado('capture',{plushId:p.i});
@@ -1538,7 +1558,7 @@ function renderCare(){
   updFood();const sb=$('cStone');if(sb){const sk=STONE_OF(i),n=INV.st[sk]||0;sb.hidden=!(i<CH0&&!st);sb.classList.toggle('buy',!n);sb.innerHTML=n?'💎 Evoluir agora com '+STONES[sk].name+' <small>(você tem '+n+')</small>':'💎 Evoluir com '+STONES[sk].name+' <small>· você não tem · comprar '+PRICE.stone+' 🪙</small>'}
 }
 function updFood(){const s=$('cFeed')&&$('cFeed').querySelector('span');if(s)s.textContent='🍓 Comida ×'+INV.food}
-function useStone(){const i=V.cur;if(i===undefined||i>=CH0)return;const k=STONE_OF(i);if(lvOf(i)>=EVO_LV)return;if((INV.st[k]||0)<=0){audio();renderShop();$('shMsg').textContent='Você não tem '+STONES[k].name+': compre aqui 💎';$('shop').hidden=false;return}const c=careOf(i);INV.st[k]--;saveInv();audio();[523,784,1046,1568].forEach((f,q)=>setTimeout(()=>tone(f,.14,'triangle',.1),q*90));for(let q=0;q<6;q++)setTimeout(()=>float('💎','love'),q*90);gainXp(i,Math.max(1,(EVO_LV-1)*4-c.xp));renderCare()}
+function useStone(){const i=V.cur;if(i===undefined||i>=CH0)return;const k=STONE_OF(i);if(lvOf(i)>=EVO_LV)return;if((INV.st[k]||0)<=0){audio();renderShop();$('shMsg').textContent='Você não tem '+STONES[k].name+': compre aqui 💎';$('shop').hidden=false;return}const c=careOf(i);INV.st[k]--;saveInv();srv('use_stone',{plushId:i,stone:k},r=>{INV.st[k]=r.stones;const cc=careOf(i);cc.xp=Math.max(cc.xp,r.xp);saveInv();saveCare()});audio();[523,784,1046,1568].forEach((f,q)=>setTimeout(()=>tone(f,.14,'triangle',.1),q*90));for(let q=0;q<6;q++)setTimeout(()=>float('💎','love'),q*90);gainXp(i,Math.max(1,(EVO_LV-1)*4-c.xp));renderCare()}
 const SELL_PRICE=1,SELL_BIG=30,SELL_GIANT=40;// redondo 1 · bicho especial (que evolui) 30 · pelúcia gigante 40
 function renderSell(i){const b=$('cSell'),bg=$('cSellG');if(!b)return;const n=coll[i]||0,big=i<CH0;b.hidden=false;b.disabled=n<1;b.dataset.armed='';
   b.textContent=n>=1?'💰 Vender 1 · +'+(big?SELL_BIG:SELL_PRICE)+' moeda'+(big?'s':'')+' (tenho '+n+')':'💰 Nenhum para vender';
@@ -1553,7 +1573,7 @@ async function sellDup(){const i=V.cur;if(i===undefined)return;const n=coll[i]||
   hud();renderShelf();if(!coll[i]&&V.open){$('vClose').click();return}renderSell(i);if(V.open)refreshVStats(i)}
 function sellGiant(){const i=V.cur;if(i===undefined||!(GCOLL[i]>0))return;const b=$('cSellG');
   if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Toque de novo: vender o gigante por '+SELL_GIANT+' 🪙';return}
-  GCOLL[i]--;if(!GCOLL[i])delete GEVO[i];saveG();bonus+=SELL_GIANT;coins+=SELL_GIANT;saveBonus();audio();fanfare();banner('+'+SELL_GIANT+' moedas','Vendeu o '+PLUSH[i].name+' gigante',true);
+  GCOLL[i]--;if(!GCOLL[i])delete GEVO[i];saveG();coins+=SELL_GIANT;if(ONL)srv('sell_giant',{plushId:i},r=>{coins=r.coins;GCOLL[i]=r.giants;saveG();hud()});else{bonus+=SELL_GIANT;saveBonus()}audio();fanfare();banner('+'+SELL_GIANT+' moedas','Vendeu o '+PLUSH[i].name+' gigante',true);
   hud();renderShelf();renderSell(i);if(V.open)refreshVStats(i)}
 $('cSell').addEventListener('click',sellDup);$('cSellG').addEventListener('click',sellGiant);
 $('cBatG').addEventListener('click',()=>openBattle(true));
@@ -1561,7 +1581,7 @@ function renderGiantRow(i){const r=$('gRow');if(!r)return;const gn=i<CH0?GCOLL[i
   b.hidden=!!GEVO[i];b.classList.toggle('buy',n<GEVO_STONES);b.innerHTML=n>=GEVO_STONES?'💎 Evoluir o gigante <small>(usa '+GEVO_STONES+' '+STONES[k].name+' · tem '+n+')</small>':'💎 Gigante evolui com '+GEVO_STONES+' '+STONES[k].name+' <small>· tem '+n+' · comprar</small>'}
 function evolveGiant(){const i=V.cur;if(i===undefined||!(GCOLL[i]>0)||GEVO[i])return;const k=STONE_OF(i);audio();
   if((INV.st[k]||0)<GEVO_STONES){renderShop();$('shMsg').textContent='Para evoluir o gigante precisa de '+GEVO_STONES+' '+STONES[k].name+' (tem '+(INV.st[k]||0)+')';$('shop').hidden=false;return}
-  INV.st[k]-=GEVO_STONES;saveInv();GEVO[i]=1;saveG();[523,659,784,1046,1318,1568,2093].forEach((q,n)=>setTimeout(()=>tone(q,.24,'triangle',.11),n*100));for(let n=0;n<10;n++)setTimeout(()=>float(['💎','✨','🏆','🌟'][n%4],'love'),n*110);
+  INV.st[k]-=GEVO_STONES;saveInv();GEVO[i]=1;saveG();srv('giant_evolve',{plushId:i,stone:k},r=>{INV.st[k]=r.stones;saveInv()});[523,659,784,1046,1318,1568,2093].forEach((q,n)=>setTimeout(()=>tone(q,.24,'triangle',.11),n*100));for(let n=0;n<10;n++)setTimeout(()=>float(['💎','✨','🏆','🌟'][n%4],'love'),n*110);
   const e=$('vEvo');e.innerHTML='🏆 Gigante evoluiu!<small>'+evName(i,1)+' gigante</small>';e.classList.remove('on');void e.offsetWidth;e.classList.add('on');renderGiantRow(i);renderShelf();refreshVStats(i)}
 $('cGEvo').addEventListener('click',evolveGiant);
 $('btnSwap').addEventListener('click',swapMachine);
@@ -1575,6 +1595,8 @@ function renderShop(){$('shCoins').textContent=DEV?'∞':coins;$('shFood').textC
     g.addEventListener('click',e=>{const b=e.target.closest('button');if(b)buyThing('stone',+b.dataset.k)})}
   STONES.forEach((p,k)=>{$('shS'+k).textContent=INV.st[k]});g.querySelectorAll('button').forEach(b=>b.disabled=!canPay(PRICE.stone))}
 function buyThing(kind,k){const pr=PRICE[kind];if(!canPay(pr)){$('shMsg').textContent='Moedas insuficientes: faltam '+(pr-coins)+' 🪙';return}$('shMsg').textContent='';
+  if(ONL&&!DEV){const item=kind==='food'?'food':'stone_'+k;$('shMsg').textContent='Comprando...';syncEstado('buy',{item}).then(r=>{if(!r||r.error){$('shMsg').textContent='Não deu para comprar agora. Tente de novo.';return}
+    $('shMsg').textContent='';coins=r.coins;if(kind==='food')INV.food=r.qty;else INV.st[k]=r.qty;saveInv();hud();audio();[784,988,1319].forEach((f,q)=>setTimeout(()=>tone(f,.1,'triangle',.08),q*70));renderShop();if(V.open)renderCare()});return}
   spend(pr);if(kind==='food')INV.food++;else INV.st[k]++;saveInv();hud();audio();[784,988,1319].forEach((f,q)=>setTimeout(()=>tone(f,.1,'triangle',.08),q*70));renderShop();if(V.open)renderCare()}
 $('btnShop').addEventListener('click',()=>{audio();renderShop();$('shop').hidden=false});
 $('shClose').addEventListener('click',()=>{$('shop').hidden=true});
@@ -1612,7 +1634,7 @@ function simBattle(a,b){let ha=a.hp,hb=b.hp,turn=Math.random()<.5?0:1;const log=
     if(turn)ha=Math.max(0,ha-d);else hb=Math.max(0,hb-d);log.push({t:turn,d,crit,ha,hb});turn^=1}
   return{log,win:hb<=0}}
 function battlePay(){let o={t:0,n:0};try{o=JSON.parse(localStorage.getItem('garro-bpay')||'')||o}catch(e){}
-  const now=Date.now();if(now-o.t>36e5)o={t:now,n:0};let paid=0;if(o.n<5){o.n++;paid=1;bonus++;coins++;saveBonus();hud()}try{localStorage.setItem('garro-bpay',JSON.stringify(o))}catch(e){}return paid}
+  const now=Date.now();if(now-o.t>36e5)o={t:now,n:0};let paid=0;if(o.n<5){o.n++;paid=1;if(!ONL){bonus++;saveBonus()}coins++;hud()}try{localStorage.setItem('garro-bpay',JSON.stringify(o))}catch(e){}return paid}
 
 /* ---------- efeitos de ataque por elemento ---------- */
 const BFX=GD.modelos.BFX;
@@ -1671,8 +1693,8 @@ function fightBattle(){if(!BT||BT.busy)return;if(BT.fought){BT.fought=0;BT.op=pi
     tone(e.crit?220:150+Math.random()*50,.09,'square',.07)},430)},k*850));
   setTimeout(()=>{
     const my=me.i;let line;
-    if(R.win){const dn=bWin(0);bKO(1);const paid=battlePay();line='<big>Vitória! 🏆</big><span>'+dn+' · +10 XP'+(paid?' · +1 moeda 🪙':' · limite de moedas por hora')+'</span>';[523,659,784,1046,1318].forEach((f,k)=>setTimeout(()=>tone(f,.18,'triangle',.1),k*110));gainXp(my,10)}
-    else{bKO(0);const dn=bWin(1);line='<big>Derrota 💔</big><span>+4 XP pela luta</span>';tone(196,.4,'sawtooth',.08);gainXp(my,4)}
+    if(R.win){const dn=bWin(0);bKO(1);const paid=battlePay();line='<big>Vitória! 🏆</big><span>'+dn+' · +10 XP'+(paid?' · +1 moeda 🪙':' · limite de moedas por hora')+'</span>';[523,659,784,1046,1318].forEach((f,k)=>setTimeout(()=>tone(f,.18,'triangle',.1),k*110));gainXp(my,10);srv('battle',{plushId:my,win:true},r=>{coins=r.coins;careOf(my).xp=r.xp;saveCare();hud()})}
+    else{bKO(0);const dn=bWin(1);line='<big>Derrota 💔</big><span>+4 XP pela luta</span>';tone(196,.4,'sawtooth',.08);gainXp(my,4);srv('battle',{plushId:my,win:false},r=>{coins=r.coins;careOf(my).xp=r.xp;saveCare();hud()})}
     $('bRes').innerHTML=line;$('bGo').textContent='⚔️ Lutar de novo';$('bGo').disabled=$('bOther').disabled=$('bClose').disabled=false;BT.busy=false;
     // depois de ganhar XP o nível pode ter mudado: atualiza o meu lado e sorteia outro adversário
     BT.me=bStats({i:my,lv:lvOf(my),giant:BT.me.giant});$('bMeSt').textContent=(ELNAME[ELEM[my]]||'')+' · Nv '+BT.me.lv+' · ⚔️ '+BT.me.atk+' · 🛡️ '+BT.me.def+' · ❤️ '+BT.me.hp;BT.fought=1},R.log.length*850+700)}
@@ -1686,6 +1708,7 @@ function gainXp(i,n){const lv0=lvOf(i),st0=careStage(i),c=careOf(i);c.xp+=n;save
   if(st1>st0)setTimeout(()=>evolve(i,st0,st1),900)}
 function careGain(i,kind,amount){const c=careOf(i);if(c[kind]>=96)return false;
   c[kind]=Math.min(100,c[kind]+amount);c.t=Date.now();saveCare();
+  srv('care',{plushId:i,kind,f:c.f,l:c.l,p:c.p},r=>{const cc=careOf(i);cc.xp=r.xp;INV.food=r.food;saveCare();saveInv();updFood()});
   if(V.open&&V.cur===i)float('+'+XPG[kind]+' XP','xp');gainXp(i,XPG[kind]);return true}
 function evolve(i,from,to){
   if(!V.open||V.cur!==i||i>=CH0)return;const p=PLUSH[i];
