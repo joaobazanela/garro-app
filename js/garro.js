@@ -920,9 +920,17 @@ function loadGLB(m){if(GLB[m.file])return GLB[m.file];
   GLB[m.file]=new Promise((res,rej)=>{if(!THREE.GLTFLoader)return rej('noloader');const b64=GLBDATA[m.file];if(!b64&&(window.GARRO_GLBTXT||(window.GARRO_EVOTXT&&m.evoM))){fetch(m.file+'.txt?v='+ASSETV).then(r=>{if(!r.ok)throw new Error('evo');return r.text()}).then(t=>{const bin=Uint8Array.from(atob(t.trim()),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>res(g.scene),rej)}).catch(rej);return}
     if(!b64)return new THREE.GLTFLoader().load(((window.GARRO_REMOTE&&m.remote)?window.GARRO_REMOTE:'')+m.file+'?v='+ASSETV,g=>res(g.scene),undefined,rej);
     const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>res(g.scene),rej)});return GLB[m.file]}
+// pelo fofo nas formas evoluídas (modelos Tripo saem lisos/em placas): mesma textura de pelo dos bichos de pelúcia, por cima da cor do modelo
+function furDet(mat,k){const U={uDet:DETU.uDet,uDS:{value:.22},uFS:{value:k}};
+  mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
+    sh.vertexShader='varying vec3 vTP;\nvarying vec3 vON;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vTP=position*vec3(length(modelMatrix[0].xyz),length(modelMatrix[1].xyz),length(modelMatrix[2].xyz));vON=normalize(normal);');
+    sh.fragmentShader='uniform sampler2D uDet;uniform float uDS,uFS;\nvarying vec3 vTP;\nvarying vec3 vON;\n'+sh.fragmentShader
+      .replace('#include <map_fragment>','#include <map_fragment>\n float gDet=.5;{vec3 bw=pow(abs(vON),vec3(4.));bw/=bw.x+bw.y+bw.z;vec3 p=vTP*uDS;gDet=texture2D(uDet,p.yz).r*bw.x+texture2D(uDet,p.xz+.37).r*bw.y+texture2D(uDet,p.xy+.71).r*bw.z;\n diffuseColor.rgb*=clamp(1.+(gDet*2.-1.)*uFS,.75,1.25);}')
+      .replace('#include <normal_fragment_begin>','#include <normal_fragment_begin>\n {vec2 dh=vec2(dFdx(gDet),dFdy(gDet))*uFS*.3;vec3 sx=dFdx(-vViewPosition),sy=dFdy(-vViewPosition);vec3 r1=cross(sy,normal),r2=cross(normal,sx);float fd=dot(sx,r1);normal=normalize(abs(fd)*normal-sign(fd)*(dh.x*r1+dh.y*r2));}')};
+  mat.customProgramCacheKey=()=>'glbfur'+k}
 function deformMat(mat,m,U){
   // formas evoluídas: o modelo inteiro se mexe, sem dobrar cabeça/cauda (dobrar esticava o rosto)
-  if(m.noDeform){mat.customProgramCacheKey=()=>'glbnd';return}
+  if(m.noDeform){if(m.pelo&&!mat.isMeshDepthMaterial){furDet(mat,m.pelo);return}mat.customProgramCacheKey=()=>'glbnd';return}
   const ds=(m.ds!=null?m.ds:.5).toFixed(3);// força das dobras: os modelos Tripo esticam se a cabeça/cauda gira demais
   mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
     sh.vertexShader='uniform float uHY,uHP,uHR,uTail,uT,uWing;\nmat3 rY(float a){float c=cos(a),s=sin(a);return mat3(c,0.,-s,0.,1.,0.,s,0.,c);}\nmat3 rX(float a){float c=cos(a),s=sin(a);return mat3(1.,0.,0.,0.,c,s,0.,-s,c);}\nmat3 rZ(float a){float c=cos(a),s=sin(a);return mat3(c,s,0.,-s,c,0.,0.,0.,1.);}\n'+
@@ -967,7 +975,7 @@ function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img
     d[p]=Math.max(0,Math.min(255,r*255));d[p+1]=Math.max(0,Math.min(255,g*255));d[p+2]=Math.max(0,Math.min(255,b*255))}
   x.putImageData(D,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=map.flipY;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t.wrapS=map.wrapS;t.wrapT=map.wrapT;return EVT[i]=t}
 function applyEvoTex(i){const C=V.C;if(!C||!C.obj)return;C.obj.traverse(o=>{if(o.isMesh&&!o.userData.keep&&o.userData.baseMap){o.material.map=evoTex(i,o.userData.baseMap);o.material.needsUpdate=true}})}
-const ASSETV='64';function loadSkin(f){if(SKIN[f])return SKIN[f];return SKIN[f]=new Promise(res=>{const src=GLBDATA[f]?'data:image/jpeg;base64,'+GLBDATA[f]:f+'?v='+ASSETV;
+const ASSETV='72';function loadSkin(f){if(SKIN[f])return SKIN[f];return SKIN[f]=new Promise(res=>{const src=GLBDATA[f]?'data:image/jpeg;base64,'+GLBDATA[f]:f+'?v='+ASSETV;
   new THREE.TextureLoader().load(src,t=>{t.flipY=false;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;res(t)},undefined,()=>res(null))})}
 function dropTail(g,m){const w=g.attributes.uv2;if(!w)return g;g=g.clone();const p=g.attributes.position,B=m.TA;
   for(let i=0;i<p.count;i++){const k=w.getX(i);if(k<=0)continue;const x=p.getX(i),y=p.getY(i),z=p.getZ(i);p.setXYZ(i,x+(B[0]+(x-B[0])*.1-x)*k,y+(B[1]+(y-B[1])*.1-y)*k,z+(B[2]+(z-B[2])*.1-z)*k)}
@@ -1737,7 +1745,7 @@ function evolve(i,from,to){
 function killAura(){V.evoK=0;if(V.evoG){if(V.evoG.parent)V.evoG.parent.remove(V.evoG);V.evoG=null;V.evoW=null}if(V.aura){V.spin.remove(V.aura.g);V.aura=null}
   if(V.C&&(V.C.obj||V.C.root))(V.C.obj||V.C.root).traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive&&!o.userData.keep&&o.material.emissiveIntensity!==undefined&&o.userData.tint){o.material.emissive.setRGB(0,0,0);o.material.emissiveIntensity=0;o.userData.tint=0}})}
 function makeAura(i){killAura();const C=V.C;if(!C||!(C.obj||C.root))return;if(C.obj)makeEvo(i);const col=new THREE.Color(ECOL[ELEM[i]]||'#ffd23c');
-  (C.obj||C.root).traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive&&!o.userData.keep){o.material.emissive.copy(col);o.material.emissiveIntensity=.1;o.userData.tint=1}});
+  if(!(C.m&&C.m.evoM))(C.obj||C.root).traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive&&!o.userData.keep){o.material.emissive.copy(col);o.material.emissiveIntensity=.1;o.userData.tint=1}});// modelo evoluído (Tripo) já tem as cores certas: o brilho por cima lavava as cores
   const g=new THREE.Group(),R0=Math.max(V.size.xz*.62,.7),sp=[];
   const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending});
   for(let k=0;k<22;k++){const m=new THREE.Mesh(new THREE.OctahedronGeometry(.035+Math.random()*.03,0),mat);g.add(m);sp.push({m,a:Math.random()*6.28,r:R0*(.85+Math.random()*.4),s:(.5+Math.random())*(k%2?1:-1)*.7,h:Math.random(),v:.18+Math.random()*.3})}
