@@ -25,6 +25,8 @@ body{background:var(--night);color:var(--ink);font-family:var(--body);
 .window{position:relative;border-radius:12px;overflow:hidden;background:#000;
   box-shadow:0 0 0 4px #0b0609,0 0 0 6px #4a3040,inset 0 0 0 1px #000}
 canvas{display:block;width:100%;height:auto;touch-action:none}
+/* a máquina não usa toque: arrastar o dedo em cima dela rola a página no celular */
+#c{touch-action:pan-y}
 .timer{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.08)}
 .timer i{display:block;height:100%;width:0;background:var(--amber);box-shadow:0 0 8px var(--amber)}
 .banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.7);opacity:0;pointer-events:none;text-align:center;
@@ -42,7 +44,9 @@ canvas{display:block;width:100%;height:auto;touch-action:none}
 .grab .who{grid-column:1/-1;font-weight:900;font-size:13px}
 .grab .who em{font-style:normal;color:var(--dim);font-weight:700}
 .deck{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:10px;align-items:center;padding-top:4px}
-button{font-family:var(--body);border:0;cursor:pointer;touch-action:none;color:var(--ink)}
+button{font-family:var(--body);border:0;cursor:pointer;touch-action:manipulation;color:var(--ink)}
+/* só os botões de segurar (setas e PEGAR) travam a rolagem; os outros deixam rolar a página */
+.arrow,.drop{touch-action:none}
 button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
 .arrow{height:62px;border-radius:14px;font-size:26px;background:linear-gradient(180deg,#4b3542,#2b1c25);box-shadow:0 5px 0 #0c0609,inset 0 1px 0 rgba(255,255,255,.15)}
 .arrow.on{transform:translateY(4px);box-shadow:0 1px 0 #0c0609,inset 0 1px 0 rgba(255,255,255,.15)}
