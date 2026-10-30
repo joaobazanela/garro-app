@@ -39,15 +39,18 @@ def gera(n,f,seed=7):
   if chefe:
     az=L-16;arena={"x":0.0,"z":float(az),"r":9.0};livre.append((0,az,10));pts[-1]=[0.0,float(L)];pts[-2][0]=0.0;pts[-3][0]*=.3
   # folhas douradas: fora do caminho, escondidas
-  folhas=[]
+  folhas=[];tent=0
   while len(folhas)<3:
-    z=rnd.uniform(10,L-12);x=xcam(z)+rnd.choice([-1,1])*rnd.uniform(4.5,8.5)
-    if abs(x)<LARG/2-2 and all(math.hypot(x-a,z-b)>8 for a,b in folhas):folhas.append([round(x,2),round(z,2)])
+    tent+=1;z=rnd.uniform(10,L-12);x=xcam(z)+rnd.choice([-1,1])*rnd.uniform(4.5,8.5)
+    # longe dos acampamentos (nas fases finais elas ganham guardas próprios)
+    if abs(x)<LARG/2-2 and all(math.hypot(x-a,z-b)>8 for a,b in folhas) and all(math.hypot(x-c['x'],z-c['z'])>(9.5 if tent<400 else 5) for c in camps):folhas.append([round(x,2),round(z,2)])
   # guardas: nas fases finais, folhas douradas vigiadas (elite + ajudante)
   ng=0 if n<6 else 1 if n<8 else 2
   lvmax=max(lv for _,lv in inim);forte=max(inim,key=lambda x:x[1])[0]
-  for q in range(ng):
-    fx,fz=folhas[q];grupo=[[forte,lvmax,round(fx+1.2,2),round(fz,2),'elite']]
+  # só vigia folhas longe dos acampamentos (para não juntar duas lutas numa só)
+  longe=[f_ for f_ in folhas if all(math.hypot(f_[0]-c['x'],f_[1]-c['z'])>9 for c in camps)]
+  for q in range(min(ng,len(longe))):
+    fx,fz=longe[q];grupo=[[forte,lvmax,round(fx+1.2,2),round(fz,2),'elite']]
     if n>=8:i,lv=inim[q%len(inim)];grupo.append([i,lv,round(fx-1.2,2),round(fz+.6,2)])
     camps.append({"x":fx,"z":fz,"inimigos":grupo,"guarda":True});livre.append((fx,fz,3.2))
   # tipos: atiradores a partir da fase 3, curandeiro a partir da 8, elite também no último acampamento da fase 10
@@ -58,7 +61,7 @@ def gera(n,f,seed=7):
       c+=1
       if cada and c%cada==0:e.append('atirador')
   if n>=8:
-    big=max((cp for cp in camps if not cp.get('guarda')),key=lambda cp:len(cp['inimigos']))
+    nor=[cp for cp in camps if not cp.get('guarda')];big=nor[len(nor)//2]
     for e in big['inimigos']:
       if len(e)==4:e.append('curandeiro');break
   if chefe:
@@ -97,11 +100,11 @@ for k,f in enumerate(D['mundos'][0]['fases']):
 D.pop('plataforma',None)
 D.setdefault('arena',{})
 # dificuldade que cresce fase a fase: [valor na 1ª fase, valor na última]; o jogo interpola pelas fases do mundo
-D.setdefault('curva',{"inimigo_vel":[2.2,3.3],"inimigo_recarga":[1.7,0.9],"inimigo_aviso":[0.65,0.32],"aggro":[6,9.5],"contato":[1.0,1.45],"tiro_vel":[5.5,8.5]})
+D.setdefault('curva',{"inimigo_vel":[2.2,3.3],"inimigo_recarga":[1.7,0.9],"inimigo_aviso":[0.65,0.32],"aggro":[6,9.5],"contato":[1.0,1.3],"tiro_vel":[5.5,8.5]})
 # tipos de inimigo (o 5º número de cada inimigo no mapa)
 D.setdefault('tipos',{"atirador":{"nome":"Atirador","icone":"🎯","recarga":2.8,"distancia":5,"vida":0.8},
-  "elite":{"nome":"Elite","icone":"🛡️","vida":2.2,"escudo":0.6,"tamanho":1.35,"dano":1.3,"pancada_raio":1.9,"pancada_aviso":0.75,"recarga":2.2},
-  "curandeiro":{"nome":"Curandeiro","icone":"💚","vida":0.75,"cura":0.22,"recarga":4.5,"raio":5.5,"distancia":5}})
+  "elite":{"nome":"Elite","icone":"🛡️","vida":1.8,"escudo":0.5,"tamanho":1.35,"dano":1.3,"pancada_raio":1.9,"pancada_aviso":0.75,"recarga":2.2},
+  "curandeiro":{"nome":"Curandeiro","icone":"💚","vida":0.75,"cura":0.15,"recarga":4.5,"raio":5.5,"distancia":5}})
 txt=json.dumps(D,ensure_ascii=False,indent=1)
 # mapas numa linha só por lista (o arquivo fica bem menor e legível)
 import re
