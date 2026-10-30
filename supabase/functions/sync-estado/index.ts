@@ -116,7 +116,8 @@ async function handle(req: Request): Promise<Response> {
   if (body.action === "giant_capture") {
     const p = int(body.plushId, 0, 19);
     if (p === null) return json({ error: "bad_plush_id" }, 400);
-    return call("rpc_giant_capture", { p_plush: p }, "giant_capture_rejected");
+    const L = await lendarios();  // 💎 raro: chance vem do data/lendarios.json (sem o arquivo, sem diamante)
+    return call("rpc_giant_capture", { p_plush: p, p_dchance: L?.diamantes?.gigante_chance ?? 0 }, "giant_capture_rejected");
   }
   if (body.action === "sell_giant") {
     const p = int(body.plushId, 0, 19);
@@ -129,12 +130,12 @@ async function handle(req: Request): Promise<Response> {
     return call(body.action === "giant_evolve" ? "rpc_giant_evolve" : "rpc_use_stone", { p_plush: p, p_stone: st }, body.action + "_rejected");
   }
   if (body.action === "care") {
-    const p = int(body.plushId, 0, 42), kind = body.kind;
+    const p = int(body.plushId, 0, 52), kind = body.kind;
     if (p === null || !["f", "l", "p"].includes(kind)) return json({ error: "bad_request" }, 400);
     return call("rpc_care", { p_plush: p, p_kind: kind, p_f: num(body.f), p_l: num(body.l), p_p: num(body.p) }, "care_rejected");
   }
   if (body.action === "battle") {
-    const p = int(body.plushId, 0, 42);
+    const p = int(body.plushId, 0, 52);
     if (p === null) return json({ error: "bad_plush_id" }, 400);
     return call("rpc_battle", { p_plush: p, p_win: body.win === true }, "battle_rejected");
   }
@@ -161,25 +162,51 @@ async function handle(req: Request): Promise<Response> {
     if (!A) return json({ error: "aventura_indisponivel" }, 503);
     const E = A.energia;
     if (body.action === "adv_rest") {
-      const p = int(body.plushId, 0, 42);
+      const p = int(body.plushId, 0, 52);
       if (p === null) return json({ error: "bad_plush_id" }, 400);
       return call("rpc_adv_rest", { p_plush: p, p_cost: E.descanso_preco, p_max: E.max, p_regen_min: E.recarga_min }, "adv_rest_rejected");
     }
     const f = faseDaAventura(A, typeof body.stage === "string" ? body.stage : "");
     if (!f) return json({ error: "fase_nao_existe" }, 400);
     if (body.action === "adv_start") {
-      const p = int(body.plushId, 0, 42);
+      const p = int(body.plushId, 0, 52);
       if (p === null) return json({ error: "bad_plush_id" }, 400);
       return call("rpc_adv_start", { p_plush: p, p_stage: f.fase.id, p_prev: f.anterior, p_max: E.max, p_regen_min: E.recarga_min }, "adv_start_rejected");
     }
     const niveis = f.fase.inimigos.map((x) => x[1]).concat(f.fase.chefe ? [f.fase.chefe[1]] : []);
     const minLv = Math.max(1, Math.max(...niveis) - (A.nivel_min_folga ?? 6));
     const estrelas = int(body.stars, 1, 3) ?? 1;
+    const L = await lendarios(), DM = L?.diamantes, ch = L?.chocar;
     return call("rpc_adv_end", {
       p_stage: f.fase.id, p_win: body.win === true, p_stars: estrelas, p_reward: f.fase.premio,
       p_xp_win: A.xp.vitoria, p_xp_lose: A.xp.derrota, p_min_sec: A.tempo_min_seg ?? 10, p_min_lv: minLv,
-      p_boss: !!f.fase.chefe, p_chance: f.fase.chefe ? A.chefe_pedra.chance : 0, p_stones: A.chefe_pedra.pedras,
+      p_boss: !!f.fase.chefe && !f.desafio, p_chance: f.fase.chefe && !f.desafio ? A.chefe_pedra.chance : 0, p_stones: A.chefe_pedra.pedras,
+      // 💎: 1ª vitória no chefão do mundo e todas as fases do mundo com 3 estrelas (uma vez só, o banco guarda)
+      p_world: f.mundo ? f.mundo.id : null, p_world_stages: f.mundo ? f.mundo.fases.map((x) => x.id) : null,
+      p_boss_diamonds: DM?.chefe_do_mundo ?? 0, p_world_diamonds: DM?.mundo_3_estrelas ?? 0,
+      // Desafio Lendário: lendário do dia e chance do ovo (sorteada só na 1ª vitória do dia)
+      p_leg: f.desafio ? legDoDia(hojeBR()) : -1, p_leg_chance: f.desafio ? (A.desafio?.chance_ovo ?? 0) : 0,
+      p_egg_min: ch?.dias_min ?? 7, p_egg_max: ch?.dias_max ?? 90,
     }, "adv_end_rejected");
+  }
+
+  // ---- lendários: máquina de ovos, loja de diamantes e carinho para chocar (regras em data/lendarios.json) ----
+  if (body.action === "egg_round_start" || body.action === "egg_capture" || body.action === "egg_buy" || body.action === "egg_care") {
+    const L = await lendarios();
+    if (!L) return json({ error: "lendarios_indisponivel" }, 503);
+    const ch = L.chocar;
+    if (body.action === "egg_round_start") return call("rpc_egg_round_start", { p_cost: L.maquina.preco }, "egg_round_rejected");
+    if (body.action === "egg_capture" || body.action === "egg_buy") {
+      const leg = int(body.leg, 0, 9);
+      if (leg === null) return json({ error: "bad_leg" }, 400);
+      if (body.action === "egg_capture") {
+        return call("rpc_egg_capture", { p_leg: leg, p_chance: L.maquina.chance_ovo, p_fake: L.maquina.ovo_falso_moedas, p_min: ch.dias_min, p_max: ch.dias_max }, "egg_capture_rejected");
+      }
+      return call("rpc_egg_buy", { p_leg: leg, p_price: L.loja.preco_ovo_diamantes, p_min: ch.dias_min, p_max: ch.dias_max }, "egg_buy_rejected");
+    }
+    const egg = Number(body.eggId);
+    if (!Number.isSafeInteger(egg) || egg < 1) return json({ error: "bad_egg" }, 400);
+    return call("rpc_egg_care", { p_egg: egg, p_birth_xp: Math.max(0, (ch.nivel_ao_nascer - 1) * 4) }, "egg_care_rejected");
   }
 
   return json({ error: "unknown_action" }, 400);
@@ -217,12 +244,14 @@ function diariasDoDia(d: Missoes, dia: string): Missao[] {
 
 // ---- aventura ----
 type Fase = { id: string; premio: number; inimigos: [number, number][]; chefe?: [number, number] };
+type Desafio = { id: string; depois_de: string; nivel: number; chance_ovo: number; premio?: number };
 type Aventura = {
   energia: { max: number; recarga_min: number; descanso_preco: number };
   xp: { vitoria: number; derrota: number };
   tempo_min_seg?: number; nivel_min_folga?: number;
   chefe_pedra: { chance: number; pedras: number[] };
   mundos: { id: string; fases: Fase[] }[];
+  desafio?: Desafio;
 };
 const AVENTURA_URL = Deno.env.get("AVENTURA_URL") ?? "https://joaobazanela.github.io/garro-app/data/aventura.json";
 let cacheAventura: { t: number; d: Aventura } | null = null;
@@ -239,9 +268,41 @@ async function aventura(): Promise<Aventura | null> {
     return cacheAventura?.d ?? null;
   }
 }
-// fase pelo id + id da fase anterior (a 1ª fase de cada mundo depende da última do mundo anterior)
-function faseDaAventura(a: Aventura, id: string): { fase: Fase; anterior: string | null } | null {
+// fase pelo id + id da fase anterior (a 1ª fase de cada mundo depende da última do mundo anterior).
+// O Desafio Lendário é uma fase à parte: o chefão é o lendário do dia (troca todo dia).
+type FaseAchada = { fase: Fase; anterior: string | null; mundo?: { id: string; fases: Fase[] }; desafio?: boolean };
+function faseDaAventura(a: Aventura, id: string): FaseAchada | null {
+  const d = a.desafio;
+  if (d && id === d.id) return { fase: { id: d.id, premio: d.premio ?? 0, inimigos: [], chefe: [43 + legDoDia(hojeBR()), d.nivel] }, anterior: d.depois_de, desafio: true };
   const todas = a.mundos.flatMap((m) => m.fases);
   const i = todas.findIndex((f) => f.id === id);
-  return i < 0 ? null : { fase: todas[i], anterior: i > 0 ? todas[i - 1].id : null };
+  if (i < 0) return null;
+  return { fase: todas[i], anterior: i > 0 ? todas[i - 1].id : null, mundo: a.mundos.find((m) => m.fases.some((f) => f.id === id)) };
+}
+// lendário do dia (0–9): igual ao js/aventura.js — muda à meia-noite de Brasília
+function legDoDia(dia: string): number {
+  return Math.floor(Date.parse(dia + "T00:00:00Z") / 864e5) % 10;
+}
+
+// ---- lendários ----
+type Lendarios = {
+  diamantes: { chefe_do_mundo: number; mundo_3_estrelas: number; gigante_chance: number };
+  maquina: { preco: number; chance_ovo: number; ovo_falso_moedas: number };
+  loja: { preco_ovo_diamantes: number };
+  chocar: { dias_min: number; dias_max: number; nivel_ao_nascer: number };
+};
+const LENDARIOS_URL = Deno.env.get("LENDARIOS_URL") ?? "https://joaobazanela.github.io/garro-app/data/lendarios.json";
+let cacheLendarios: { t: number; d: Lendarios } | null = null;
+async function lendarios(): Promise<Lendarios | null> {
+  if (cacheLendarios && Date.now() - cacheLendarios.t < 5 * 60 * 1000) return cacheLendarios.d;
+  try {
+    const r = await fetch(LENDARIOS_URL, { headers: { "cache-control": "no-cache" } });
+    if (!r.ok) return cacheLendarios?.d ?? null;
+    const d = await r.json() as Lendarios;
+    if (!d.maquina || !d.chocar || !d.loja || !d.diamantes) return cacheLendarios?.d ?? null;
+    cacheLendarios = { t: Date.now(), d };
+    return d;
+  } catch (_e) {
+    return cacheLendarios?.d ?? null;
+  }
 }

@@ -1,0 +1,379 @@
+{
+ "versao": 1,
+ "id0": 43,
+ "diamantes": {
+  "chefe_do_mundo": 1,
+  "mundo_3_estrelas": 1,
+  "gigante_chance": 0.01,
+  "dev_infinitos": true
+ },
+ "maquina": {
+  "preco": 200,
+  "chance_ovo": 0.03,
+  "ovo_falso_moedas": 1,
+  "ovos_na_maquina": 9
+ },
+ "loja": {
+  "preco_ovo_diamantes": 50
+ },
+ "chocar": {
+  "dias_min": 7,
+  "dias_max": 90,
+  "nivel_ao_nascer": 30,
+  "dicas": [
+   "O ovo está frio e quietinho. Continue dando carinho todo dia.",
+   "O ovo ficou morninho. Alguma coisa acordou lá dentro.",
+   "Às vezes o ovo balança sozinho!",
+   "Dá para ouvir batidinhas lá dentro... falta pouco!"
+  ]
+ },
+ "lendarios": [
+  {
+   "id": 43,
+   "slug": "obsidragon",
+   "nome": "Obsidragon",
+   "elemento": "lava",
+   "stat": [118,98],
+   "cm": 46,
+   "g": 1400,
+   "desc": "Dragão de escamas negras com veias de ouro. Guarda tesouros dentro dos vulcões.",
+   "base": {
+    "pelucia": 11,
+    "evoluida": false
+   },
+   "cor": "#ffb83a",
+   "brilho": 1.1,
+   "tamanho": 1.12,
+   "sprite": {
+    "w": 200,
+    "h": 196,
+    "hull": [
+     [0.935,0.107],
+     [0.955,0.224],
+     [0.985,0.806],
+     [0.925,0.985],
+     [0.125,0.98],
+     [0.015,0.954],
+     [0.01,0.893],
+     [0.195,0.133],
+     [0.25,0.036],
+     [0.8,0.01],
+     [0.855,0.031]
+    ],
+    "img": "img/lendarios/obsidragon.webp"
+   }
+  },
+  {
+   "id": 44,
+   "slug": "lunaria",
+   "nome": "Lunária",
+   "elemento": "ice",
+   "stat": [104,108],
+   "cm": 40,
+   "g": 900,
+   "desc": "Raposa de cristal da lua cheia. Onde ela pisa, nasce neve brilhante.",
+   "base": {
+    "pelucia": 6,
+    "evoluida": false
+   },
+   "cor": "#7fd0ff",
+   "brilho": 0.9,
+   "tamanho": 1.1,
+   "sprite": {
+    "w": 167,
+    "h": 200,
+    "hull": [
+     [0.449,0.01],
+     [0.707,0.055],
+     [0.982,0.35],
+     [0.874,0.865],
+     [0.617,0.985],
+     [0.491,0.985],
+     [0.048,0.875],
+     [0.012,0.52],
+     [0.03,0.365],
+     [0.329,0.055]
+    ],
+    "img": "img/lendarios/lunaria.webp"
+   }
+  },
+  {
+   "id": 45,
+   "slug": "incendyr",
+   "nome": "Incendyr",
+   "elemento": "embers",
+   "stat": [120,92],
+   "cm": 42,
+   "g": 800,
+   "desc": "Fênix de penas de fogo. Renasce das próprias brasas.",
+   "base": {
+    "pelucia": 16,
+    "evoluida": false
+   },
+   "cor": "#ff8a1a",
+   "brilho": 1.0,
+   "tamanho": 1.12,
+   "sprite": {
+    "w": 200,
+    "h": 143,
+    "hull": [
+     [0.675,0.042],
+     [0.95,0.392],
+     [0.99,0.531],
+     [0.96,0.762],
+     [0.73,0.951],
+     [0.345,0.972],
+     [0.005,0.343],
+     [0.165,0.14],
+     [0.58,0.007]
+    ],
+    "img": "img/lendarios/incendyr.webp"
+   }
+  },
+  {
+   "id": 46,
+   "slug": "verdantis",
+   "nome": "Verdantis",
+   "elemento": "leaves",
+   "stat": [100,114],
+   "cm": 48,
+   "g": 1100,
+   "desc": "Cervo ancião da floresta. Seus chifres florescem a cada primavera.",
+   "base": {
+    "pelucia": 10,
+    "evoluida": false
+   },
+   "cor": "#9aff6a",
+   "brilho": 0.8,
+   "tamanho": 1.1,
+   "sprite": {
+    "w": 199,
+    "h": 200,
+    "hull": [
+     [0.07,0.04],
+     [0.472,0.01],
+     [0.819,0.035],
+     [0.985,0.12],
+     [0.854,0.845],
+     [0.673,0.98],
+     [0.302,0.965],
+     [0.226,0.935],
+     [0.01,0.15]
+    ],
+    "img": "img/lendarios/verdantis.webp"
+   }
+  },
+  {
+   "id": 47,
+   "slug": "noctalis",
+   "nome": "Noctalis",
+   "elemento": "shadow",
+   "stat": [116,96],
+   "cm": 42,
+   "g": 950,
+   "desc": "Lobo das sombras de chamas roxas. Só aparece em noites sem lua.",
+   "base": {
+    "pelucia": 4,
+    "evoluida": false
+   },
+   "cor": "#a050ff",
+   "brilho": 1.2,
+   "tamanho": 1.12,
+   "sprite": {
+    "w": 174,
+    "h": 200,
+    "hull": [
+     [0.575,0.01],
+     [0.966,0.485],
+     [0.977,0.7],
+     [0.81,0.88],
+     [0.609,0.98],
+     [0.052,0.955],
+     [0.011,0.91],
+     [0.098,0.22],
+     [0.155,0.16]
+    ],
+    "img": "img/lendarios/noctalis.webp"
+   }
+  },
+  {
+   "id": 48,
+   "slug": "ocearion",
+   "nome": "Ocearion",
+   "elemento": "sand",
+   "stat": [98,120],
+   "cm": 50,
+   "g": 1600,
+   "desc": "Tartaruga dos mares profundos. Carrega um recife inteiro no casco.",
+   "base": {
+    "pelucia": 15,
+    "evoluida": false
+   },
+   "cor": "#6ff0ff",
+   "brilho": 0.8,
+   "tamanho": 1.12,
+   "sprite": {
+    "w": 200,
+    "h": 163,
+    "hull": [
+     [0.26,0.129],
+     [0.355,0.043],
+     [0.485,0.012],
+     [0.73,0.258],
+     [0.99,0.779],
+     [0.99,0.81],
+     [0.88,0.969],
+     [0.815,0.988],
+     [0.015,0.89],
+     [0.005,0.84],
+     [0.145,0.337]
+    ],
+    "img": "img/lendarios/ocearion.webp"
+   }
+  },
+  {
+   "id": 49,
+   "slug": "terralith",
+   "nome": "Terralith",
+   "elemento": "stone",
+   "stat": [96,126],
+   "cm": 52,
+   "g": 2200,
+   "desc": "Gigante de pedra com runas azuis. Dorme há mil anos no alto das montanhas.",
+   "base": {
+    "pelucia": 13,
+    "evoluida": false
+   },
+   "cor": "#3aa8ff",
+   "brilho": 1.4,
+   "tamanho": 1.12,
+   "sprite": {
+    "w": 200,
+    "h": 183,
+    "hull": [
+     [0.885,0.202],
+     [0.975,0.377],
+     [0.99,0.568],
+     [0.92,0.76],
+     [0.82,0.88],
+     [0.16,0.989],
+     [0.02,0.934],
+     [0.005,0.508],
+     [0.045,0.317],
+     [0.105,0.246],
+     [0.35,0.087],
+     [0.56,0.005]
+    ],
+    "img": "img/lendarios/terralith.webp"
+   }
+  },
+  {
+   "id": 50,
+   "slug": "solaris",
+   "nome": "Solaris",
+   "elemento": "gold",
+   "stat": [112,112],
+   "cm": 46,
+   "g": 1000,
+   "desc": "Guardião do sol com auréola de ouro. Sua luz cura quem está por perto.",
+   "base": {
+    "pelucia": 19,
+    "evoluida": true
+   },
+   "cor": "#ffd86a",
+   "brilho": 1.0,
+   "tamanho": 1.08,
+   "extra": "aureola",
+   "sprite": {
+    "w": 182,
+    "h": 200,
+    "hull": [
+     [0.769,0.175],
+     [0.956,0.69],
+     [0.984,0.845],
+     [0.791,0.92],
+     [0.363,0.985],
+     [0.297,0.98],
+     [0.17,0.93],
+     [0.011,0.495],
+     [0.088,0.34],
+     [0.187,0.235],
+     [0.33,0.135],
+     [0.626,0.115]
+    ],
+    "img": "img/lendarios/solaris.webp"
+   }
+  },
+  {
+   "id": 51,
+   "slug": "crystalyn",
+   "nome": "Crystalyn",
+   "elemento": "petals",
+   "stat": [106,104],
+   "cm": 38,
+   "g": 700,
+   "desc": "Pequena fada de cristais coloridos. Brilha como um arco-íris.",
+   "base": {
+    "pelucia": 17,
+    "evoluida": false
+   },
+   "cor": "#f0b0ff",
+   "brilho": 0.9,
+   "tamanho": 1.1,
+   "sprite": {
+    "w": 200,
+    "h": 175,
+    "hull": [
+     [0.75,0.011],
+     [0.985,0.354],
+     [0.775,0.817],
+     [0.55,0.96],
+     [0.265,0.983],
+     [0.16,0.949],
+     [0.07,0.771],
+     [0.01,0.589],
+     [0.07,0.394],
+     [0.22,0.194],
+     [0.295,0.126],
+     [0.695,0.011]
+    ],
+    "img": "img/lendarios/crystalyn.webp"
+   }
+  },
+  {
+   "id": 52,
+   "slug": "astrakai",
+   "nome": "Astrakai",
+   "elemento": "stars",
+   "stat": [114,106],
+   "cm": 54,
+   "g": 1300,
+   "desc": "Serpente celeste feita de estrelas. Desenha constelações no céu.",
+   "base": {
+    "pelucia": 1,
+    "evoluida": true
+   },
+   "cor": "#ffe9a0",
+   "brilho": 1.0,
+   "tamanho": 1.08,
+   "sprite": {
+    "w": 160,
+    "h": 200,
+    "hull": [
+     [0.244,0.04],
+     [0.331,0.01],
+     [0.594,0.03],
+     [0.85,0.105],
+     [0.906,0.255],
+     [0.981,0.89],
+     [0.962,0.92],
+     [0.125,0.98],
+     [0.019,0.53],
+     [0.088,0.195],
+     [0.119,0.145]
+    ],
+    "img": "img/lendarios/astrakai.webp"
+   }
+  }
+ ]
+}

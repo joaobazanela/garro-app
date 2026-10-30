@@ -71,6 +71,17 @@ Um único arquivo HTML, sem instalação. Usa Matter.js (física) e Three.js (3D
 - **Banco (só estado):** `adventure_progress` (fases vencidas, estrelas), `adventure_energy` (energia por bichinho) e `adventure_run` (partida em andamento). A `sync-estado` lê o `data/aventura.json` publicado (`AVENTURA_URL`, cache de 5 min): `adv_start` confere fase anterior e gasta energia; `adv_end` só aceita vitória de partida começada, com pelo menos 10 s e com o bichinho no nível mínimo da fase; `adv_rest` cobra o descanso.
 - Sem login: progresso e energia ficam no aparelho.
 
+### Lendários (migração 0010)
+- **10 lendários** (ids 43–52), mais fortes que as pelúcias grandes: Obsidragon, Lunária, Incendyr, Verdantis, Noctalis, Ocearion, Terralith, Solaris, Crystalyn e Astrakai. Não caem na máquina comum: **nascem de ovos**.
+- **Ovos:** cada ovo tem um número **secreto** de dias de carinho para chocar (sorteado entre 7 e 90). Dá para contar **1 dia por dia** (horário de Brasília); pular dias não zera. O jogo só mostra dicas (frio → morninho → balança → batidinhas). Ao chocar, o lendário entra na coleção no Nv 30 (vai até o Nv 100) e aparece a carta dele.
+- **Onde conseguir ovos:** 🥚 **Máquina de Ovos** (4ª aba, 200 🪙 por jogada; quase todo ovo é falso e vira +1 🪙; 3% é verdadeiro, sorteado no servidor) · 👑 **Desafio Lendário** na Aventura (fase depois do chefão do mundo 1; o chefão é o lendário do dia, Nv 42, troca à meia-noite; 5% de chance do ovo dele, sorteada só na 1ª vitória do dia) · **Loja de ovos** no Ninho: 50 💎 cada.
+- **Diamantes 💎 (raros):** 1 na 1ª vitória contra o chefão de cada mundo · 1 com 3 estrelas em todas as fases de um mundo · 1% de chance a cada pelúcia gigante pega. Contas de desenvolvedor (modo dev) têm diamantes infinitos e um botão para pular o dia do ovo.
+- **Ninho:** botão 💎 no topo e na seção ✦ Lendários da coleção. Lendários vão para a coleção, a batalha e a Aventura (como bichinhos grandes).
+- **Visual:** cada lendário usa o corpo 3D de uma pelúcia (Draksel, Glacien, Ignovus, Sylvorn, Umbros, Coralith, Petrun, Auren Divino, Lumina e Aquarim Leviatã) com pele repintada, mapa de brilho (veias, runas, estrelas), aura e enfeites (auréola do Solaris). Artes em `img/lendarios/`: `<nome>.jpg` (pele), `<nome>_brilho.jpg`, `<nome>.webp` (figura da coleção), `ovo_<nome>.webp` e `carta_<nome>.webp` (recortados das artes enviadas).
+- **Conteúdo** em `data/lendarios.json` (nomes, elementos, atributos, base 3D, preços, chances, dias, dicas) e `desafio` em `data/aventura.json`. Código em `js/lendarios.js` (ninho, loja, ovos, diamantes) e no `js/garro.js` (máquina de ovos, modelos, coleção).
+- **Banco (só estado):** `player_state.diamonds`, `legendary_eggs` (o jogador **não lê** a coluna `need_days`; só a dica `hint`) e `diamond_awards` (prêmios únicos). A `sync-estado` lê o `data/lendarios.json` publicado (`LENDARIOS_URL`, cache de 5 min): `egg_round_start`, `egg_capture`, `egg_buy`, `egg_care`; `giant_capture` e `adv_end` passaram a dar diamantes e o ovo do desafio.
+- Sem login: ovos e diamantes ficam no aparelho.
+
 ### Pelúcias derivadas (textura dos modelos de referência)
 - `models/deer_base.glb`: corpo do Sylvorn sem chifres nem orelhas. Serve de molde para Flarion, Umbros, Voltik, Lunaris, Lumina e Auren, cada um com a pele pintada em `models/skins/<n>.jpg` e as partes próprias (orelhas, asas, cauda...).
 - `models/tex/fur.jpg` e `models/tex/scale.jpg`: pelagem e escamas tiradas do Sylvorn e do Terranox, aplicadas nas outras pelúcias 3D.

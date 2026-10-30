@@ -387,3 +387,52 @@ style#btnMis{position:relative}
 .advdif .cav{font-size:14px;letter-spacing:-1px}
 .advdif .tp{background:rgba(255,255,255,.08);border-radius:8px;padding:2px 7px;color:#fff3c4}
 .advfoes small.fac{color:#9dff8a}.advfoes small.med{color:#ffe07a}.advfoes small.dif{color:#ff8a7a}
+/* Lendários — 4 abas de máquina (Máquina, Gigante, Ovos, Aventura) */
+.mtabs.tres{grid-template-columns:repeat(4,1fr)}
+.mtabs.tres button{font-size:10.5px;padding:8px 1px;letter-spacing:-.3px}
+.mtabs #mach4{background:linear-gradient(#4a2a6a,#2a1640);color:#f0dcff;border-color:#8a5ac0}
+.mtabs #mach4.on{background:linear-gradient(#c88aff,#7a3ad0);color:#1a0630;border-color:#e8c8ff}
+.window.ovos{box-shadow:inset 0 0 0 3px #8a5ac0,0 0 24px rgba(160,90,255,.35)}
+/* Lendários: HUD, coleção, ninho, loja de ovos e nascimento */
+.hud.com-lend{grid-template-columns:repeat(6,1fr)}.hud.com-lend.com-missoes{grid-template-columns:repeat(7,1fr)}
+.hud.com-lend .chip{padding:6px 3px}.hud.com-lend .chip b{font-size:17px}.hud.com-lend .chip span{font-size:8.5px;letter-spacing:.06em}
+.chip.diam b{color:#d8b4ff;text-shadow:0 0 8px rgba(190,140,255,.6);font-size:14px!important;white-space:nowrap}
+.legsec{margin-top:14px;padding:12px;border-radius:16px;background:radial-gradient(120% 90% at 50% 0%,rgba(140,80,220,.28),rgba(20,8,30,.6));box-shadow:inset 0 0 0 1px rgba(200,160,255,.25)}
+.leghead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.leghead h3{margin:0;font-family:var(--display);font-weight:400;font-size:20px;color:#f0dcff}.leghead h3 small{font-family:inherit;font-size:13px;color:#c9a9e8}
+.leghead button{font:inherit;font-weight:900;font-size:13px;border:0;border-radius:12px;padding:8px 12px;background:linear-gradient(#c88aff,#7a3ad0);color:#1a0630;cursor:pointer}
+.leghead button b{background:#ffd23c;color:#2a1200;border-radius:8px;padding:0 6px;margin-left:2px}
+.leggrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.legslot{position:relative;font:inherit;border:0;border-radius:12px;padding:6px 2px 4px;background:rgba(255,255,255,.06);display:grid;justify-items:center;gap:2px;cursor:pointer;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,220,140,.35)}
+.legslot img{width:100%;height:56px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,210,120,.45))}
+.legslot span{font-size:9.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.legslot u{text-decoration:none;font-size:9px;font-weight:900;color:#ffd25a}
+.legslot.lock{box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}.legslot.lock img{filter:grayscale(.7) brightness(.45);opacity:.8}.legslot.lock span{color:#8a7a9a}
+.ninho{background:radial-gradient(120% 60% at 50% 0%,rgba(90,40,140,.98),rgba(14,6,16,.99))}
+.ninho h3{color:#f0dcff}
+.nmsg{color:#ff9a8a;min-height:16px;font-size:12px;font-weight:800}.nmsg.ok{color:#9dff8a}
+.ninhovos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ovo{display:grid;justify-items:center;text-align:center;gap:3px;background:rgba(255,255,255,.07);border-radius:16px;padding:10px 8px}
+.ovo img{height:96px;width:auto;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.ovo.h1 img{filter:drop-shadow(0 0 8px rgba(255,200,120,.6))}
+.ovo.h2 img{animation:ovobal 2.4s ease-in-out infinite;filter:drop-shadow(0 0 12px rgba(255,200,120,.75))}
+.ovo.h3 img{animation:ovobal 1.1s ease-in-out infinite;filter:drop-shadow(0 0 16px rgba(255,230,160,.95))}
+@keyframes ovobal{0%,100%{transform:rotate(0)}20%{transform:rotate(-6deg)}40%{transform:rotate(5deg)}60%{transform:rotate(-2deg)}}
+.ovo b{font-size:13px}.ovo small{font-size:11px;color:#cfc0e0}.ovo small.dica{color:#ffe7a8;font-weight:700;min-height:28px}
+.ovo button{font-size:13px;padding:8px 10px;width:100%}.ovo button.dev{background:#3a3a4a!important;color:#cfd!important;font-size:11px;padding:6px}
+.lojaovos{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.lovo{display:grid;justify-items:center;gap:2px;padding:6px 2px!important;background:rgba(255,255,255,.08)!important;color:#fff!important;border-radius:12px}
+.lovo img{height:52px;width:auto}.lovo b{font-size:9.5px}.lovo i{font-style:normal;font-size:10px;color:#d8b4ff}
+.nasceu{position:fixed;inset:0;z-index:90;background:radial-gradient(circle at 50% 35%,rgba(120,60,200,.9),rgba(10,4,16,.97));display:grid;align-content:center;justify-items:center;gap:6px;padding:20px;text-align:center;color:#fff;animation:advin2 .5s ease-out}
+.ncarta{position:relative;width:min(62vw,240px);border-radius:16px;overflow:hidden;box-shadow:0 0 0 3px #ffd25a,0 0 40px rgba(255,210,90,.6);animation:ncarta 1s cubic-bezier(.2,1.4,.4,1)}
+.ncarta img{display:block;width:100%}.nbrilho{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);animation:nbrilho 2.2s ease-in-out infinite}
+@keyframes ncarta{0%{transform:scale(.2) rotate(-12deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes nbrilho{0%{transform:translateX(-120%)}60%,100%{transform:translateX(120%)}}
+.nasceu h4{margin:6px 0 0;font-family:var(--display);font-weight:400;font-size:30px;color:#ffd25a}.nasceu b{font-size:20px;color:#f0dcff}.nasceu small{max-width:300px;color:#e0d0f0}
+.nasceu div:last-child{display:flex;gap:8px;margin-top:8px}.nasceu button{font:inherit;font-weight:900;border:0;border-radius:12px;padding:11px 16px;background:linear-gradient(#ffb23a,#e07a12);color:#2a1200;cursor:pointer}.nasceu button.sec{background:rgba(255,255,255,.14);color:#fff}
+.vtags .rL{background:linear-gradient(90deg,#ffd25a,#c88aff);color:#1a0630;font-weight:900}
+/* Aventura: Desafio Lendário */
+.advnode.lenda{width:92px;height:92px;background:radial-gradient(circle,#7a3ad0,#2a0a4a);border-color:#ffd25a;box-shadow:0 6px 0 #3a1460,0 0 26px rgba(200,140,255,.7)}
+.advnode.lenda i{color:#e8c8ff}
+.advfase.lenda{background:radial-gradient(120% 100% at 50% 0%,rgba(140,80,220,.45),rgba(0,0,0,.35));box-shadow:inset 0 0 0 1px rgba(220,180,255,.4)}
+.advlabel.lenda{background:linear-gradient(90deg,#7a3ad0,#c88aff);color:#fff}

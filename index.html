@@ -49,7 +49,7 @@
     <button class="chip shopbtn" id="btnShop" type="button"><span>Loja</span><b>🛒</b></button>
     <button class="chip shopbtn" id="btnInv" type="button"><span>Itens</span><b>🎒</b></button>
   </div>
-  <div class="mtabs"><button id="mach1" class="on" type="button">🎪 Máquina · 1 🪙</button><button id="mach2" type="button">🦖 Gigante · 50 🪙</button></div>
+  <div class="mtabs"><button id="mach1" class="on" type="button">🎪 Máquina · 1 🪙</button><button id="mach2" type="button">🦖 Gigante · 50 🪙</button><button id="mach4" type="button">🥚 Ovos · 200 🪙</button></div>
   <div class="gsign" id="gsign" hidden>★ GIGANTE ★</div>
   <div class="window">
     <canvas id="c" aria-label="Máquina de garra com pelúcias"></canvas>
@@ -128,11 +128,11 @@
 </div>
 <script>
 /* carrega o conteúdo do jogo (data/*.json) e depois a lógica (js/garro.js) */
-window.GD={};(function(){var V='78 · 30/10 08:07',F=["sprites", "fills", "sprites_pedras", "sprites_luta", "pelucias", "modelos", "textos", "regras", "missoes", "aventura"];
+window.GD={};(function(){var V='78 · 30/10 08:07',F=["sprites", "fills", "sprites_pedras", "sprites_luta", "pelucias", "modelos", "textos", "regras", "missoes", "aventura", "lendarios"];
   function err(e){var d=document.createElement('p');d.style.cssText='color:#fff;background:#3a1020;padding:16px;margin:0;font:600 14px system-ui';d.textContent='Não foi possível carregar o jogo ('+(e&&e.message||e)+'). Recarregue a página.';document.body.insertBefore(d,document.body.firstChild)}
   function iniciar(){
     Promise.all(F.map(function(f){return fetch('data/'+f+'.json?v='+V).then(function(r){if(!r.ok)throw new Error('data/'+f+'.json');return r.json()}).then(function(j){GD[f]=j})}))
-    .then(function(){var s=document.createElement('script');s.src='js/garro.js?v='+V;s.onerror=function(){err('js/garro.js')};s.onload=function(){['missoes','aventura'].forEach(function(n){var m=document.createElement('script');m.src='js/'+n+'.js?v='+V;document.body.appendChild(m)})};document.body.appendChild(s)}).catch(err)
+    .then(function(){var s=document.createElement('script');s.src='js/garro.js?v='+V;s.onerror=function(){err('js/garro.js')};s.onload=function(){['missoes','aventura','lendarios'].forEach(function(n){var m=document.createElement('script');m.src='js/'+n+'.js?v='+V;document.body.appendChild(m)})};document.body.appendChild(s)}).catch(err)
   }
   /* os scripts de CDN (Matter/Three/Supabase) usam defer; esperar o DOM pronto
      garante que eles já terminaram antes do garro.js rodar */
