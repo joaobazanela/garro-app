@@ -975,7 +975,7 @@ function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img
     d[p]=Math.max(0,Math.min(255,r*255));d[p+1]=Math.max(0,Math.min(255,g*255));d[p+2]=Math.max(0,Math.min(255,b*255))}
   x.putImageData(D,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=map.flipY;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t.wrapS=map.wrapS;t.wrapT=map.wrapT;return EVT[i]=t}
 function applyEvoTex(i){const C=V.C;if(!C||!C.obj)return;C.obj.traverse(o=>{if(o.isMesh&&!o.userData.keep&&o.userData.baseMap){o.material.map=evoTex(i,o.userData.baseMap);o.material.needsUpdate=true}})}
-const ASSETV='72';function loadSkin(f){if(SKIN[f])return SKIN[f];return SKIN[f]=new Promise(res=>{const src=GLBDATA[f]?'data:image/jpeg;base64,'+GLBDATA[f]:f+'?v='+ASSETV;
+const ASSETV='78';function loadSkin(f){if(SKIN[f])return SKIN[f];return SKIN[f]=new Promise(res=>{const src=GLBDATA[f]?'data:image/jpeg;base64,'+GLBDATA[f]:f+'?v='+ASSETV;
   new THREE.TextureLoader().load(src,t=>{t.flipY=false;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;res(t)},undefined,()=>res(null))})}
 function dropTail(g,m){const w=g.attributes.uv2;if(!w)return g;g=g.clone();const p=g.attributes.position,B=m.TA;
   for(let i=0;i<p.count;i++){const k=w.getX(i);if(k<=0)continue;const x=p.getX(i),y=p.getY(i),z=p.getZ(i);p.setXYZ(i,x+(B[0]+(x-B[0])*.1-x)*k,y+(B[1]+(y-B[1])*.1-y)*k,z+(B[2]+(z-B[2])*.1-z)*k)}
@@ -993,20 +993,38 @@ function attachParts(obj,i,m){const sp0=SPEC[i],sp=Object.assign({},sp0,{x:sp0.x
   if(m.notail){const t=C.tail;t.position.set(m.TA[0]-m.tp[0],m.TA[1]-m.tp[1],m.TA[2]-m.tp[2]);t.scale.multiplyScalar(kB*1.15*(m.ts||1));tpG.add(t)}
   const wings=(C.wings||[]).map(w=>({w,z:w.rotation.z,s:Math.sign(w.position.x)||1}));
   return{hpG,tpG,wings,segs:C.segs||[]}}
-async function openGLB(i){setDet(i);
+// modelo 3D pronto para outras telas (Aventura): grandes = GLB (o evoluído quando houver), redondos = montados em código.
+// Volta um grupo com altura 1, pés em y=0 e olhando para +z. Não mexe no visualizador.
+async function montaModelo(i,evo){
+  if(i>=CH0){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
+    const b=new THREE.Box3().setFromObject(C.root),h=b.max.y-b.min.y||1;C.root.scale.setScalar(1/h);C.root.position.y=-b.min.y/h;return g}
+  const m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
+  let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;
+  let src;try{src=await loadGLB(m)}catch(e){if(m===m0)throw e;m=m0;src=await loadGLB(m)}
+  const obj=src.clone(true),skin=m.skin?await loadSkin(m.skin):null;
+  obj.traverse(o=>{if(o.isMesh){if(m.notail)o.geometry=dropTail(o.geometry,m);if(!o.geometry.attributes.normal)weldNormals(o.geometry);
+    const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;mm.roughness=.92;mm.metalness=0;o.material=mm}});
+  if(!m.evoM){try{if(m.HC)attachParts(obj,i,m);else attachExtras(obj,i,m)}catch(e){}}
+  obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=b.max.y-b.min.y||1,g=new THREE.Group();
+  obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);return g}
+// tira da cena qualquer modelo que tenha ficado de uma abertura anterior (evita dois bichinhos na tela)
+function tiraModelos(){if(!V.spin)return;for(const c of V.spin.children.slice())if(c.userData.modelo)V.spin.remove(c)}
+async function openGLB(i){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir de novo antes de terminar, só o último vale
   const evo=careStage(i)>0&&i<CH0,m0=MODELS[i];let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;if(!initViewer())return false;
   let src;try{src=await loadGLB(m)}catch(e){if(m===m0)return false;EVOFAIL[i]=1;delete GLB[m.file];m=m0;try{src=await loadGLB(m)}catch(e2){return false}}
+  if(tok!==V.abre)return false;
   const evoModel=m!==m0;
   if(V.C)V.spin.remove(V.C.root);if(V.T){V.spin.remove(V.T.root);V.T=null}
   const U={uHY:{value:0},uHP:{value:0},uHR:{value:0},uTail:{value:0},uT:{value:0},uWing:{value:0}};
   const obj=src.clone(true);
   const skin=m.skin?await loadSkin(m.skin):null;
+  if(tok!==V.abre)return false;
   obj.traverse(o=>{if(o.isMesh){if(m.notail)o.geometry=dropTail(o.geometry,m);if(!o.geometry.attributes.normal)weldNormals(o.geometry);
     const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;if(evo&&!evoModel&&mm.map){o.userData.baseMap=mm.map;mm.map=evoTex(i,mm.map)}else if(mm.map)o.userData.baseMap=mm.map;mm.roughness=.92;mm.metalness=0;deformMat(mm,m,U);o.material=mm;const dm=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking});deformMat(dm,m,U);o.customDepthMaterial=dm}});
   const box=new THREE.Box3().setFromObject(obj),sz=box.getSize(new THREE.Vector3()),k=2/Math.max(sz.x,sz.y,sz.z);
   const parts=m.evoM?null:(m.HC?attachParts(obj,i,m):attachExtras(obj,i,m));
   const roll=new THREE.Group(),root=new THREE.Group();obj.scale.setScalar(k);obj.position.y=-sz.y*k/2;roll.add(obj);roll.position.y=sz.y*k/2;root.add(roll);
-  root.position.y=-1;V.spin.add(root);
+  root.position.y=-1;tiraModelos();root.userData.modelo=1;V.spin.add(root);
   setFloor(i);castAll(root);
   V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts};V.mode='glb';V.chibi=false;V.sp={};
   {const st=careStage(i);V.C.gs=GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
@@ -1200,7 +1218,7 @@ function openProc(i){
   const sp=SPEC[i],C=build(sp);V.C=C;V.sp=sp;
   try{projectPhoto(C,i,sp)}catch(e){}addFur(C.root,sp,C);
   setFloor(i);castAll(C.root);
-  C.baseY=-1-C.feet;C.backY=-1+sp.s[1]*(sp.x.includes('shell')?1.5:1.02);C.root.position.y=C.baseY;V.spin.add(C.root);
+  C.baseY=-1-C.feet;C.backY=-1+sp.s[1]*(sp.x.includes('shell')?1.5:1.02);C.root.position.y=C.baseY;V.abre=(V.abre||0)+1;tiraModelos();C.root.userData.modelo=1;V.spin.add(C.root);
   C.root.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(C.root),sz=box.getSize(new THREE.Vector3());
   V.size={xz:Math.max(sz.x,sz.z),y:sz.y};
   Object.assign(V,{ry:-.7,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),blinkAt:1.5,blinkTo:0,wag:0,side:1,
@@ -1321,7 +1339,7 @@ function tset(s,dur,extra){TS.st=s;TS.stT=tnow();TS.until=TS.stT+dur;Object.assi
 function openTerra(){
   if(!initViewer()){detail(0);return}
   if(V.C)V.spin.remove(V.C.root);if(V.T)V.spin.remove(V.T.root);
-  V.mode='terra';V.T=buildTerra();V.C={root:V.T.root};V.spin.add(V.T.root);
+  V.abre=(V.abre||0)+1;tiraModelos();V.mode='terra';V.T=buildTerra();V.C={root:V.T.root};V.T.root.userData.modelo=1;V.spin.add(V.T.root);
   V.T.root.position.y=-1;V.T.root.updateMatrixWorld(true);
   const sz=new THREE.Box3().setFromObject(V.T.root).getSize(new THREE.Vector3());V.size={xz:Math.max(sz.x,sz.z)*.62,y:sz.y};
   Object.assign(V,{ry:-.75,rx:.12,vy:0,t0:performance.now(),taps:[]});
@@ -1539,7 +1557,7 @@ function openChibi(i,stage,pop){
   V.mode='creature';V.chibi=true;V.C=C;V.sp={h:.5,tl:'',bird:0};
   const gs=S.gs;C.gs=gs;C.root.scale.setScalar(gs);
   setFloor(i);castAll(C.root);
-  C.baseY=-1-C.feet*gs;C.backY=-1+.62*gs;C.root.position.y=C.baseY;V.spin.add(C.root);
+  C.baseY=-1-C.feet*gs;C.backY=-1+.62*gs;C.root.position.y=C.baseY;V.abre=(V.abre||0)+1;tiraModelos();C.root.userData.modelo=1;V.spin.add(C.root);
   if(!CHSZ[i])CHSZ[i]=chibiSize(i,2);V.size={xz:CHSZ[i].xz,y:CHSZ[i].y};
   Object.assign(V,{ry:-.5,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),blinkAt:1.5,blinkTo:0,wag:0,side:1,pop:pop?performance.now():0,
     S:{lid:0,ear:0,tailX:0,wagA:.2,wagS:5,tongue:0,hx:0,hy:0,hz:0,crouch:0,roll:0,paddle:0,scratch:0,shake:0,brow:0,flap:0}});
@@ -2076,7 +2094,7 @@ function openFox(i,pop){
   V.mode='creature';V.chibi=true;V.C=C;V.sp={h:.24,tl:'',bird:0};
   C.gs=gsOf(i,careStage(i));C.root.scale.setScalar(C.gs);
   setFloor(i);castAll(C.root);
-  C.baseY=-1-C.feet*C.gs;C.backY=-1+.62*C.gs;C.root.position.y=C.baseY;V.spin.add(C.root);
+  C.baseY=-1-C.feet*C.gs;C.backY=-1+.62*C.gs;C.root.position.y=C.baseY;V.abre=(V.abre||0)+1;tiraModelos();C.root.userData.modelo=1;V.spin.add(C.root);
   if(!FOXSZ[i])FOXSZ[i]=foxSize(i);V.size={xz:FOXSZ[i].xz,y:FOXSZ[i].y};
   Object.assign(V,{ry:-.5,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),blinkAt:1.5,blinkTo:0,wag:0,side:1,pop:pop?performance.now():0,
     S:{lid:0,ear:0,tailX:0,wagA:.2,wagS:5,tongue:0,hx:0,hy:0,hz:0,crouch:0,roll:0,paddle:0,scratch:0,shake:0,brow:0,flap:0}});
@@ -2087,7 +2105,13 @@ function openFox(i,pop){
 window.GARRO={
   online:()=>ONL&&!DEV,sb:()=>sb,sync:(a,x)=>syncEstado(a,x),
   coins:()=>coins,setCoins:n=>{coins=n;hud()},addCoinsLocal:n=>{coins+=n;bonus+=n;saveBonus();hud()},
-  coll:()=>coll,lvOf:i=>lvOf(i),CH0,banner:(t,s,w)=>banner(t,s,w),fanfare:()=>fanfare(),click:f=>{audio();click(f||600)}
+  coll:()=>coll,lvOf:i=>lvOf(i),CH0,banner:(t,s,w)=>banner(t,s,w),fanfare:()=>fanfare(),click:f=>{audio();click(f||600)},
+  // usados pela Aventura (js/aventura.js)
+  modelo:(i,evo)=>montaModelo(i,evo),THREE:()=>window.THREE,
+  name:i=>PLUSH[i].name,evName:i=>evName(i,1),sprite:(i,lv,giant)=>bSrc({i,lv,giant:giant?1:0}),EVO_LV,
+  xpLocal:(i,n)=>gainXp(i,n),xpSet:(i,x)=>{careOf(i).xp=x;saveCare()},
+  stoneLocal:k=>{INV.st[k]=(INV.st[k]||0)+1;saveInv()},stone:k=>STONES[k],
+  tone:(f,d,t,v)=>{audio();tone(f,d,t,v)},evento:(k,n)=>evento(k,n),hint:t=>{$('hint').textContent=t}
 };
 window.dispatchEvent(new Event('garro:pronto'));
 renderShelf();hud();
