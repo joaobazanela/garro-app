@@ -43,8 +43,30 @@ def gera(n,f,seed=7):
   while len(folhas)<3:
     z=rnd.uniform(10,L-12);x=xcam(z)+rnd.choice([-1,1])*rnd.uniform(4.5,8.5)
     if abs(x)<LARG/2-2 and all(math.hypot(x-a,z-b)>8 for a,b in folhas):folhas.append([round(x,2),round(z,2)])
+  # guardas: nas fases finais, folhas douradas vigiadas (elite + ajudante)
+  ng=0 if n<6 else 1 if n<8 else 2
+  lvmax=max(lv for _,lv in inim);forte=max(inim,key=lambda x:x[1])[0]
+  for q in range(ng):
+    fx,fz=folhas[q];grupo=[[forte,lvmax,round(fx+1.2,2),round(fz,2),'elite']]
+    if n>=8:i,lv=inim[q%len(inim)];grupo.append([i,lv,round(fx-1.2,2),round(fz+.6,2)])
+    camps.append({"x":fx,"z":fz,"inimigos":grupo,"guarda":True});livre.append((fx,fz,3.2))
+  # tipos: atiradores a partir da fase 3, curandeiro a partir da 8, elite também no último acampamento da fase 10
+  cada=0 if n<3 else 4 if n<6 else 3;c=0
+  for cp in camps:
+    if cp.get('guarda'):continue
+    for e in cp['inimigos']:
+      c+=1
+      if cada and c%cada==0:e.append('atirador')
+  if n>=8:
+    big=max((cp for cp in camps if not cp.get('guarda')),key=lambda cp:len(cp['inimigos']))
+    for e in big['inimigos']:
+      if len(e)==4:e.append('curandeiro');break
+  if chefe:
+    last=[cp for cp in camps if not cp.get('guarda')][-1];e=last['inimigos'][0]
+    if len(e)==4:e.append('elite')
+  # menos morangos nas fases finais
   morangos=[]
-  for q in range(3+n//3):
+  for q in range(4 if n<=3 else 3 if n<=6 else 2):
     z=rnd.uniform(8,L-8);x=xcam(z)+rnd.choice([-1,1])*rnd.uniform(2.2,3.4);morangos.append([round(x,2),round(z,2)])
   # árvores, pedras e cogumelos (fora do caminho, dos acampamentos e dos itens)
   arv,ped,cog=[],[],[]
@@ -70,12 +92,18 @@ def gera(n,f,seed=7):
           "acampamentos":camps,"folhas":folhas,"morangos":morangos,"arvores":arv,"pedras":ped,"cogumelos":cog,"arena":arena}
 p=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','data','aventura.json');D=json.load(open(p))
 for k,f in enumerate(D['mundos'][0]['fases']):
-  f.pop('mapa',None);f['mapa3d']=gera(k+1,f)
-  m=f['mapa3d'];print(f['id'],'L',m['comprimento'],'inimigos',sum(len(c['inimigos']) for c in m['acampamentos']),'árvores',len(m['arvores']))
+  f.pop('mapa',None);f['mapa3d']=gera(k+1,f);f['caveiras']=1+k//2
+  m=f['mapa3d'];tp=[e[4] for c in m['acampamentos'] for e in c['inimigos'] if len(e)>4];print(f['id'],'L',m['comprimento'],'inimigos',sum(len(c['inimigos']) for c in m['acampamentos']),'tipos',{t:tp.count(t) for t in set(tp)},'morangos',len(m['morangos']),'árvores',len(m['arvores']))
 D.pop('plataforma',None)
 D.setdefault('arena',{})
+# dificuldade que cresce fase a fase: [valor na 1ª fase, valor na última]; o jogo interpola pelas fases do mundo
+D.setdefault('curva',{"inimigo_vel":[2.2,3.3],"inimigo_recarga":[1.7,0.9],"inimigo_aviso":[0.65,0.32],"aggro":[6,9.5],"contato":[1.0,1.45],"tiro_vel":[5.5,8.5]})
+# tipos de inimigo (o 5º número de cada inimigo no mapa)
+D.setdefault('tipos',{"atirador":{"nome":"Atirador","icone":"🎯","recarga":2.8,"distancia":5,"vida":0.8},
+  "elite":{"nome":"Elite","icone":"🛡️","vida":2.2,"escudo":0.6,"tamanho":1.35,"dano":1.3,"pancada_raio":1.9,"pancada_aviso":0.75,"recarga":2.2},
+  "curandeiro":{"nome":"Curandeiro","icone":"💚","vida":0.75,"cura":0.22,"recarga":4.5,"raio":5.5,"distancia":5}})
 txt=json.dumps(D,ensure_ascii=False,indent=1)
 # mapas numa linha só por lista (o arquivo fica bem menor e legível)
 import re
-txt=re.sub(r'\[\s+(-?[\d.]+),\s+(-?[\d.]+)(?:,\s+(-?[\d.]+))?(?:,\s+(-?[\d.]+))?\s+\]',lambda m_:'['+','.join(g for g in m_.groups() if g is not None)+']',txt)
+txt=re.sub(r'\[\s+(-?[\d.]+),\s+(-?[\d.]+)(?:,\s+(-?[\d.]+))?(?:,\s+(-?[\d.]+))?(?:,\s+("[a-z]+"))?\s+\]',lambda m_:'['+','.join(g for g in m_.groups() if g is not None)+']',txt)
 open(p,'w').write(txt)
