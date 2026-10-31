@@ -22,10 +22,10 @@ const media=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const MB=media(STAT.slice(0,G.CH0).map(s=>(s[0]+s[1])/2)),MS=media(STAT.slice(G.CH0,G.LEG0||43).map(s=>(s[0]+s[1])/2));
 // o nível pesa muito: ataque, defesa e vida crescem juntos; bichinhos redondos são equiparados aos grandes
 function lutador(i,lv,o){o=o||{};const s=STAT[i],M=grande(i)?MB:MS,k=MB/M,a=(s[0]+M)/2*k,d=(s[1]+M)/2*k;
-  const P=1+LT.nivel_k*(lv-1),ev=(i<G.CH0&&lv>=G.EVO_LV)?LT.evoluido:1;
-  let atk=a*P*ev,def=d*P*ev,hp=(a+d)*P*ev*LT.vida_k*(o.heroi?LT.heroi_vida:1);
+  const P=1+LT.nivel_k*(lv-1),ev=G.isEvo(i,lv,o.rb)?LT.evoluido:1,RB=1+G.REB_B*(o.rb|0);
+  let atk=a*P*ev*RB,def=d*P*ev*RB,hp=(a+d)*P*ev*RB*LT.vida_k*(o.heroi?LT.heroi_vida:1);
   if(o.chefe){hp*=LT.chefe_vida;atk*=LT.chefe_ataque}
-  hp=Math.round(hp);return{i,lv,atk,def,hp,max:hp,el:ELEM[i],cd:0,defesa:false,chefe:!!o.chefe}}
+  hp=Math.round(hp);return{i,lv,rb:o.rb|0,atk,def,hp,max:hp,el:ELEM[i],cd:0,defesa:false,chefe:!!o.chefe}}
 const grupo=el=>(D.grupos&&D.grupos[el])||el;
 function elemMult(A,B){const a=grupo(A.el),b=grupo(B.el);if((D.vantagens[a]||[]).includes(b))return LT.vantagem;if((D.vantagens[b]||[]).includes(a))return LT.desvantagem;return 1}
 function dano(A,B,mult){const em=elemMult(A,B);let d=A.atk*mult*(1-LT.variacao+Math.random()*2*LT.variacao)*60/(60+B.def)*em;
@@ -97,7 +97,7 @@ function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('a
   h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+G.sprite(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
   h+='<small class="advrec">Recomendado: Nv '+recomendado(f)+' ou mais</small></div>';
   if(!meus.length)h+='<p class="advnote">Pegue uma pelúcia na máquina para começar a aventura.</p>';
-  h+='<div class="advpets">'+meus.map(i=>{const lv=G.lvOf(i),E=energia(i),el=ELEM[i];return '<button type="button" class="advpet'+(i===SEL?' sel':'')+(lv<recomendado(f)-4?' fraco':'')+'" data-i="'+i+'"><img src="'+G.sprite(i,lv)+'" alt=""><b>'+(lv>=G.EVO_LV&&i<G.CH0?G.evName(i):G.name(i))+'</b><small>Nv '+lv+' · '+(ELNAME[el]||'')+'</small>'+pips(E.e)+(E.e<EN.max?'<small class="advwait">+1 ⚡ em '+tempo(E.falta)+'</small>':'')+'</button>'}).join('')+'</div>';
+  h+='<div class="advpets">'+meus.map(i=>{const lv=G.lvOf(i),E=energia(i),el=ELEM[i];return '<button type="button" class="advpet'+(i===SEL?' sel':'')+(lv<recomendado(f)-4?' fraco':'')+'" data-i="'+i+'"><img src="'+G.sprite(i,lv,0,G.rbOf(i))+'" alt=""><b>'+(lv>=G.EVO_LV&&i<G.CH0?G.evName(i):G.name(i))+'</b><small>Nv '+lv+' · '+(ELNAME[el]||'')+'</small>'+pips(E.e)+(E.e<EN.max?'<small class="advwait">+1 ⚡ em '+tempo(E.falta)+'</small>':'')+'</button>'}).join('')+'</div>';
   if(SEL!==null){const E=energia(SEL),nm=nivelMin(f),lvs=G.lvOf(SEL);h+='<div class="advgo">'+(lvs<nm?'<button type="button" disabled>Precisa de Nv '+nm+'</button><small>'+G.name(SEL)+' ainda é fraco para esta fase. Cuide dele para subir de nível ou escolha outro bichinho.</small>':E.e>0?'<button type="button" id="advStart">Jogar! ▶</button>':'<button type="button" id="advRest">😴 Descansar · '+EN.descanso_preco+' 🪙</button><small>'+G.name(SEL)+' está cansado. Volta 1 ⚡ em '+tempo(E.falta)+', ou descanse agora.</small>')+'</div>'}
   $('advBody').innerHTML=h;
   const st=$('advStart');if(st)st.addEventListener('click',()=>comecar(k,SEL));
@@ -124,7 +124,7 @@ async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=ener
   const lv=G.lvOf(i);
   // mapa novo a cada partida (js/mapas.js): percurso e quantidade de bichinhos mudam; sem o gerador usa o mapa reserva do JSON
   let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=GARRO_MAPAS.novo(f.desafio?11:k+1,{inimigos:f.inimigos,chefe:f.chefe},!!f.desafio,D.mapa_variacao)}catch(e){console.warn('mapa',e)}
-  RUN={k,f,i,M:M3,hero:lutador(i,lv,{heroi:1}),fim:false,quit:0,leaves:0,dif:difDe(k)};
+  RUN={k,f,i,M:M3,hero:lutador(i,lv,{heroi:1,rb:G.rbOf(i)}),fim:false,quit:0,leaves:0,dif:difDe(k)};
   luta()}
 
 // ---------- a fase: mapa 3D visto de cima (joystick, luta em tempo real, habilidades) ----------
@@ -140,14 +140,14 @@ function tiposDa(f){const c={};for(const cp of (f.mapa3d&&f.mapa3d.acampamentos)
 const ESPECIAIS={fogo:['🔥','Chamas','cone'],agua:['🌊','Onda','onda'],planta:['🌿','Cipós','raiz'],raio:['⚡','Corrente','corrente'],gelo:['❄️','Nevasca','nova'],
   terra:['🪨','Tremor','tremor'],ar:['🌪️','Rajada','investida'],sombra:['🌑','Sombra Veloz','teleporte'],luz:['✨','Brilho Curador','cura'],veneno:['☠️','Névoa Tóxica','nuvem']};
 let TEC={},JOY={x:0,y:0};
-function nomeDe(i,lv){return lv>=G.EVO_LV&&i<G.CH0?G.evName(i):G.name(i)}
+function nomeDe(i,lv,rb){return G.isEvo(i,lv,rb)?G.evName(i):G.name(i)}
 function pausar(on){const R=RUN;if(!R||!R.r3||R.fim)return;R.pausaU=on;R.pausa=on;$('advPause').hidden=!on;TEC={};JOY.x=JOY.y=0;G.click(on?600:760)}
 function aviso(t,ms){const a=$('advAviso');if(!a)return;a.textContent=t;a.classList.add('on');clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.classList.remove('on'),ms||2600)}
 function luta(){TELA='luta';msg('');const R=RUN,f=R.f,h=R.hero;$('advTitle').textContent=f.nome;
   const pw=(BFX[h.el]&&BFX[h.el].e[0])||'✨',E=ESPECIAIS[grupo(h.el)]||ESPECIAIS.terra;R.esp=E;R.espOk=h.lv>=(AR.especial_nivel||10);
   const cor=ECOL[h.el]||'#ffb23a';
   $('advBody').innerHTML='<div class="advscene a3d" id="advScene" style="--el:'+cor+'"><canvas id="advCv"></canvas><div class="advdano" id="advDano"></div>'+
-    '<div class="advhud"><div class="advme"><span class="foto"><img src="'+G.sprite(R.i,h.lv)+'" alt=""><small>'+h.lv+'</small></span><div class="info"><b>'+nomeDe(R.i,h.lv)+'</b>'+
+    '<div class="advhud"><div class="advme"><span class="foto"><img src="'+G.sprite(R.i,h.lv,0,h.rb)+'" alt=""><small>'+h.lv+'</small></span><div class="info"><b>'+nomeDe(R.i,h.lv,h.rb)+'</b>'+
       '<div class="hp"><i id="advHpMe"></i><span id="advHpTxt"></span></div><div class="advobj"><span id="advObjE"></span><span class="advleaf" id="advLeaf"></span><span class="cav">'+caveiras(f)+'</span></div></div></div>'+
       '<div class="advdir"><canvas class="advmini" id="advMini" width="192" height="192"></canvas><button type="button" class="advpausa" id="advPausa" aria-label="Pausar">⏸</button></div></div>'+
     '<div class="advboss" id="advBoss" hidden><b>👑 '+(f.chefe?G.evName(f.chefe[0]):'')+' <small>Nv '+(f.chefe?f.chefe[1]:'')+'</small><span id="advHpBossTxt"></span></b><div class="hp"><i id="advHpBoss"></i></div></div>'+
@@ -257,7 +257,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   S.add(new T.HemisphereLight(0xfff2e0,0x2f4a32,1.05));const sol=new T.DirectionalLight(0xffe2c4,.95);sol.position.set(6,12,-5);S.add(sol);
   const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};const C3=await props3d();if(RUN!==R)return;R.w={M,...cenario(S,M,C3),ents:[],tiros:[],efeitos:[],nums:[]};
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
-  const heroEvo=R.i<G.CH0&&R.hero.lv>=G.EVO_LV;
+  const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
   const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1);hg.scale.setScalar(Hs);
   const hU=prepAndar(hg,redondo(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
   R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};

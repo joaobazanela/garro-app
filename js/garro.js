@@ -74,8 +74,8 @@ async function carregarEstadoExtra(){
       await syncEstado('import_local',{data:d});const {data:c2}=await sb.from('collection').select('plush_id,count');if(c2){coll={};c2.forEach(r=>{coll[r.plush_id]=r.count})}}
     const {data:inv,error:e1}=await sb.from('inventory').select('item,qty');
     if(inv&&!e1){INV.food=0;INV.st=INV.st.map(()=>0);inv.forEach(r=>{if(r.item==='food')INV.food=r.qty;else{const k=+r.item.split('_')[1];if(k>=0&&k<INV.st.length)INV.st[k]=r.qty}});saveInv()}
-    const {data:pc,error:e2}=await sb.from('plush_care').select('plush_id,xp,f,l,p,updated_at');
-    if(pc&&!e2){CARE={};pc.forEach(r=>{CARE[r.plush_id]={xp:r.xp,f:r.f,l:r.l,p:r.p,t:Date.parse(r.updated_at)||Date.now()}});saveCare()}
+    const {data:pc,error:e2}=await sb.from('plush_care').select('plush_id,xp,f,l,p,rebirths,stone_pending,updated_at');
+    if(pc&&!e2){CARE={};pc.forEach(r=>{CARE[r.plush_id]={xp:r.xp,f:r.f,l:r.l,p:r.p,rb:r.rebirths|0,sp:r.stone_pending|0,t:Date.parse(r.updated_at)||Date.now()}});saveCare()}
     const {data:gs,error:e3}=await sb.from('giants').select('plush_id,count,evolved');
     if(gs&&!e3){GCOLL={};GEVO={};gs.forEach(r=>{if(r.count>0){GCOLL[r.plush_id]=r.count;if(r.evolved)GEVO[r.plush_id]=1}});saveG()}
   }catch(e){console.warn('estado extra',e)}
@@ -1641,7 +1641,10 @@ function saveCare(){try{localStorage.setItem(CARE_KEY,JSON.stringify(CARE))}catc
 const DECAY=GD.regras.DECAY;// pontos por minuto
 const XPG=GD.regras.XPG;
 // the first 20 plushes keep their painted look: they only grow a bit; the 15 round ones also change shape and color
-const GROW=GD.regras.GROW;const EVO_LV=50;
+const GROW=GD.regras.GROW;
+// regras da pedra de evolução (data/regras.json → EVOLUCAO): forma evoluída no Nv 30; 2 pedras = +1 nível; no Nv 100 renasce (volta ao 1, ganha força)
+const EVO=Object.assign({nivel:30,pedras_por_nivel:2,renascer_nivel:100,bonus_por_renascimento:.1},GD.regras.EVOLUCAO||{});
+const EVO_LV=EVO.nivel,PEDRAS_NV=EVO.pedras_por_nivel,REB_B=EVO.bonus_por_renascimento;
 // ataque e defesa no nível 1: os grandes são bem mais fortes que os redondos (cada um tem seu jeito)
 const STAT=GD.pelucias.STAT;
 // curva de níveis (data/regras.json → NIVEL): XP total para o nível N = linear×(N−1) + cubo×(N−1)³ (como as curvas cúbicas do Pokémon)
@@ -1653,20 +1656,23 @@ function lvOf(i){return lvFromXp(i,careOf(i).xp)}
 // XP salvo no aparelho na escala antiga (4 ou 5 XP por nível): converte uma vez mantendo o nível (o servidor converte na migração 0011)
 try{if(localStorage.getItem('garro-xp-curva')!=='2'){for(const k in CARE){const i=+k,c=CARE[k];if(!c||!(c.xp>0)||!PLUSH[i])continue;const dv=grande(i)?4:5,cap=capOf(i),L0=Math.min(cap,1+Math.floor(c.xp/dv)),rest=c.xp-(L0-1)*dv;
     c.xp=L0>=cap?xpTotal(i,cap):xpTotal(i,L0)+Math.floor(rest/dv*(xpTotal(i,L0+1)-xpTotal(i,L0)))}saveCare();localStorage.setItem('garro-xp-curva','2')}}catch(e){}
-function statsAt(i,lv){const b=STAT[i],ev=i<CH0&&lv>=EVO_LV?1.35:1,gr=grande(i)?.04:.03,atk=Math.round(b[0]*(1+(lv-1)*gr)*ev),df=Math.round(b[1]*(1+(lv-1)*gr)*ev);return{lv,atk,def:df,hp:Math.round((atk+df)*2+lv*5)}}
-function renderPow(i){const e=$('vPow');if(!e)return;const S=statsAt(i,lvOf(i));e.innerHTML='<span>Nv <b>'+S.lv+'</b></span><span>⚔️ <b>'+S.atk+'</b></span><span>🛡️ <b>'+S.def+'</b></span><span>❤️ <b>'+S.hp+'</b></span>'}
+function rbOf(i){return i<CH0&&CARE[i]?CARE[i].rb|0:0}
+// evoluído = chegou ao nível da evolução (ou já renasceu: renascer não perde a forma)
+function isEvo(i,lv,rb){return i<CH0&&(lv>=EVO_LV||(rb|0)>0)}
+function statsAt(i,lv,rb){rb=rb|0;const b=STAT[i],ev=(isEvo(i,lv,rb)?1.35:1)*(1+REB_B*rb),gr=grande(i)?.04:.03,atk=Math.round(b[0]*(1+(lv-1)*gr)*ev),df=Math.round(b[1]*(1+(lv-1)*gr)*ev);return{lv,atk,def:df,hp:Math.round((atk+df)*2+lv*5)}}
+function renderPow(i){const e=$('vPow');if(!e)return;const S=statsAt(i,lvOf(i),rbOf(i));e.innerHTML=(rbOf(i)?'<span>🔄 <b>'+rbOf(i)+'</b></span>':'')+'<span>Nv <b>'+S.lv+'</b></span><span>⚔️ <b>'+S.atk+'</b></span><span>🛡️ <b>'+S.def+'</b></span><span>❤️ <b>'+S.hp+'</b></span>'}
 const EVN=GD.pelucias.EVN;
 const ECOL=GD.pelucias.ECOL;
 function evName(i,st){const n=PLUSH[i].name;return st>0?(EVN[n]||n):n}
 function careOf(i){let c=CARE[i];const now=Date.now();
-  if(!c){c=CARE[i]={xp:0,f:55,l:55,p:55,t:now};saveCare()}
+  if(!c){c=CARE[i]={xp:0,f:55,l:55,p:55,rb:0,sp:0,t:now};saveCare()}
   const mins=Math.max(0,(now-c.t)/60000);if(mins>.02){for(const k in DECAY)c[k]=Math.max(0,c[k]-DECAY[k]*mins);c.t=now}
   return c}
 function careXp(i){return careOf(i).xp}
 // quanto falta para o próximo nível (barra de XP como no Pokémon)
 function xpPct(i){const lv=lvOf(i);if(lv>=capOf(i))return 100;const a=xpTotal(i,lv),b=xpTotal(i,lv+1);return Math.max(0,Math.min(100,(careOf(i).xp-a)/(b-a)*100))}
 function xpTxt(i){const lv=lvOf(i),a=xpTotal(i,lv),b=xpTotal(i,lv+1);return 'XP '+Math.max(0,careOf(i).xp-a)+'/'+(b-a)}
-function careStage(i){return isLeg(i)?0:i>=CH0?2:lvOf(i)>=EVO_LV?1:0}
+function careStage(i){return isLeg(i)?0:i>=CH0?2:isEvo(i,lvOf(i),rbOf(i))?1:0}
 function gsOf(i,st){return i>=CH0?1:GROW[st].gs}
 function refreshVStats(i){const p=PLUSH[i],st=careStage(i);$('vStats').textContent=Math.round(p.cm*gsOf(i,st))+' cm · '+p.g+' g · pego '+(coll[i]||0)+'x'+(i>=CH0?'':' · '+(st?'Evoluído':'Base'))+(GCOLL[i]?' · 🏆 gigante'+(GEVO[i]?' evoluído':'')+' ×'+GCOLL[i]:'');if(i<CH0)$('vName').textContent=evName(i,st);renderPow(i)}
 function renderCare(){
@@ -1675,13 +1681,31 @@ function renderCare(){
   if(isLeg(i)){$('cStage').textContent='✦ Lendário · '+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+' · mais forte que as pelúcias grandes';$('cXpBar').style.width=xpPct(i)+'%'}
   else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+' · 2 repetidas = 1 moeda';$('cXpBar').style.width=xpPct(i)+'%'}
   else{$('cStage').textContent=st?'★ '+evName(i,1):PLUSH[i].name;
-    $('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(st?' · forma evoluída!':' · evolui no Nv '+EVO_LV);
+    $('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(st?' · forma evoluída!':' · evolui no Nv '+EVO_LV)+(rbOf(i)?' · 🔄 '+rbOf(i)+'× (+'+Math.round(REB_B*rbOf(i)*100)+'% força)':'');
     $('cXpBar').style.width=xpPct(i)+'%'}
   for(const [k,id,b] of [['f','mF','cFeed'],['l','mL','cPet'],['p','mP','cPlay']]){$(id).style.width=Math.round(c[k])+'%';$(b).classList.toggle('low',c[k]<25)}
-  updFood();const sb=$('cStone');if(sb){const sk=STONE_OF(i),n=INV.st[sk]||0;sb.hidden=!(i<CH0&&!st);sb.classList.toggle('buy',!n);sb.innerHTML=n?'💎 Evoluir agora com '+STONES[sk].name+' <small>(você tem '+n+')</small>':'💎 Evoluir com '+STONES[sk].name+' <small>· você não tem · comprar '+PRICE.stone+' 🪙</small>'}
+  updFood();const sb=$('cStone'),rbb=$('cRebirth');
+  if(rbb){const topo=i<CH0&&lv>=cap;rbb.hidden=!topo;rbb.dataset.armed='';rbb.innerHTML='🔄 Renascer <small>· volta ao Nv 1 · +'+Math.round(REB_B*100)+'% de força</small>'}
+  if(sb){const sk=STONE_OF(i),n=INV.st[sk]||0,prim=rbOf(i)===0&&lv<EVO_LV,sp=c.sp|0;sb.hidden=!(i<CH0&&lv<cap);sb.classList.toggle('buy',!n);
+    const efeito=prim?'evolui já · vai ao Nv '+EVO_LV:'pedra '+(sp+1)+'/'+PEDRAS_NV+' para +1 nível';
+    sb.innerHTML=n?'💎 Usar '+STONES[sk].name+' <small>('+efeito+' · você tem '+n+')</small>':'💎 '+STONES[sk].name+' <small>· você não tem · comprar '+PRICE.stone+' 🪙</small>'}
 }
 function updFood(){const s=$('cFeed')&&$('cFeed').querySelector('span');if(s)s.textContent='🍓 Comida ×'+INV.food}
-function useStone(){const i=V.cur;if(i===undefined||i>=CH0)return;const k=STONE_OF(i);if(lvOf(i)>=EVO_LV)return;if((INV.st[k]||0)<=0){audio();renderShop();$('shMsg').textContent='Você não tem '+STONES[k].name+': compre aqui 💎';$('shop').hidden=false;return}const c=careOf(i);INV.st[k]--;saveInv();evento('stone');srv('use_stone',{plushId:i,stone:k},r=>{INV.st[k]=r.stones;const cc=careOf(i);cc.xp=Math.max(cc.xp,r.xp);saveInv();saveCare()});audio();[523,784,1046,1568].forEach((f,q)=>setTimeout(()=>tone(f,.14,'triangle',.1),q*90));for(let q=0;q<6;q++)setTimeout(()=>float('💎','love'),q*90);gainXp(i,Math.max(1,(EVO_LV-1)*4-c.xp));renderCare()}
+function useStone(){const i=V.cur;if(i===undefined||i>=CH0)return;const k=STONE_OF(i),lv=lvOf(i);if(lv>=capOf(i))return;if((INV.st[k]||0)<=0){audio();renderShop();$('shMsg').textContent='Você não tem '+STONES[k].name+': compre aqui 💎';$('shop').hidden=false;return}
+  const c=careOf(i),prim=rbOf(i)===0&&lv<EVO_LV;let alvo=c.xp;
+  if(prim)alvo=xpTotal(i,EVO_LV);// 1ª pedra: evolui na hora e vai ao Nv 30
+  else if((c.sp|0)+1>=PEDRAS_NV){c.sp=0;alvo=xpTotal(i,lv+1)}// a cada 2 pedras, +1 nível
+  else{c.sp=(c.sp|0)+1;float('💎 '+c.sp+'/'+PEDRAS_NV,'xp')}
+  INV.st[k]--;saveInv();evento('stone');
+  srv('use_stone',{plushId:i,stone:k},r=>{INV.st[k]=r.stones;const cc=careOf(i);cc.xp=Math.max(cc.xp,r.xp);cc.sp=r.pending|0;cc.rb=r.rebirths|0;saveInv();saveCare();if(V.open&&V.cur===i)renderCare()});
+  audio();[523,784,1046,1568].forEach((f,q)=>setTimeout(()=>tone(f,.14,'triangle',.1),q*90));for(let q=0;q<6;q++)setTimeout(()=>float('💎','love'),q*90);
+  saveCare();if(alvo>c.xp)gainXp(i,alvo-c.xp);renderCare()}
+function rebirth(){const i=V.cur;if(i===undefined||i>=CH0||lvOf(i)<capOf(i))return;const b=$('cRebirth');
+  if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Toque de novo: renascer ('+PLUSH[i].name+' volta ao Nv 1 e fica +'+Math.round(REB_B*100)+'% mais forte)';return}
+  const c=careOf(i);c.xp=0;c.sp=0;c.rb=(c.rb|0)+1;saveCare();evento('rebirth');
+  srv('rebirth',{plushId:i},r=>{const cc=careOf(i);cc.xp=r.xp;cc.rb=r.rebirths|0;cc.sp=0;saveCare();if(V.open&&V.cur===i){renderCare();refreshVStats(i)}});
+  audio();fanfare();for(let q=0;q<8;q++)setTimeout(()=>float('🔄','love'),q*90);banner('🔄 Renasceu!',PLUSH[i].name+' · '+c.rb+'× · +'+Math.round(REB_B*c.rb*100)+'% de força',true);
+  renderCare();refreshVStats(i)}
 const SELL_PRICE=1,SELL_BIG=30,SELL_GIANT=40;// redondo 1 · bicho especial (que evolui) 30 · pelúcia gigante 40
 function renderSell(i){const b=$('cSell'),bg=$('cSellG');if(!b)return;if(isLeg(i)){b.hidden=true;bg.hidden=true;renderGiantRow(i);return}const n=coll[i]||0,big=i<CH0;b.hidden=false;b.disabled=n<1;b.dataset.armed='';
   b.textContent=n>=1?'💰 Vender 1 · +'+(big?SELL_BIG:SELL_PRICE)+' moeda'+(big?'s':'')+' (tenho '+n+')':'💰 Nenhum para vender';
@@ -1724,9 +1748,9 @@ function buyThing(kind,k){const pr=PRICE[kind];if(!canPay(pr)){$('shMsg').textCo
 $('btnShop').addEventListener('click',()=>{audio();renderShop();$('shop').hidden=false});
 $('shClose').addEventListener('click',()=>{$('shop').hidden=true});
 $('buyFood').addEventListener('click',()=>buyThing('food'));
-$('cStone').addEventListener('click',useStone);
+$('cStone').addEventListener('click',useStone);$('cRebirth').addEventListener('click',rebirth);
 /* ---------- inventário ---------- */
-function canEvolveWith(i,k){return i<CH0&&(coll[i]||0)>0&&STONE_OF(i)===k&&lvOf(i)<EVO_LV}
+function canEvolveWith(i,k){return i<CH0&&(coll[i]||0)>0&&STONE_OF(i)===k&&lvOf(i)<capOf(i)}
 function renderInv(){$('ivFood').textContent=INV.food;const g=$('ivStones');g.innerHTML='';
   STONES.map((p,k)=>k).sort((a,b)=>((INV.st[b]||0)>0)-((INV.st[a]||0)>0)||a-b).forEach(k=>{const p=STONES[k],n=INV.st[k]||0,d=document.createElement('div');d.className='shst ivst'+(n?'':' zero');
     const who=[];for(let i=0;i<CH0;i++)if(STONE_OF(i)===k)who.push(PLUSH[i].name);
@@ -1742,15 +1766,15 @@ $('ivClose').addEventListener('click',()=>{$('inv').hidden=true});
 $('ivBuy').addEventListener('click',()=>{$('inv').hidden=true;renderShop();$('shop').hidden=false});
 /* ---------- batalha: cada bichinho com nível, ataque e defesa ---------- */
 let BT=null;
-function bStats(f){const S=statsAt(f.i,f.lv);if(f.giant){const k=GEVO[f.i]&&f.giant?1.6:1.35;S.atk=Math.round(S.atk*k);S.def=Math.round(S.def*k);S.hp=Math.round(S.hp*(k+.25))}return Object.assign({},f,S)}
+function bStats(f){const S=statsAt(f.i,f.lv,f.rb);if(f.giant){const k=GEVO[f.i]&&f.giant?1.6:1.35;S.atk=Math.round(S.atk*k);S.def=Math.round(S.def*k);S.hp=Math.round(S.hp*(k+.25))}return Object.assign({},f,S)}
 function pickOpp(my){const myLv=lvOf(my);const same=Math.random()<.75;let j;do{j=Math.floor(Math.random()*NPL)}while(j===my||(same&&(j<CH0)!==grande(my)));const lv=Math.max(1,Math.min(capOf(j),Math.round(myLv*(.75+Math.random()*.5))));return bStats({i:j,lv,giant:j<CH0&&Math.random()<.12?1:0})}
-function bName(f){return (f.giant?'🏆 '+(GEVO[f.i]?'Gigante★ ':'Gigante '):'')+evName(f.i,f.i<CH0&&(f.lv>=EVO_LV||(f.giant&&GEVO[f.i]))?1:0)}
+function bName(f){return (f.giant?'🏆 '+(GEVO[f.i]?'Gigante★ ':'Gigante '):'')+evName(f.i,f.i<CH0&&(isEvo(f.i,f.lv,f.rb)||(f.giant&&GEVO[f.i]))?1:0)}
 // imagens da luta: todos desenhados de perfil OLHANDO PARA A DIREITA. O da esquerda fica como está, o da direita é espelhado: sempre cara a cara.
 const BSPR=GD.sprites_luta.BSPR,BSPRE=GD.sprites_luta.BSPRE;const EVOSPR=BSPRE;// coleção usa as mesmas imagens evoluídas
-function bSrc(f){const ev=f.i<CH0&&(f.lv>=EVO_LV||(f.giant&&GEVO[f.i]));return (ev&&BSPRE[f.i]?BSPRE[f.i].img:null)||(BSPR[f.i]?BSPR[f.i].img:null)||(ev&&EVOSPR[f.i]?EVOSPR[f.i].img:PLUSH[f.i].img)}
+function bSrc(f){const ev=f.i<CH0&&(isEvo(f.i,f.lv,f.rb)||(f.giant&&GEVO[f.i]));return (ev&&BSPRE[f.i]?BSPRE[f.i].img:null)||(BSPR[f.i]?BSPR[f.i].img:null)||(ev&&EVOSPR[f.i]?EVOSPR[f.i].img:PLUSH[f.i].img)}
 function bSize(){const a=BT&&BT.me,b=BT&&BT.op;if(!a||!b)return;const any=a.giant||b.giant;for(const [side,f] of [['Me',a],['Op',b]]){const im=$('b'+side+'Img');im.classList.toggle('giant',!!f.giant);im.classList.toggle('small',!!(any&&!f.giant))}}
 function bFill(side,f){const im=$('b'+side+'Img');im.src=bSrc(f);setTimeout(bSize,0);const fl=side!=='Me';im.dataset.flip=fl?'1':'0';im.style.transform=fl?'scaleX(-1)':'';$('b'+side+'Name').textContent=bName(f);$('b'+side+'St').textContent=(ELNAME[ELEM[f.i]]||'')+' · Nv '+f.lv+' · ⚔️ '+f.atk+' · 🛡️ '+f.def+' · ❤️ '+f.hp;$('b'+side+'Hp').style.width='100%'}
-function openBattle(gi){const i=V.cur;if(i===undefined)return;audio();BT={me:bStats({i,lv:lvOf(i),giant:gi===true&&GCOLL[i]>0?1:0}),busy:false,done:false};BT.op=pickOpp(i);
+function openBattle(gi){const i=V.cur;if(i===undefined)return;audio();BT={me:bStats({i,lv:lvOf(i),rb:rbOf(i),giant:gi===true&&GCOLL[i]>0?1:0}),busy:false,done:false};BT.op=pickOpp(i);
   bFill('Me',BT.me);bFill('Op',BT.op);bIdle();$('bRes').innerHTML='Quem tem mais poder leva vantagem, mas a sorte conta!';$('bGo').disabled=$('bOther').disabled=$('bClose').disabled=false;$('bGo').textContent='⚔️ Lutar!';$('battle').hidden=false}
 function simBattle(a,b){let ha=a.hp,hb=b.hp,turn=Math.random()<.5?0:1;const log=[];
   for(let r=0;r<80&&ha>0&&hb>0;r++){const A=turn?b:a,D=turn?a:b;let d=Math.max(2,Math.round(A.atk*(.8+Math.random()*.4)-D.def*.45));const crit=Math.random()<.1;if(crit)d=Math.round(d*1.5);
@@ -2191,12 +2215,12 @@ window.GARRO={
   coll:()=>coll,lvOf:i=>lvOf(i),CH0,banner:(t,s,w)=>banner(t,s,w),fanfare:()=>fanfare(),click:f=>{audio();click(f||600)},
   // usados pela Aventura (js/aventura.js)
   modelo:(i,evo)=>montaModelo(i,evo),THREE:()=>window.THREE,
-  name:i=>PLUSH[i].name,evName:i=>evName(i,1),sprite:(i,lv,giant)=>bSrc({i,lv,giant:giant?1:0}),EVO_LV,
+  name:i=>PLUSH[i].name,evName:i=>evName(i,1),sprite:(i,lv,giant,rb)=>bSrc({i,lv,rb:rb|0,giant:giant?1:0}),EVO_LV,
   xpLocal:(i,n)=>gainXp(i,n),xpSet:(i,x)=>{careOf(i).xp=x;saveCare()},xpTotal,lvFromXp,xp:i=>careOf(i).xp,xpBar:i=>({pct:xpPct(i),txt:lvOf(i)>=capOf(i)?'Nível máximo':'Nv '+lvOf(i)+' · '+xpTxt(i)}),
   stoneLocal:k=>{INV.st[k]=(INV.st[k]||0)+1;saveInv()},stone:k=>STONES[k],
   tone:(f,d,t,v)=>{audio();tone(f,d,t,v)},evento:(k,n)=>evento(k,n),hint:t=>{$('hint').textContent=t},
   // usados pelos Lendários (js/lendarios.js)
-  LEG0,isLeg:i=>isLeg(i),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i)),
+  LEG0,isLeg:i=>isLeg(i),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i),rbOf(i)),rbOf:i=>rbOf(i),isEvo,REB_B,
   abrir:i=>openViewer(i),estante:()=>renderShelf(),collAdd:(i,n)=>{coll[i]=(coll[i]||0)+(n||1);saveX();renderShelf()},collSet:(i,n)=>{coll[i]=n;saveX()},
   hud:()=>hud(),maquina:()=>MACH,
   glb:f=>loadGLB({file:f}).then(g=>g.clone(true))
