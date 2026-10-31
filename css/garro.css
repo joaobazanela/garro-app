@@ -440,3 +440,15 @@ style#btnMis{position:relative}
 .advnode.lenda i{color:#e8c8ff}
 .advfase.lenda{background:radial-gradient(120% 100% at 50% 0%,rgba(140,80,220,.45),rgba(0,0,0,.35));box-shadow:inset 0 0 0 1px rgba(220,180,255,.4)}
 .advlabel.lenda{background:linear-gradient(90deg,#7a3ad0,#c88aff);color:#fff}
+/* Ninho: ovo em 3D */
+.ovo .ver3d{position:relative;border:0;background:none!important;padding:0!important;width:auto!important;box-shadow:none!important;cursor:pointer}
+.ovo .ver3d i{position:absolute;right:-4px;bottom:2px;font-style:normal;font-size:10px;font-weight:900;background:rgba(0,0,0,.6);color:#fff;border-radius:8px;padding:1px 5px}
+.ovo3d{position:fixed;inset:0;z-index:85;background:radial-gradient(circle at 50% 40%,rgba(110,60,180,.95),rgba(10,4,16,.98));display:grid;grid-template-rows:auto 1fr auto auto auto;gap:6px;padding:14px 16px 20px;color:#fff;text-align:center}
+.o3top{display:flex;justify-content:space-between;align-items:center}.o3top b{font-family:var(--display);font-weight:400;font-size:22px;color:#f0dcff}
+.o3x{width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer}
+.o3cena{position:relative;min-height:0}.o3cena canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.o3load{position:absolute;inset:0;display:grid;place-items:center;color:#d8c8f0;font-weight:800}
+.o3flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .45s}.o3flash.on{opacity:1}
+.o3dias{color:#d8c8f0;font-weight:800}.o3dica{margin:0;color:#ffe7a8;font-weight:800;min-height:20px}
+.o3b{display:grid;gap:8px}.o3b button{font:inherit;font-weight:900;font-size:17px;border:0;border-radius:14px;padding:13px;background:linear-gradient(#ffb23a,#e07a12);color:#2a1200;cursor:pointer;box-shadow:0 5px 0 #8a4a08}
+.o3b button:disabled{opacity:.5}.o3b button.dev{background:#3a3a4a;color:#cfd;font-size:12px;box-shadow:none;padding:8px}

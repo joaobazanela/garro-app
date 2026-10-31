@@ -61,23 +61,24 @@ function ninho(){const B=box(),d=diam();$('nDiam').textContent=d===Infinity?'∞
   let h='<div class="shsec">Seus ovos <small>· dê carinho 1 vez por dia; cada ovo tem um tempo secreto para chocar</small></div>';
   if(!ovos.length)h+='<p class="shnote">Você ainda não tem ovos. Tente a 🥚 Máquina de Ovos, o 👑 Desafio Lendário da Aventura ou compre na loja abaixo.</p>';
   h+='<div class="ninhovos">'+ovos.map(o=>{const x=leg(o.leg),feito=o.last===hj;
-    return '<div class="ovo h'+(o.hint|0)+'"><img src="img/lendarios/ovo_'+x.slug+'.webp" alt=""><b>Ovo de '+x.nome+'</b><small>'+o.days+' dia'+(o.days===1?'':'s')+' de carinho</small><small class="dica">'+dica(o)+'</small>'+
+    return '<div class="ovo h'+(o.hint|0)+'"><button type="button" class="ver3d" data-ver="'+o.id+'" aria-label="Ver o ovo em 3D"><img src="img/lendarios/ovo_'+x.slug+'.webp" alt=""><i>👆 3D</i></button><b>Ovo de '+x.nome+'</b><small>'+o.days+' dia'+(o.days===1?'':'s')+' de carinho</small><small class="dica">'+dica(o)+'</small>'+
       '<button type="button" data-ovo="'+o.id+'"'+(feito?' disabled':'')+'>'+(feito?'✓ Carinho de hoje feito':'🤍 Dar carinho')+'</button>'+(dev()&&!G.online()?'<button type="button" class="dev" data-pula="'+o.id+'">⏩ dev: pular 1 dia</button>':'')+'</div>'}).join('')+'</div>';
   h+='<div class="shsec" id="nLoja">Loja de ovos <small>· '+LJ.preco_ovo_diamantes+' 💎 cada</small></div><div class="lojaovos">'+LS.map((x,k)=>'<button type="button" class="lovo" data-compra="'+k+'"'+(d<LJ.preco_ovo_diamantes?' disabled':'')+'><img src="img/lendarios/ovo_'+x.slug+'.webp" alt=""><b>'+x.nome+'</b><i>'+LJ.preco_ovo_diamantes+' 💎</i></button>').join('')+'</div>';
   h+='<p class="shnote"><b>Como ganhar 💎 (raros):</b> '+DM.chefe_do_mundo+' 💎 na 1ª vitória contra o chefão de cada mundo da Aventura · '+DM.mundo_3_estrelas+' 💎 com 3 estrelas em todas as fases de um mundo · 1% de chance a cada pelúcia gigante pega.</p>';
   $('nBody').innerHTML=h}
-$('nBody').addEventListener('click',e=>{const c=e.target.closest('[data-ovo]');if(c){carinho(+c.dataset.ovo,c);return}
+$('nBody').addEventListener('click',e=>{const v=e.target.closest('[data-ver]');if(v){ver3d(+v.dataset.ver);return}
+  const c=e.target.closest('[data-ovo]');if(c){carinho(+c.dataset.ovo,c);return}
   const p=e.target.closest('[data-pula]');if(p){const o=L.ovos.find(x=>x.id===+p.dataset.pula);if(o){o.last=null;saveL();ninho()}return}
   const b=e.target.closest('[data-compra]');if(b)comprar(+b.dataset.compra,b)});
 
 async function carinho(id,btn){const B=box(),o=B.ovos.find(x=>x.id===id);if(!o||o.nasceu)return;btn.disabled=true;G.tone(880,.12,'sine',.06);
   if(G.online()){const r=await G.sync('egg_care',{eggId:id});
     if(!r||r.error||typeof r.days!=='number'){msg('Não deu para dar carinho agora. Tente de novo.');btn.disabled=false;return}
-    o.days=r.days;o.hint=r.hint;o.last=hoje();if(r.hatched){o.nasceu=true;G.collSet(r.nasceu,(G.coll()[r.nasceu]||0)+1);if(typeof r.xp==='number')G.xpSet(r.nasceu,r.xp);nascer(o.leg)}
+    o.days=r.days;o.hint=r.hint;o.last=hoje();if(r.hatched){o.nasceu=true;G.collSet(r.nasceu,(G.coll()[r.nasceu]||0)+1);if(typeof r.xp==='number')G.xpSet(r.nasceu,r.xp);chocar(o)}
     else msg(r.counted?'🤍 Carinho de hoje dado! '+dica(o):'Você já deu carinho hoje. Volte amanhã!',r.counted)}
   else{if(o.last!==hoje()){o.days++;o.last=hoje()}o.hint=Math.min(3,Math.floor(o.days*4/o.need));
-    if(o.days>=o.need){o.nasceu=true;const i=G.LEG0+o.leg;G.collAdd(i,1);G.xpSet(i,Math.max(0,(CH.nivel_ao_nascer-1)*4));nascer(o.leg)}else msg('🤍 Carinho de hoje dado! '+dica(o),true);saveL()}
-  G.evento('pet');tudo()}
+    if(o.days>=o.need){o.nasceu=true;const i=G.LEG0+o.leg;G.collAdd(i,1);G.xpSet(i,Math.max(0,(CH.nivel_ao_nascer-1)*4));chocar(o)}else msg('🤍 Carinho de hoje dado! '+dica(o),true);saveL()}
+  G.evento('pet');if(OV&&OV.id===id&&!o.nasceu){OV.pulo=1;OV.dica.textContent=dica(o);OV.d.querySelector('.o3dias').textContent=o.days+' dia'+(o.days===1?'':'s')+' de carinho';const b=$('o3Pet');if(b){b.disabled=o.last===hoje();b.textContent=b.disabled?'✓ Carinho de hoje feito':'🤍 Dar carinho'}}tudo()}
 
 // ovo novo (máquina, desafio, loja). Sem login sorteia aqui os dias secretos.
 function ovoLocal(k,src){const need=CH.dias_min+Math.floor(Math.random()*(CH.dias_max-CH.dias_min+1));L.ovos.push({id:++L.seq,leg:k,need,days:0,last:null,hint:0,src});saveL()}
@@ -85,6 +86,35 @@ async function comprar(k,btn){const p=LJ.preco_ovo_diamantes,x=leg(k);if(diam()<
   if(G.online()){const r=await G.sync('egg_buy',{leg:k});if(!r||r.error||typeof r.diamonds!=='number'){msg('Não deu para comprar agora. Tente de novo.');btn.disabled=false;return}S.diam=r.diamonds;await carregar()}
   else{if(!dev())L.diam-=p;ovoLocal(k,'loja')}
   G.fanfare();msg('🥚 Ovo de '+x.nome+' foi para o ninho!',true);tudo()}
+
+// ---------- ovo em 3D (modelos em models/lendarios/ovo_<nome>.glb): gira, balança conforme a dica e racha ao chocar ----------
+let OV=null;
+function ver3d(id){const o=box().ovos.find(x=>x.id===id);if(!o)return;const x=leg(o.leg),T=G.THREE();if(!T)return;fecha3d();G.click(700);
+  const d=document.createElement('div');d.className='ovo3d';
+  d.innerHTML='<div class="o3top"><b>Ovo de '+x.nome+'</b><button type="button" class="o3x" aria-label="Fechar">✕</button></div><div class="o3cena"><canvas></canvas><div class="o3load">Chocando a imagem…</div><div class="o3flash"></div></div>'+
+    '<small class="o3dias">'+o.days+' dia'+(o.days===1?'':'s')+' de carinho</small><p class="o3dica"></p><div class="o3b"><button type="button" id="o3Pet"'+(o.last===hoje()?' disabled':'')+'>'+(o.last===hoje()?'✓ Carinho de hoje feito':'🤍 Dar carinho')+'</button>'+(dev()&&!G.online()?'<button type="button" class="dev" id="o3Pula">⏩ dev: pular 1 dia</button>':'')+'</div>';
+  document.body.appendChild(d);const cv=d.querySelector('canvas'),R_=new T.WebGLRenderer({canvas:cv,antialias:true,alpha:true});R_.setPixelRatio(Math.min(2,window.devicePixelRatio||1));R_.outputEncoding=T.sRGBEncoding;
+  const S=new T.Scene(),cam=new T.PerspectiveCamera(32,1,.05,50);cam.position.set(0,1.1,4.6);cam.lookAt(0,.8,0);
+  S.add(new T.HemisphereLight(0xfff4e6,0x40305a,1.1));const sol=new T.DirectionalLight(0xffffff,.8);sol.position.set(2,4,3);S.add(sol);
+  const cor=new T.Color(x.cor||'#ffd25a'),anel=new T.Mesh(new T.RingGeometry(.75,.95,48),new T.MeshBasicMaterial({color:cor,transparent:true,opacity:.5,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide}));anel.rotation.x=-Math.PI/2;S.add(anel);
+  const raiz=new T.Group();S.add(raiz);
+  OV={id,o,d,R:R_,S,cam,raiz,anel,t0:performance.now(),pulo:0,racha:0,dica:d.querySelector('.o3dica'),raf:0};OV.dica.textContent=dica(o);
+  const tam=()=>{const r=cv.parentNode.getBoundingClientRect();R_.setSize(r.width,r.height,false);cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix()};tam();OV.tam=tam;window.addEventListener('resize',tam);
+  G.glb(x.ovo3d).then(g=>{if(!OV||OV.id!==id)return;const b=new T.Box3().setFromObject(g),h=b.max.y-b.min.y||1;g.scale.setScalar(1.7/h);g.position.set(-(b.min.x+b.max.x)/2*1.7/h,-b.min.y*1.7/h,-(b.min.z+b.max.z)/2*1.7/h);
+    g.traverse(m=>{if(m.isMesh&&m.material){m.material.roughness=.8;m.material.metalness=0;if(m.material.map)m.material.map.encoding=T.sRGBEncoding}});raiz.add(g);d.querySelector('.o3load').hidden=true}).catch(()=>{d.querySelector('.o3load').textContent='Não deu para carregar o ovo 3D.'});
+  const loop=now=>{if(!OV||OV.d!==d)return;OV.raf=requestAnimationFrame(loop);const t=(now-OV.t0)/1000,h=OV.o.hint|0;
+    let bal=[.0,.03,.08,.16][h],vel=[1,1.4,2.4,4][h];if(OV.racha){OV.racha+=1/60;bal=.35;vel=22}
+    raiz.rotation.y=t*.45;raiz.rotation.z=Math.sin(t*vel)*bal*(h>=2||OV.racha?1:0)+Math.sin(t*1.3)*.02;
+    if(OV.pulo){OV.pulo=Math.max(0,OV.pulo-1/40);raiz.position.y=Math.sin((1-OV.pulo)*Math.PI)*.35}else raiz.position.y=0;
+    anel.material.opacity=.3+.25*Math.sin(t*2)+h*.08;anel.scale.setScalar(1+Math.sin(t*2)*.05+h*.06);R_.render(S,cam)};OV.raf=requestAnimationFrame(loop);
+  d.querySelector('.o3x').addEventListener('click',fecha3d);
+  $('o3Pet').addEventListener('click',e=>carinho(id,e.currentTarget));
+  const pl=$('o3Pula');if(pl)pl.addEventListener('click',()=>{const q=L.ovos.find(z=>z.id===id);if(q){q.last=null;saveL();const b=$('o3Pet');b.disabled=false;b.textContent='🤍 Dar carinho';ninho()}})}
+function fecha3d(){if(!OV)return;cancelAnimationFrame(OV.raf);window.removeEventListener('resize',OV.tam);try{OV.R.dispose();OV.R.forceContextLoss()}catch(e){}OV.d.remove();OV=null}
+// chocou: se o ovo 3D está aberto ele treme forte e brilha; depois aparece a carta
+function chocar(o){if(OV&&OV.id===o.id){OV.racha=.001;G.tone(220,.3,'triangle',.06);setTimeout(()=>G.tone(330,.3,'triangle',.07),300);setTimeout(()=>G.tone(440,.4,'triangle',.08),650);
+    setTimeout(()=>{if(OV)OV.d.querySelector('.o3flash').classList.add('on')},1100);setTimeout(()=>{fecha3d();nascer(o.leg)},1600)}
+  else nascer(o.leg)}
 
 // ---------- nasceu! (a arte da carta do lendário) ----------
 function nascer(k){const x=leg(k),i=G.LEG0+k;G.fanfare();setTimeout(()=>G.fanfare(),700);

@@ -121,9 +121,8 @@ const STONESPR=GD.sprites_pedras.STONESPR;
 const STONES=GD.pelucias.STONES.map((d,k)=>({i:100+k,stone:k,name:d[0],cm:12,g:70,tex:.9,rare:1,desc:d[1],...STONESPR[k]}));
 STONES.forEach(bakeP);
 // máquina de ovos: os 10 ovos lendários (a maioria é falsa; o servidor decide quando é de verdade)
-const EGGW={obsidragon:162,lunaria:165,incendyr:155,verdantis:145,noctalis:125,ocearion:170,terralith:169,solaris:162,crystalyn:172,astrakai:175};
-const EGGS=LEGS.map((L,k)=>{const w=EGGW[L.slug]||160,h=256,hull=[];for(let q=0;q<12;q++){const a=q/12*Math.PI*2;hull.push([.5+Math.cos(a)*.47,.56+Math.sin(a)*(Math.sin(a)<0?.5:.42)])}
-  return{i:200+k,egg:k,name:'Ovo de '+L.nome,cm:21,g:200,tex:1,rare:1,desc:'',w,h,hull,img:'img/lendarios/ovo_'+L.slug+'.webp'}});
+const EGGS=LEGS.map((L,k)=>{const o=L.ovo||{w:160,h:256,hull:[[.5,0],[1,.5],[.5,1],[0,.5]]};
+  return{i:200+k,egg:k,name:'Ovo de '+L.nome,cm:21,g:200,tex:1,rare:1,desc:'',w:o.w,h:o.h,hull:o.hull,img:'img/lendarios/ovo_'+L.slug+'.webp'}});
 EGGS.forEach(bakeP);
 let INV={food:3,st:[0,0,0,0,0,0,0,0]};try{const o=JSON.parse(localStorage.getItem('garro-inv')||'');if(o&&typeof o==='object')INV=Object.assign(INV,o)}catch(e){}
 while(INV.st.length<STONES.length)INV.st.push(0);
@@ -975,10 +974,10 @@ const SKIN={};
 // forma evoluída: arquivo .glb próprio quando existir (ex.: 'models/petrun_evo.glb'); senão o mesmo corpo com a pele evoluída
 // modelos Tripo das formas evoluídas (cada arquivo veio com base+evolução; aqui só a evolução)
 const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
-// lendários: corpo de uma pelúcia (ou da forma evoluída) com pele repintada e brilho próprio (img/lendarios/)
-for(const L of LEGS){const b=L.base.pelucia,m0=MODELS[b];if(!m0)continue;
-  const base=L.base.evoluida&&EVOFILE[b]?Object.assign({},m0,NBE[b]||{},{file:EVOFILE[b],remote:1,evoM:1,wing:null,notail:false,noDeform:1}):Object.assign({},m0);
-  MODELS[L.id]=Object.assign(base,{extraLeg:L.extra||null,skin:'img/lendarios/'+L.slug+'.jpg',glow:'img/lendarios/'+L.slug+'_brilho.jpg',glowCol:L.cor,glowK:L.brilho||1,escala:L.tamanho||1.1,leg:1,key:'L'+L.slug});NOEXTRA.add(L.id)}
+// lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
+for(const L of LEGS){if(!L.modelo)continue;
+  MODELS[L.id]={file:L.modelo,skin:null,evoM:1,noDeform:1,wing:null,notail:false,hc:[0,.62,.3],hr:.16,hp:[0,.5,.2],tz:-.3,tp:[0,.3,-.3],spd:.8,wag:.25,
+    glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null};NOEXTRA.add(L.id)}
 const EVT={};
 function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img.width)return map;
   const S=Math.min(1024,img.width),cv=document.createElement('canvas');cv.width=cv.height=S;const x=cv.getContext('2d');x.drawImage(img,0,0,S,S);
@@ -2154,7 +2153,8 @@ window.GARRO={
   // usados pelos Lendários (js/lendarios.js)
   LEG0,isLeg:i=>isLeg(i),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i)),
   abrir:i=>openViewer(i),estante:()=>renderShelf(),collAdd:(i,n)=>{coll[i]=(coll[i]||0)+(n||1);saveX();renderShelf()},collSet:(i,n)=>{coll[i]=n;saveX()},
-  hud:()=>hud(),maquina:()=>MACH
+  hud:()=>hud(),maquina:()=>MACH,
+  glb:f=>loadGLB({file:f}).then(g=>g.clone(true))
 };
 window.dispatchEvent(new Event('garro:pronto'));
 renderShelf();hud();

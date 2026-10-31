@@ -23,6 +23,7 @@ def gera(n,f,seed=7,desafio=False):
       if az<=z<=bz:return ax+(bx-ax)*(z-az)/(bz-az)
     return pts[-1][0]
   livre=[]  # áreas que não podem ter árvore (acampamentos, arena)
+  livre.append((pts[-1][0] if not chefe else 0.0,L-2,5.2))  # diorama do portal
   # acampamentos de inimigos ao longo do caminho
   total=3 if desafio else 4+n if not chefe else 7;inim=f['inimigos'];camps=[];k=0
   fim=L-14 if not chefe else L-30
@@ -107,6 +108,9 @@ for k,f in enumerate(D['mundos'][0]['fases']):
   m=f['mapa3d'];tp=[e[4] for c in m['acampamentos'] for e in c['inimigos'] if len(e)>4];print(f['id'],'L',m['comprimento'],'inimigos',sum(len(c['inimigos']) for c in m['acampamentos']),'tipos',{t:tp.count(t) for t in set(tp)},'morangos',len(m['morangos']),'árvores',len(m['arvores']))
 D.pop('plataforma',None)
 D.setdefault('arena',{})
+# cenário 3D (modelos em models/cenario/, recortados do diorama do portal): portal de chegada, árvores e canteiros de cogumelos
+D.setdefault('cenario3d',{"portal":"models/cenario/portal.glb","portal_tamanho":7.6,"arvores":["models/cenario/arvore1.glb","models/cenario/arvore2.glb"],"arvore_tamanho":3.4,
+  "cogumelos":"models/cenario/cogumelos.glb","cogumelo_tamanho":1.5,"bloco":6})
 # dificuldade que cresce fase a fase: [valor na 1ª fase, valor na última]; o jogo interpola pelas fases do mundo
 D.setdefault('curva',{"inimigo_vel":[2.2,3.3],"inimigo_recarga":[1.7,0.9],"inimigo_aviso":[0.65,0.32],"aggro":[6,9.5],"contato":[1.0,1.3],"tiro_vel":[5.5,8.5]})
 # tipos de inimigo (o 5º número de cada inimigo no mapa)
