@@ -9,6 +9,7 @@ alter table public.player_state add column if not exists diamonds integer not nu
 alter table public.player_state drop constraint if exists player_state_diamonds_check;
 alter table public.player_state add constraint player_state_diamonds_check check (diamonds >= 0);
 alter table public.player_state add column if not exists pending_egg boolean not null default false;
+alter table public.player_state add column if not exists egg_firm boolean not null default false;  -- jogada atual: a garra segura firme o ovo lendário?
 alter table public.player_state add column if not exists leg_roll_day date;  -- dia em que já sorteou o ovo do Desafio Lendário
 
 -- lendários entram na coleção, no cuidado e na energia da Aventura
@@ -94,38 +95,44 @@ begin
 end; $$;
 
 -- ---------- máquina de ovos ----------
-create or replace function public.rpc_egg_round_start(p_user uuid, p_cost integer)
-returns table(coins integer, wins integer) language plpgsql security definer set search_path = public as $$
-declare c integer; w integer;
+-- A caixa tem ovos comuns (nunca viram lendário, dão p_fake moedas) e o ovo do lendário do dia no meio.
+-- Os ovos são lisos: no começo da jogada o servidor sorteia se a garra vai segurar firme o ovo lendário (p_grip).
+-- Se não for firme, o ovo escorrega na tela; pedir o ovo lendário sem firme é recusado.
+drop function if exists public.rpc_egg_round_start(uuid, integer);
+create or replace function public.rpc_egg_round_start(p_user uuid, p_cost integer, p_grip real)
+returns table(coins integer, wins integer, firm boolean) language plpgsql security definer set search_path = public as $$
+declare c integer; w integer; f boolean := random() < p_grip;
 begin
-  if p_cost < 50 or p_cost > 5000 then raise exception 'regra_invalida'; end if;
-  update public.player_state set coins = player_state.coins - p_cost, pending_egg = true, last_action_at = now()
+  if p_cost < 50 or p_cost > 5000 or p_grip < 0 or p_grip > 0.5 then raise exception 'regra_invalida'; end if;
+  update public.player_state set coins = player_state.coins - p_cost, pending_egg = true, egg_firm = f, last_action_at = now()
   where user_id = p_user and player_state.coins >= p_cost
     and (last_action_at is null or now() - last_action_at > interval '1.5 seconds')
   returning player_state.coins, player_state.wins into c, w;
   if not found then raise exception 'egg_round_rejected'; end if;
-  return query select c, w;
+  return query select c, w, f;
 end; $$;
 
--- pegou um ovo: o servidor decide se é verdadeiro (p_chance) ou falso (+p_fake moedas)
-create or replace function public.rpc_egg_capture(p_user uuid, p_leg integer, p_chance real, p_fake integer, p_min integer, p_max integer)
+-- pegou um ovo: comum dá p_fake moedas; lendário (o do dia, p_leg vem da sync-estado) só se a jogada era firme
+drop function if exists public.rpc_egg_capture(uuid, integer, real, integer, integer, integer);
+create or replace function public.rpc_egg_capture(p_user uuid, p_real boolean, p_leg integer, p_fake integer, p_min integer, p_max integer)
 returns table(coins integer, real_egg boolean, egg_id bigint, leg integer)
 language plpgsql security definer set search_path = public as $$
-declare c integer; e bigint := null; ok boolean := false;
+declare c integer; f boolean; e bigint := null;
 begin
-  if p_leg < 0 or p_leg > 9 or p_chance < 0 or p_chance > 0.25 or p_fake < 0 or p_fake > 10 then raise exception 'regra_invalida'; end if;
+  if p_leg < 0 or p_leg > 9 or p_fake < 0 or p_fake > 10 then raise exception 'regra_invalida'; end if;
   update public.player_state set pending_egg = false, last_action_at = now()
   where user_id = p_user and pending_egg = true
     and last_action_at is not null and now() - last_action_at > interval '1.5 seconds'
-  returning player_state.coins into c;
+  returning player_state.coins, player_state.egg_firm into c, f;
   if not found then raise exception 'egg_capture_rejected'; end if;
-  if random() < p_chance then
-    ok := true; e := public.g_egg_new(p_user, p_leg, p_min, p_max, 'maquina');
+  if p_real then
+    if not f then raise exception 'egg_not_firm'; end if;
+    e := public.g_egg_new(p_user, p_leg, p_min, p_max, 'maquina');
   elsif p_fake > 0 then
     update public.player_state set coins = player_state.coins + p_fake where user_id = p_user returning player_state.coins into c;
   end if;
   perform public.g_count(p_user, 'capture', 1);
-  return query select c, ok, e, p_leg;
+  return query select c, p_real, e, p_leg;
 end; $$;
 
 -- loja: ovo por diamantes
@@ -301,7 +308,7 @@ end; $$;
 -- só a Edge Function (service_role) chama as ações
 do $$ declare f text; begin
   foreach f in array array['g_diamonds_add(uuid,integer)','g_award(uuid,text,integer)','g_egg_new(uuid,integer,integer,integer,text)',
-    'rpc_egg_round_start(uuid,integer)','rpc_egg_capture(uuid,integer,real,integer,integer,integer)','rpc_egg_buy(uuid,integer,integer,integer,integer)',
+    'rpc_egg_round_start(uuid,integer,real)','rpc_egg_capture(uuid,boolean,integer,integer,integer,integer)','rpc_egg_buy(uuid,integer,integer,integer,integer)',
     'rpc_egg_care(uuid,bigint,integer)','rpc_giant_capture(uuid,integer,real)',
     'rpc_adv_end(uuid,text,boolean,integer,integer,integer,integer,integer,integer,boolean,real,integer[],text,text[],integer,integer,integer,real,integer,integer)',
     'rpc_care(uuid,integer,text,real,real,real)','rpc_battle(uuid,integer,boolean)','rpc_adv_start(uuid,integer,text,text,integer,integer)',

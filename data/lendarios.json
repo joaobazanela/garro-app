@@ -9,9 +9,36 @@
  },
  "maquina": {
   "preco": 200,
-  "chance_ovo": 0.03,
   "ovo_falso_moedas": 1,
-  "ovos_na_maquina": 9
+  "ovos_comuns": 11,
+  "lendarios_na_maquina": 1,
+  "segurar_lendario": 0.33,
+  "escorregar_comum": 0.4,
+  "ovo_comum": {
+   "nome": "Ovo comum",
+   "img": "img/lendarios/ovo_comum.webp",
+   "w": 156,
+   "h": 211,
+   "hull": [
+    [1.0,0.481],
+    [0.942,0.738],
+    [0.8,0.9],
+    [0.658,0.976],
+    [0.477,1.0],
+    [0.374,0.986],
+    [0.187,0.89],
+    [0.071,0.757],
+    [0.0,0.524],
+    [0.077,0.276],
+    [0.226,0.105],
+    [0.381,0.014],
+    [0.445,0.0],
+    [0.606,0.01],
+    [0.735,0.071],
+    [0.935,0.295]
+   ]
+  },
+  "_nota": "Ovo comum (branco com pintinhas) nunca é lendário: dá ovo_falso_moedas. O ovo lendário é sempre o lendário do dia e fica no meio da caixa. Os ovos são lisos: o comum escorrega com chance escorregar_comum; o lendário só fica firme na garra com chance segurar_lendario (sorteada no servidor no começo da jogada)."
  },
  "loja": {
   "preco_ovo_diamantes": 50

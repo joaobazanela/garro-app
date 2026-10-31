@@ -195,13 +195,14 @@ async function handle(req: Request): Promise<Response> {
     const L = await lendarios();
     if (!L) return json({ error: "lendarios_indisponivel" }, 503);
     const ch = L.chocar;
-    if (body.action === "egg_round_start") return call("rpc_egg_round_start", { p_cost: L.maquina.preco }, "egg_round_rejected");
-    if (body.action === "egg_capture" || body.action === "egg_buy") {
+    if (body.action === "egg_round_start") return call("rpc_egg_round_start", { p_cost: L.maquina.preco, p_grip: L.maquina.segurar_lendario }, "egg_round_rejected");
+    // máquina de ovos: o ovo lendário é sempre o do dia (o jogo não escolhe); o banco só aceita se a jogada era "firme"
+    if (body.action === "egg_capture") {
+      return call("rpc_egg_capture", { p_real: body.real === true, p_leg: legDoDia(hojeBR()), p_fake: L.maquina.ovo_falso_moedas, p_min: ch.dias_min, p_max: ch.dias_max }, "egg_capture_rejected");
+    }
+    if (body.action === "egg_buy") {
       const leg = int(body.leg, 0, 9);
       if (leg === null) return json({ error: "bad_leg" }, 400);
-      if (body.action === "egg_capture") {
-        return call("rpc_egg_capture", { p_leg: leg, p_chance: L.maquina.chance_ovo, p_fake: L.maquina.ovo_falso_moedas, p_min: ch.dias_min, p_max: ch.dias_max }, "egg_capture_rejected");
-      }
       return call("rpc_egg_buy", { p_leg: leg, p_price: L.loja.preco_ovo_diamantes, p_min: ch.dias_min, p_max: ch.dias_max }, "egg_buy_rejected");
     }
     const egg = Number(body.eggId);
@@ -287,7 +288,7 @@ function legDoDia(dia: string): number {
 // ---- lendários ----
 type Lendarios = {
   diamantes: { chefe_do_mundo: number; mundo_3_estrelas: number; gigante_chance: number };
-  maquina: { preco: number; chance_ovo: number; ovo_falso_moedas: number };
+  maquina: { preco: number; segurar_lendario: number; ovo_falso_moedas: number };
   loja: { preco_ovo_diamantes: number };
   chocar: { dias_min: number; dias_max: number; nivel_ao_nascer: number };
 };

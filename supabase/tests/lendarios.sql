@@ -4,23 +4,27 @@ insert into auth.users(id) values (:u);
 update player_state set coins = 1000 where user_id = :u;
 
 -- máquina de ovos: 200 por jogada; pegar sem jogada é recusado
-do $$ begin perform rpc_egg_capture('66666666-6666-6666-6666-666666666666',0,0.03,1,7,90); exception when others then raise notice 'OK sem jogada: %',sqlerrm; end $$;
-select 'jogada' t,* from rpc_egg_round_start(:u,200);
-do $$ begin perform rpc_egg_capture('66666666-6666-6666-6666-666666666666',0,0.03,1,7,90); exception when others then raise notice 'OK rapido demais: %',sqlerrm; end $$;
+do $$ begin perform rpc_egg_capture('66666666-6666-6666-6666-666666666666',false,0,1,7,90); exception when others then raise notice 'OK sem jogada: %',sqlerrm; end $$;
+select 'jogada' t,coins,wins from rpc_egg_round_start(:u,200,0.33);
+do $$ begin perform rpc_egg_capture('66666666-6666-6666-6666-666666666666',false,0,1,7,90); exception when others then raise notice 'OK rapido demais: %',sqlerrm; end $$;
 update player_state set last_action_at = now() - interval '3 s' where user_id = :u;
--- chance 0: ovo falso, +1 moeda
-select 'ovo falso' t,* from rpc_egg_capture(:u,0,0,1,7,90);
--- regra fora do limite
-update player_state set last_action_at = now() - interval '3 s' where user_id = :u; select rpc_egg_round_start(:u,200); update player_state set last_action_at = now() - interval '3 s' where user_id = :u;
-do $$ begin perform rpc_egg_capture('66666666-6666-6666-6666-666666666666',0,0.9,1,7,90); exception when others then raise notice 'OK chance invalida: %',sqlerrm; end $$;
--- chance máxima permitida (0.2) várias vezes até sair um ovo verdadeiro
-do $$ declare k integer; r record; begin
+-- ovo comum: +1 moeda, nunca vira lendário
+select 'ovo comum' t,* from rpc_egg_capture(:u,false,0,1,7,90);
+-- regra fora do limite (segurar acima de 0.5)
+update player_state set last_action_at = now() - interval '3 s' where user_id = :u;
+do $$ begin perform rpc_egg_round_start('66666666-6666-6666-6666-666666666666',200,0.9); exception when others then raise notice 'OK segurar invalido: %',sqlerrm; end $$;
+-- garra NÃO firme (p_grip 0): pedir o ovo lendário é recusado
+update player_state set last_action_at = now() - interval '3 s' where user_id = :u;
+select 'jogada solta' t,firm from rpc_egg_round_start(:u,200,0); update player_state set last_action_at = now() - interval '3 s' where user_id = :u;
+do $$ begin perform rpc_egg_capture('66666666-6666-6666-6666-666666666666',true,3,1,7,90); exception when others then raise notice 'OK sem firme nao ganha: %',sqlerrm; end $$;
+-- garra firme (p_grip 0.5 até sair firme): o ovo lendário vai para o ninho
+do $$ declare k integer; f boolean; r record; begin
   for k in 1..40 loop
-    update player_state set coins = 1000, last_action_at = now() - interval '3 s' where user_id = '66666666-6666-6666-6666-666666666666';
-    perform rpc_egg_round_start('66666666-6666-6666-6666-666666666666',200);
+    update player_state set coins = 1000, pending_egg = false, last_action_at = now() - interval '3 s' where user_id = '66666666-6666-6666-6666-666666666666';
+    select firm into f from rpc_egg_round_start('66666666-6666-6666-6666-666666666666',200,0.5);
     update player_state set last_action_at = now() - interval '3 s' where user_id = '66666666-6666-6666-6666-666666666666';
-    select * into r from rpc_egg_capture('66666666-6666-6666-6666-666666666666',3,0.2,1,7,90);
-    if r.real_egg then raise notice 'OK ovo verdadeiro na jogada %: leg %', k, r.leg; exit; end if;
+    if f then select * into r from rpc_egg_capture('66666666-6666-6666-6666-666666666666',true,3,1,7,90);
+      raise notice 'OK ovo lendario na jogada % (firme): leg %, real %', k, r.leg, r.real_egg; exit; end if;
   end loop; end $$;
 select 'ovos' t,leg,source,need_days between 7 and 90 as dias_ok,days,hint from legendary_eggs where user_id = :u;
 

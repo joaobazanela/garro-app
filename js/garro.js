@@ -120,10 +120,14 @@ PLUSH.forEach(bakeP);
 const STONESPR=GD.sprites_pedras.STONESPR;
 const STONES=GD.pelucias.STONES.map((d,k)=>({i:100+k,stone:k,name:d[0],cm:12,g:70,tex:.9,rare:1,desc:d[1],...STONESPR[k]}));
 STONES.forEach(bakeP);
-// máquina de ovos: os 10 ovos lendários (a maioria é falsa; o servidor decide quando é de verdade)
+// máquina de ovos: muitos ovos comuns (branco com pintinhas, nunca são lendários) e o ovo do lendário do dia no meio.
+// Os ovos são lisos: o comum escorrega às vezes; o lendário só fica firme quando o servidor sorteou "firme" no começo da jogada.
 const EGGS=LEGS.map((L,k)=>{const o=L.ovo||{w:160,h:256,hull:[[.5,0],[1,.5],[.5,1],[0,.5]]};
   return{i:200+k,egg:k,name:'Ovo de '+L.nome,cm:21,g:200,tex:1,rare:1,desc:'',w:o.w,h:o.h,hull:o.hull,img:'img/lendarios/ovo_'+L.slug+'.webp'}});
 EGGS.forEach(bakeP);
+const MQ=LEGD.maquina||{},OC=MQ.ovo_comum||{w:156,h:211,hull:[[.5,0],[1,.5],[.5,1],[0,.5]],img:'img/lendarios/ovo_comum.webp'};
+const EGG_C={i:210,egg:-1,comum:1,name:OC.nome||'Ovo comum',cm:14,g:150,tex:1,desc:'',w:OC.w,h:OC.h,hull:OC.hull,img:OC.img};bakeP(EGG_C);
+function legDia(){if(window.GARRO_LEND)return GARRO_LEND.legDoDia();const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%(LEGS.length||10)}
 let INV={food:3,st:[0,0,0,0,0,0,0,0]};try{const o=JSON.parse(localStorage.getItem('garro-inv')||'');if(o&&typeof o==='object')INV=Object.assign(INV,o)}catch(e){}
 while(INV.st.length<STONES.length)INV.st.push(0);
 function saveInv(){try{localStorage.setItem('garro-inv',JSON.stringify(INV))}catch(e){}}
@@ -149,7 +153,8 @@ const guard=Bodies.rectangle(DIV,(80+DIVTOP)/2,8,DIVTOP-80,{isStatic:true,fricti
 
 let bodies=[];
 function addPlush(p,x,y){
-  const b=Bodies.fromVertices(x,y,[p.verts.map(v=>({x:v.x,y:v.y}))],{friction:.85,frictionStatic:1.2,frictionAir:.012,restitution:.04,
+  const liso=p.egg!==undefined;// ovos são lisos
+  const b=Bodies.fromVertices(x,y,[p.verts.map(v=>({x:v.x,y:v.y}))],{friction:liso?.12:.85,frictionStatic:liso?.25:1.2,frictionAir:.012,restitution:.04,
     collisionFilter:{category:CAT_PLUSH,mask:CAT_PLUSH|CAT_WALL|CAT_PRONG|CAT_GUARD}},true);
   Body.setMass(b,p.g/100);Body.setAngle(b,(Math.random()-.5)*.6);
   b.plush=p;bodies.push(b);Composite.add(world,b);return b;
@@ -168,11 +173,20 @@ function settlePile(){fill(PILE,FLOOR-60);for(let i=0;i<500;i++)Engine.update(en
 settlePile();
 // novos bichos caem devagar: 1 a cada 4 jogadas quando a pilha baixa; só repõe 3 de uma vez se estiver quase vazia
 let sinceDrop=0;
-function fillEggs(n,fromY){for(let k=0;k<n;k++){const e=EGGS[Math.floor(Math.random()*EGGS.length)];if(e)addPlush(e,DIV+50+Math.random()*(W-DIV-90),fromY-k*60)}}
-function settleEggs(){fill0();fillEggs((LEGD.maquina&&LEGD.maquina.ovos_na_maquina)||9,FLOOR-60);for(let i=0;i<400;i++)Engine.update(engine,1000/60);
+const MEIO=()=>(DIV+W)/2;
+// ovos comuns nos lados (longe do meio, onde fica o lendário)
+function fillEggs(n,fromY,perto){for(let k=0;k<n;k++){let x;if(perto)x=MEIO()+(k%2?1:-1)*(52+Math.random()*16);else{const L=DIV+40,Rr=W-40,m=MEIO();do x=L+Math.random()*(Rr-L);while(Math.abs(x-m)<70)}addPlush(EGG_C,x,fromY-k*55)}}
+function legNaMaquina(){return bodies.filter(b=>b.plush.egg>=0).length}
+// o ovo lendário fica em pé no pedestal (não rola), no meio da caixa
+function addLegEgg(y){const e=EGGS[legDia()];if(!e)return;const b=addPlush(e,MEIO()+(Math.random()-.5)*10,y);Body.setAngle(b,0);Body.setInertia(b,Infinity);b.friction=.6;b.frictionStatic=.9;return b}
+// primeiro o lendário no chão do meio, depois os comuns dos lados e alguns encostados nele (cercado, mas dá para pegar por cima)
+function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
+  for(let k=0;k<(MQ.lendarios_na_maquina||1);k++)addLegEgg(FLOOR-90-k*120);for(let i=0;i<90;i++)Engine.update(engine,1000/60);
+  fillEggs(n-perto,FLOOR-60);for(let i=0;i<120;i++)Engine.update(engine,1000/60);
+  fillEggs(perto,FLOOR-120,true);for(let i=0;i<400;i++)Engine.update(engine,1000/60);
   for(let i=bodies.length-1;i>=0;i--)if(bodies[i].position.x<DIV){Composite.remove(world,bodies[i]);bodies.splice(i,1)}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
-function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(bodies.length<5)fillEggs(2,-60);return}sinceDrop++;if(bodies.length<6){fill(Math.min(3,PILE-bodies.length),-60);sinceDrop=0}else if(bodies.length<13&&sinceDrop>=4){fill(1,-60);sinceDrop=0}}
+function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}sinceDrop++;if(bodies.length<6){fill(Math.min(3,PILE-bodies.length),-60);sinceDrop=0}else if(bodies.length<13&&sinceDrop>=4){fill(1,-60);sinceDrop=0}}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
 /* ---------- segunda máquina: um bichinho gigante ---------- */
 let MACH=1;const GCOST=50,GK=2.4;
@@ -201,7 +215,7 @@ function placeGiant(){const i=Math.floor(Math.random()*CH0),G=giantOf(i);G.lande
   $('who').innerHTML='Gigante da vez: <b>'+G.name+'</b> <em>· '+G.cm+' cm</em>'}
 function setMachine(m){if(m===MACH)return;if(claw.state!=='ready'){banner('Espere a garra voltar');return}
   MACH=m;const k=(m===2?1.7:1)/CS;CS=m===2?1.7:1;Body.scale(prongL,k,k);Body.scale(prongR,k,k);
-  for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(m===2)placeGiant();else if(m===3){settleEggs();$('who').textContent='Quase todos os ovos são falsos (+1 🪙). Às vezes um é de verdade...'}else{settlePile();$('who').textContent='Mire bem no centro da pelúcia. As pesadas escorregam fácil.'}
+  for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(m===2)placeGiant();else if(m===3){settleEggs();$('who').textContent='Ovo branco é comum (+1 🪙). O ovo do lendário do dia fica no meio: é liso e escorrega fácil!'}else{settlePile();$('who').textContent='Mire bem no centro da pelúcia. As pesadas escorregam fácil.'}
   $('gsign').hidden=m!==2;$('mach1').classList.toggle('on',m===1);$('mach2').classList.toggle('on',m===2);if($('mach4'))$('mach4').classList.toggle('on',m===3);document.querySelector('.window').classList.toggle('giant',m===2);document.querySelector('.window').classList.toggle('ovos',m===3);
   $('hint').textContent=m===2?'Máquina gigante: '+GCOST+' moedas por jogada':m===3?'Máquina de ovos: '+ECOST+' moedas por jogada':'Toque nas setas para colocar uma moeda';audio();click(m===2?300:m===3?420:600);hud()}
 
@@ -361,7 +375,10 @@ function showGrab(p,force,closed){
 function start(){
   if(claw.state!=='ready')return false;
   if(MACH===3){if(!canPay(ECOST)){$('hint').textContent='A máquina de ovos custa '+ECOST+' moedas por jogada.';banner('Moedas insuficientes','Ovos: '+ECOST+' 🪙 por jogada');return false}
-    claw.state='move';roundTime=ROUND;roundWin=false;pay(ECOST,'egg_round_start');evento('egg_play');claw.force=losses>=4?1100+Math.random()*150:600+Math.random()*500;
+    claw.state='move';roundTime=ROUND;roundWin=false;evento('egg_play');claw.eggFirm=null;
+    // o servidor sorteia no começo da jogada se a garra vai segurar firme o ovo lendário (sem login: sorteio aqui)
+    if(ONL&&!DEV){coins-=ECOST;hud();syncEstado('egg_round_start').then(r=>{if(r&&typeof r.coins==='number'){coins=r.coins;hud()}claw.eggFirm=!!(r&&r.firm)})}
+    else{spend(ECOST);claw.eggFirm=Math.random()<(MQ.segurar_lendario??.33)}claw.force=losses>=4?1100+Math.random()*150:600+Math.random()*500;
     $('hint').textContent='Escolha um ovo e aperte PEGAR';click(500);hud();return true}
   if(MACH===2){if(!canPay(GCOST)){$('hint').textContent='A máquina gigante custa '+GCOST+' moedas por jogada.';banner('Moedas insuficientes','Gigante: '+GCOST+' 🪙 por jogada');return false}
     claw.state='move';roundTime=ROUND;roundWin=false;pay(GCOST,'giant_round_start');evento('giant_play');claw.force=losses>=3?1250+Math.random()*150:700+Math.random()*600;
@@ -386,7 +403,10 @@ function attach(b,hits,mult,closed){mult=mult||1;
   claw.link=Constraint.create({pointA:{x:gp.x,y:gp.y},bodyB:b,pointB:{x:gp.x-b.position.x,y:gp.y-b.position.y},length:0,stiffness:.12,damping:.08});
   Composite.add(world,claw.link);
   b.collisionFilter.mask=p.giant?0:CAT_PLUSH|CAT_WALL;b.frictionAir=.03;// gigante na garra atravessa vidro e divisória
-  claw.slipAt=grip<p.g?claw.y-10-Math.random()*40:-1;
+  claw.slipAt=grip<p.g?claw.y-10-Math.random()*40:-1;claw.firme=false;
+  // ovos são lisos: escorregam logo depois de subir, a não ser que a garra esteja firme
+  if(p.egg!==undefined){const firme=p.egg>=0?claw.eggFirm===true:Math.random()>=(MQ.escorregar_comum??.4);
+    if(firme){claw.hold=grip=Math.max(grip,p.g*3);claw.slipAt=-1;claw.firme=true}else claw.slipAt=claw.y-14-Math.random()*46}
   showGrab(p,grip,closed);
 }
 function release(reason){
@@ -397,6 +417,7 @@ function release(reason){
     b.collisionFilter.mask=CAT_PLUSH|CAT_WALL|CAT_PRONG|CAT_GUARD}
   setTimeout(()=>{b.collisionFilter.mask=CAT_PLUSH|CAT_WALL|CAT_PRONG|CAT_GUARD},900);
   if(reason==='slip'){banner(claw.snag?'Enroscou!':'Escorregou!',b.plush.name);thud()}
+  if(reason==='liso'){banner('Escorregou!',b.plush.egg>=0?'O ovo lendário é liso... tente de novo':'Ovo liso!');thud()}
   if(reason==='heavy'){banner('Pesado demais!',b.plush.name+' · '+b.plush.g+' g');thud()}
 }
 function stress(){return claw.held?claw.held.plush.g/claw.hold:0}
@@ -405,6 +426,8 @@ function stress(){return claw.held?claw.held.plush.g/claw.hold:0}
 function evento(kind,n){try{window.dispatchEvent(new CustomEvent('garro:evento',{detail:{kind,n:n||1}}))}catch(e){}}
 function won(b){
   const p=b.plush;
+  // ovo lendário que caiu sem estar firme na garra (empurrado) volta para o meio da caixa
+  if(p.egg>=0&&claw.eggFirm!==true){addLegEgg(-80);banner('Quase!','O ovo lendário voltou para o meio');return}
   if(p.egg!==undefined){roundWin=true;losses=0;evento('capture');shakeWin(4);puff(50,FLOOR-40,18,['#ffd23c','#ffffff','#c9b4ff'],true);
     try{window.dispatchEvent(new CustomEvent('garro:ovo',{detail:{leg:p.egg}}))}catch(e){}hud();return}if(p.stone!==undefined){INV.st[p.stone]++;saveInv();roundWin=true;losses=0;banner(p.name+'!','Pedra rara! Use no bicho do mesmo elemento',true);fanfare();hud();return}
   if(p.giant){evento('capture');evento('giant_capture');coll[p.i]=(coll[p.i]||0)+1;saveX();GCOLL[p.i]=(GCOLL[p.i]||0)+1;saveG();shakeWin(10);boom();for(let k=0;k<3;k++)setTimeout(()=>puff(40+Math.random()*60,FLOOR-40,26,['#ffd23c','#ff5a8a','#5ad1ff','#8aff6a','#ffffff'],true),k*300);const c0=careOf(p.i);c0.xp+=60;saveCare();if(ONL&&!DEV)srv('giant_capture',{plushId:p.i},r=>{coll[p.i]=r.count;GCOLL[p.i]=r.giants;careOf(p.i).xp=r.xp;saveX();saveG();saveCare();renderShelf();try{window.dispatchEvent(new CustomEvent('garro:gigante',{detail:r}))}catch(e){}});
@@ -445,16 +468,16 @@ function step(){
   }else if(c.state==='up'){
     const heavy=c.held&&c.held.plush.giant;c.y-=heavy?.85:1.5;
     if(c.held){
-      if(c.slipAt>0&&c.y<c.slipAt)release(c.held.plush.g>c.hold*1.25?'heavy':'slip');
-      else if(Math.random()<Math.max(0,stress()-.6)*.01+(Math.abs(c.held.angularVelocity)>.06?stress()*.012:0))release('slip');
+      if(c.slipAt>0&&c.y<c.slipAt)release(c.held.plush.egg!==undefined?'liso':c.held.plush.g>c.hold*1.25?'heavy':'slip');
+      else if(!c.firme&&Math.random()<Math.max(0,stress()-.6)*.01+(Math.abs(c.held.angularVelocity)>.06?stress()*.012:0))release('slip');
     }
     if(c.y<=REST){c.y=REST;c.state='top';c.t=0;hum(false);
-      if(c.held){c.hold*=.82;const s=stress();if(s>1&&Math.random()<.8)release('slip');else if(Math.random()<Math.pow(s,4)*.35)release('slip')}}
+      if(c.held&&!c.firme){c.hold*=.82;const s=stress();if(s>1&&Math.random()<.8)release('slip');else if(Math.random()<Math.pow(s,4)*.35)release('slip')}}
   }else if(c.state==='top'){
     if(++c.t>24){c.state='return';hum(true)}
   }else if(c.state==='return'){
     const d=HOME-c.x;c.x+=Math.sign(d)*Math.min(Math.abs(d),c.held&&c.held.plush.giant?1.05:1.8);
-    if(c.held&&Math.random()<Math.max(0,stress()-.7)*.008+(Math.abs(c.held.angularVelocity)>.07?stress()*.01:0))release('slip');
+    if(c.held&&!c.firme&&Math.random()<Math.max(0,stress()-.7)*.008+(Math.abs(c.held.angularVelocity)>.07?stress()*.01:0))release('slip');
     if(Math.abs(d)<.5){c.state='release';c.t=0;hum(false)}
   }else if(c.state==='release'){
     c.t++;if(c.t>10){c.open=Math.min(1,c.open+.04);c.oL=c.oR=c.oB=c.open}

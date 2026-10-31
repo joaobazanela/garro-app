@@ -1,6 +1,6 @@
 /* GARRO — Lendários: ovos, ninho (carinho para chocar), máquina de ovos, diamantes 💎 e loja de ovos.
    Conteúdo (nomes, artes, preços, chances, dias mínimo/máximo, dicas) vem de data/lendarios.json (window.GD.lendarios).
-   Logado: o servidor decide tudo (ovo verdadeiro, dias secretos para chocar, diamantes) — tabelas legendary_eggs e
+   Logado: o servidor decide tudo (se a garra segura firme o ovo lendário, dias secretos para chocar, diamantes) — tabelas legendary_eggs e
    player_state.diamonds (migração 0010). Sem login: fica no aparelho. Modo dev: diamantes infinitos. */
 (function(){
 const G=window.GARRO,D=(window.GD||{}).lendarios;
@@ -123,14 +123,14 @@ function nascer(k){const x=leg(k),i=G.LEG0+k;G.fanfare();setTimeout(()=>G.fanfar
   document.body.appendChild(d);d.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;d.remove();if(b.dataset.v==='3d'){pan.hidden=true;document.body.style.overflow='';G.abrir(i)}});
   G.estante()}
 
-// ---------- máquina de ovos: o servidor decide se o ovo pego é verdadeiro ----------
-window.addEventListener('garro:ovo',async e=>{const k=e.detail.leg,x=leg(k);if(!x)return;
-  let real=false;
-  if(G.online()){const r=await G.sync('egg_capture',{leg:k});if(!r||r.error){G.banner('Ops!','Não deu para abrir o ovo. Tente de novo.');return}
-    G.setCoins(r.coins);real=!!r.real_egg;if(real)await carregar()}
-  else{real=Math.random()<MQ.chance_ovo;if(real)ovoLocal(k,'maquina');else G.addCoinsLocal(MQ.ovo_falso_moedas)}
-  if(real){G.banner('🥚 OVO VERDADEIRO!','Ovo de '+x.nome+' foi para o Ninho!',true);G.fanfare();setTimeout(()=>G.fanfare(),600);setTimeout(()=>abrirNinho(),1400)}
-  else{G.banner('Ovo falso... 🐣','Era só casca! +'+MQ.ovo_falso_moedas+' 🪙');G.tone(300,.15,'triangle',.06)}
+// ---------- máquina de ovos: ovo comum (leg -1) dá moedas; o ovo lendário do dia, se chegou firme na saída, vai para o Ninho ----------
+window.addEventListener('garro:ovo',async e=>{const k=e.detail.leg,comum=!(k>=0);let x=comum?null:leg(k),real=false;
+  if(G.online()){const r=await G.sync('egg_capture',{real:!comum});if(!r||r.error){G.banner('Ops!','Não deu para abrir o ovo. Tente de novo.');return}
+    G.setCoins(r.coins);real=!!r.real_egg;if(real){x=leg(r.leg)||x;await carregar()}}
+  else if(comum)G.addCoinsLocal(MQ.ovo_falso_moedas);
+  else{real=true;ovoLocal(k,'maquina')}
+  if(real){G.banner('🥚 OVO LENDÁRIO!','Ovo de '+x.nome+' foi para o Ninho!',true);G.fanfare();setTimeout(()=>G.fanfare(),600);setTimeout(()=>abrirNinho(),1400)}
+  else{G.banner('Ovo comum 🥚','+'+MQ.ovo_falso_moedas+' 🪙 · o lendário é o ovo do meio');G.tone(520,.12,'triangle',.05)}
   tudo()});
 
 // ---------- 💎 raro na máquina gigante ----------
