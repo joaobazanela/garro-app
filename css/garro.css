@@ -452,3 +452,7 @@ style#btnMis{position:relative}
 .o3dias{color:#d8c8f0;font-weight:800}.o3dica{margin:0;color:#ffe7a8;font-weight:800;min-height:20px}
 .o3b{display:grid;gap:8px}.o3b button{font:inherit;font-weight:900;font-size:17px;border:0;border-radius:14px;padding:13px;background:linear-gradient(#ffb23a,#e07a12);color:#2a1200;cursor:pointer;box-shadow:0 5px 0 #8a4a08}
 .o3b button:disabled{opacity:.5}.o3b button.dev{background:#3a3a4a;color:#cfd;font-size:12px;box-shadow:none;padding:8px}
+/* barra de XP e "Subiu de nível!" no resultado da Aventura */
+.advxp{height:8px;border-radius:6px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:4px}.advxp i{display:block;height:100%;background:linear-gradient(90deg,#7ad0ff,#b48cff);transition:width .8s}
+.advres li.advup{background:rgba(255,210,90,.12);border:1px solid rgba(255,210,90,.5);border-radius:12px;padding:8px;text-align:center;color:#ffe08a}.advres li.advup big{display:block;font-size:16px;margin-bottom:4px}
+.advres li.advup div{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:13px}.advres li.advup s{opacity:.6}.advres li.advup b{color:#9dff9d}

@@ -77,7 +77,7 @@ async function carinho(id,btn){const B=box(),o=B.ovos.find(x=>x.id===id);if(!o||
     o.days=r.days;o.hint=r.hint;o.last=hoje();if(r.hatched){o.nasceu=true;G.collSet(r.nasceu,(G.coll()[r.nasceu]||0)+1);if(typeof r.xp==='number')G.xpSet(r.nasceu,r.xp);chocar(o)}
     else msg(r.counted?'🤍 Carinho de hoje dado! '+dica(o):'Você já deu carinho hoje. Volte amanhã!',r.counted)}
   else{if(o.last!==hoje()){o.days++;o.last=hoje()}o.hint=Math.min(3,Math.floor(o.days*4/o.need));
-    if(o.days>=o.need){o.nasceu=true;const i=G.LEG0+o.leg;G.collAdd(i,1);G.xpSet(i,Math.max(0,(CH.nivel_ao_nascer-1)*4));chocar(o)}else msg('🤍 Carinho de hoje dado! '+dica(o),true);saveL()}
+    if(o.days>=o.need){o.nasceu=true;const i=G.LEG0+o.leg;G.collAdd(i,1);G.xpSet(i,G.xpTotal(i,CH.nivel_ao_nascer));chocar(o)}else msg('🤍 Carinho de hoje dado! '+dica(o),true);saveL()}
   G.evento('pet');if(OV&&OV.id===id&&!o.nasceu){OV.pulo=1;OV.dica.textContent=dica(o);OV.d.querySelector('.o3dias').textContent=o.days+' dia'+(o.days===1?'':'s')+' de carinho';const b=$('o3Pet');if(b){b.disabled=o.last===hoje();b.textContent=b.disabled?'✓ Carinho de hoje feito':'🤍 Dar carinho'}}tudo()}
 
 // ovo novo (máquina, desafio, loja). Sem login sorteia aqui os dias secretos.
