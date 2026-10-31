@@ -4,6 +4,12 @@ const SPRITES=GD.sprites.SPRITES;
 const CH0=20;// first id of the round collectibles (no evolution)
 const DATA=GD.pelucias.DATA;
 const PLUSH=DATA.map((d,i)=>({i,name:d[0],cm:d[1],g:d[2],tex:d[3],rare:d[4],desc:d[5],...SPRITES[i]}));const NPL=PLUSH.length;
+// lendários (data/lendarios.json): ids depois das 43 pelúcias; não caem na máquina, nascem de ovos
+const LEGD=GD.lendarios||{lendarios:[]},LEG0=LEGD.id0||43,LEGS=LEGD.lendarios||[];
+const isLeg=i=>i>=LEG0,grande=i=>i<CH0||i>=LEG0;
+for(const L of LEGS){const sp=L.sprite||{w:200,h:200,hull:[[.15,.1],[.85,.1],[.95,.9],[.05,.9]],img:'img/lendarios/'+L.slug+'.webp'};
+  PLUSH[L.id]={i:L.id,leg:1,slug:L.slug,name:L.nome,cm:L.cm,g:L.g,tex:.9,rare:0,desc:L.desc,...sp};
+  GD.pelucias.STAT[L.id]=L.stat;GD.pelucias.ELEM[L.id]=L.elemento}
 
 const {Engine,Bodies,Body,Composite,Constraint,Query,Vertices}=Matter;
 const W=360,H=500,FLOOR=470,DIV=96,DIVTOP=290,REST=64,HOME=48,PXCM=3.0;
@@ -114,6 +120,14 @@ PLUSH.forEach(bakeP);
 const STONESPR=GD.sprites_pedras.STONESPR;
 const STONES=GD.pelucias.STONES.map((d,k)=>({i:100+k,stone:k,name:d[0],cm:12,g:70,tex:.9,rare:1,desc:d[1],...STONESPR[k]}));
 STONES.forEach(bakeP);
+// máquina de ovos: muitos ovos comuns (branco com pintinhas, nunca são lendários) e o ovo do lendário do dia no meio.
+// Os ovos são lisos: o comum escorrega às vezes; o lendário só fica firme quando o servidor sorteou "firme" no começo da jogada.
+const EGGS=LEGS.map((L,k)=>{const o=L.ovo||{w:160,h:256,hull:[[.5,0],[1,.5],[.5,1],[0,.5]]};
+  return{i:200+k,egg:k,name:'Ovo de '+L.nome,cm:21,g:200,tex:1,rare:1,desc:'',w:o.w,h:o.h,hull:o.hull,img:'img/lendarios/ovo_'+L.slug+'.webp'}});
+EGGS.forEach(bakeP);
+const MQ=LEGD.maquina||{},OC=MQ.ovo_comum||{w:156,h:211,hull:[[.5,0],[1,.5],[.5,1],[0,.5]],img:'img/lendarios/ovo_comum.webp'};
+const EGG_C={i:210,egg:-1,comum:1,name:OC.nome||'Ovo comum',cm:14,g:150,tex:1,desc:'',w:OC.w,h:OC.h,hull:OC.hull,img:OC.img};bakeP(EGG_C);
+function legDia(){if(window.GARRO_LEND)return GARRO_LEND.legDoDia();const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%(LEGS.length||10)}
 let INV={food:3,st:[0,0,0,0,0,0,0,0]};try{const o=JSON.parse(localStorage.getItem('garro-inv')||'');if(o&&typeof o==='object')INV=Object.assign(INV,o)}catch(e){}
 while(INV.st.length<STONES.length)INV.st.push(0);
 function saveInv(){try{localStorage.setItem('garro-inv',JSON.stringify(INV))}catch(e){}}
@@ -139,14 +153,15 @@ const guard=Bodies.rectangle(DIV,(80+DIVTOP)/2,8,DIVTOP-80,{isStatic:true,fricti
 
 let bodies=[];
 function addPlush(p,x,y){
-  const b=Bodies.fromVertices(x,y,[p.verts.map(v=>({x:v.x,y:v.y}))],{friction:.85,frictionStatic:1.2,frictionAir:.012,restitution:.04,
+  const liso=p.egg!==undefined;// ovos são lisos
+  const b=Bodies.fromVertices(x,y,[p.verts.map(v=>({x:v.x,y:v.y}))],{friction:liso?.12:.85,frictionStatic:liso?.25:1.2,frictionAir:.012,restitution:.04,
     collisionFilter:{category:CAT_PLUSH,mask:CAT_PLUSH|CAT_WALL|CAT_PRONG|CAT_GUARD}},true);
   Body.setMass(b,p.g/100);Body.setAngle(b,(Math.random()-.5)*.6);
   b.plush=p;bodies.push(b);Composite.add(world,b);return b;
 }
 const PILE=16;
 function pickPlush(cnt){
-  const round=Math.random()<.86;let pool=PLUSH.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=PLUSH.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=PLUSH;
+  const round=Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
   let t=0;pool.forEach(p=>t+=p.rare);let r=Math.random()*t;for(const p of pool){r-=p.rare;if(r<0)return p}return pool[0];
 }
 function fill(n,fromY){
@@ -158,8 +173,21 @@ function settlePile(){fill(PILE,FLOOR-60);for(let i=0;i<500;i++)Engine.update(en
 settlePile();
 // novos bichos caem devagar: 1 a cada 4 jogadas quando a pilha baixa; só repõe 3 de uma vez se estiver quase vazia
 let sinceDrop=0;
-function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}sinceDrop++;if(bodies.length<6){fill(Math.min(3,PILE-bodies.length),-60);sinceDrop=0}else if(bodies.length<13&&sinceDrop>=4){fill(1,-60);sinceDrop=0}}
-const SWAP_COST=10;
+const MEIO=()=>(DIV+W)/2;
+// ovos comuns nos lados (longe do meio, onde fica o lendário)
+function fillEggs(n,fromY,perto){for(let k=0;k<n;k++){let x;if(perto)x=MEIO()+(k%2?1:-1)*(52+Math.random()*16);else{const L=DIV+40,Rr=W-40,m=MEIO();do x=L+Math.random()*(Rr-L);while(Math.abs(x-m)<70)}addPlush(EGG_C,x,fromY-k*55)}}
+function legNaMaquina(){return bodies.filter(b=>b.plush.egg>=0).length}
+// o ovo lendário fica em pé no pedestal (não rola), no meio da caixa
+function addLegEgg(y){const e=EGGS[legDia()];if(!e)return;const b=addPlush(e,MEIO()+(Math.random()-.5)*10,y);Body.setAngle(b,0);Body.setInertia(b,Infinity);b.friction=.6;b.frictionStatic=.9;return b}
+// primeiro o lendário no chão do meio, depois os comuns dos lados e alguns encostados nele (cercado, mas dá para pegar por cima)
+function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
+  for(let k=0;k<(MQ.lendarios_na_maquina||1);k++)addLegEgg(FLOOR-90-k*120);for(let i=0;i<90;i++)Engine.update(engine,1000/60);
+  fillEggs(n-perto,FLOOR-60);for(let i=0;i<120;i++)Engine.update(engine,1000/60);
+  fillEggs(perto,FLOOR-120,true);for(let i=0;i<400;i++)Engine.update(engine,1000/60);
+  for(let i=bodies.length-1;i>=0;i--)if(bodies[i].position.x<DIV){Composite.remove(world,bodies[i]);bodies.splice(i,1)}}
+function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
+function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}sinceDrop++;if(bodies.length<6){fill(Math.min(3,PILE-bodies.length),-60);sinceDrop=0}else if(bodies.length<13&&sinceDrop>=4){fill(1,-60);sinceDrop=0}}
+const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
 /* ---------- segunda máquina: um bichinho gigante ---------- */
 let MACH=1;const GCOST=50,GK=2.4;
 let FX=[],DECOR=[];
@@ -187,13 +215,13 @@ function placeGiant(){const i=Math.floor(Math.random()*CH0),G=giantOf(i);G.lande
   $('who').innerHTML='Gigante da vez: <b>'+G.name+'</b> <em>· '+G.cm+' cm</em>'}
 function setMachine(m){if(m===MACH)return;if(claw.state!=='ready'){banner('Espere a garra voltar');return}
   MACH=m;const k=(m===2?1.7:1)/CS;CS=m===2?1.7:1;Body.scale(prongL,k,k);Body.scale(prongR,k,k);
-  for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(m===2)placeGiant();else{settlePile();$('who').textContent='Mire bem no centro da pelúcia. As pesadas escorregam fácil.'}
-  $('gsign').hidden=m!==2;$('mach1').classList.toggle('on',m===1);$('mach2').classList.toggle('on',m===2);document.querySelector('.window').classList.toggle('giant',m===2);
-  $('hint').textContent=m===2?'Máquina gigante: '+GCOST+' moedas por jogada':'Toque nas setas para colocar uma moeda';audio();click(m===2?300:600);hud()}
+  for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(m===2)placeGiant();else if(m===3){settleEggs();$('who').textContent='Ovo branco é comum (+1 🪙). O ovo do lendário do dia fica no meio: é liso e escorrega fácil!'}else{settlePile();$('who').textContent='Mire bem no centro da pelúcia. As pesadas escorregam fácil.'}
+  $('gsign').hidden=m!==2;$('mach1').classList.toggle('on',m===1);$('mach2').classList.toggle('on',m===2);if($('mach4'))$('mach4').classList.toggle('on',m===3);document.querySelector('.window').classList.toggle('giant',m===2);document.querySelector('.window').classList.toggle('ovos',m===3);
+  $('hint').textContent=m===2?'Máquina gigante: '+GCOST+' moedas por jogada':m===3?'Máquina de ovos: '+ECOST+' moedas por jogada':'Toque nas setas para colocar uma moeda';audio();click(m===2?300:m===3?420:600);hud()}
 
 function swapMachine(){if(claw.state!=='ready'){banner('Espere a garra voltar');return}
   if(!canPay(SWAP_COST)){banner('Moedas insuficientes','Trocar custa '+SWAP_COST+' 🪙');return}
-  pay(SWAP_COST,'swap');for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(MACH===2)placeGiant();else settlePile();sinceDrop=0;
+  pay(SWAP_COST,'swap');for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(MACH===2)placeGiant();else if(MACH===3)settleEggs();else settlePile();sinceDrop=0;
   audio();[523,659,784].forEach((f,k)=>setTimeout(()=>tone(f,.12,'triangle',.09),k*90));banner('Bichinhos trocados!',DEV?'grátis (dev)':'-'+SWAP_COST+' 🪙',true);hud()}
 
 /* ---------- claw ---------- */
@@ -346,6 +374,12 @@ function showGrab(p,force,closed){
 
 function start(){
   if(claw.state!=='ready')return false;
+  if(MACH===3){if(!canPay(ECOST)){$('hint').textContent='A máquina de ovos custa '+ECOST+' moedas por jogada.';banner('Moedas insuficientes','Ovos: '+ECOST+' 🪙 por jogada');return false}
+    claw.state='move';roundTime=ROUND;roundWin=false;evento('egg_play');claw.eggFirm=null;
+    // o servidor sorteia no começo da jogada se a garra vai segurar firme o ovo lendário (sem login: sorteio aqui)
+    if(ONL&&!DEV){coins-=ECOST;hud();syncEstado('egg_round_start').then(r=>{if(r&&typeof r.coins==='number'){coins=r.coins;hud()}claw.eggFirm=!!(r&&r.firm)})}
+    else{spend(ECOST);claw.eggFirm=Math.random()<(MQ.segurar_lendario??.33)}claw.force=losses>=4?1100+Math.random()*150:600+Math.random()*500;
+    $('hint').textContent='Escolha um ovo e aperte PEGAR';click(500);hud();return true}
   if(MACH===2){if(!canPay(GCOST)){$('hint').textContent='A máquina gigante custa '+GCOST+' moedas por jogada.';banner('Moedas insuficientes','Gigante: '+GCOST+' 🪙 por jogada');return false}
     claw.state='move';roundTime=ROUND;roundWin=false;pay(GCOST,'giant_round_start');evento('giant_play');claw.force=losses>=3?1250+Math.random()*150:700+Math.random()*600;
     $('hint').textContent='Mire no meio do gigante e aperte PEGAR';click(500);hud();return true}
@@ -369,7 +403,10 @@ function attach(b,hits,mult,closed){mult=mult||1;
   claw.link=Constraint.create({pointA:{x:gp.x,y:gp.y},bodyB:b,pointB:{x:gp.x-b.position.x,y:gp.y-b.position.y},length:0,stiffness:.12,damping:.08});
   Composite.add(world,claw.link);
   b.collisionFilter.mask=p.giant?0:CAT_PLUSH|CAT_WALL;b.frictionAir=.03;// gigante na garra atravessa vidro e divisória
-  claw.slipAt=grip<p.g?claw.y-10-Math.random()*40:-1;
+  claw.slipAt=grip<p.g?claw.y-10-Math.random()*40:-1;claw.firme=false;
+  // ovos são lisos: escorregam logo depois de subir, a não ser que a garra esteja firme
+  if(p.egg!==undefined){const firme=p.egg>=0?claw.eggFirm===true:Math.random()>=(MQ.escorregar_comum??.4);
+    if(firme){claw.hold=grip=Math.max(grip,p.g*3);claw.slipAt=-1;claw.firme=true}else claw.slipAt=claw.y-14-Math.random()*46}
   showGrab(p,grip,closed);
 }
 function release(reason){
@@ -380,6 +417,7 @@ function release(reason){
     b.collisionFilter.mask=CAT_PLUSH|CAT_WALL|CAT_PRONG|CAT_GUARD}
   setTimeout(()=>{b.collisionFilter.mask=CAT_PLUSH|CAT_WALL|CAT_PRONG|CAT_GUARD},900);
   if(reason==='slip'){banner(claw.snag?'Enroscou!':'Escorregou!',b.plush.name);thud()}
+  if(reason==='liso'){banner('Escorregou!',b.plush.egg>=0?'O ovo lendário é liso... tente de novo':'Ovo liso!');thud()}
   if(reason==='heavy'){banner('Pesado demais!',b.plush.name+' · '+b.plush.g+' g');thud()}
 }
 function stress(){return claw.held?claw.held.plush.g/claw.hold:0}
@@ -387,8 +425,13 @@ function stress(){return claw.held?claw.held.plush.g/claw.hold:0}
 // avisos para as missões (js/missoes.js): capture, feed, pet, play, battle_win, stone, giant_play, giant_capture, giant_evolve
 function evento(kind,n){try{window.dispatchEvent(new CustomEvent('garro:evento',{detail:{kind,n:n||1}}))}catch(e){}}
 function won(b){
-  const p=b.plush;if(p.stone!==undefined){INV.st[p.stone]++;saveInv();roundWin=true;losses=0;banner(p.name+'!','Pedra rara! Use no bicho do mesmo elemento',true);fanfare();hud();return}
-  if(p.giant){evento('capture');evento('giant_capture');coll[p.i]=(coll[p.i]||0)+1;saveX();GCOLL[p.i]=(GCOLL[p.i]||0)+1;saveG();shakeWin(10);boom();for(let k=0;k<3;k++)setTimeout(()=>puff(40+Math.random()*60,FLOOR-40,26,['#ffd23c','#ff5a8a','#5ad1ff','#8aff6a','#ffffff'],true),k*300);const c0=careOf(p.i);c0.xp+=60;saveCare();srv('giant_capture',{plushId:p.i},r=>{coll[p.i]=r.count;GCOLL[p.i]=r.giants;careOf(p.i).xp=r.xp;saveX();saveG();saveCare();renderShelf()});
+  const p=b.plush;
+  // ovo lendário que caiu sem estar firme na garra (empurrado) volta para o meio da caixa
+  if(p.egg>=0&&claw.eggFirm!==true){addLegEgg(-80);banner('Quase!','O ovo lendário voltou para o meio');return}
+  if(p.egg!==undefined){roundWin=true;losses=0;evento('capture');shakeWin(4);puff(50,FLOOR-40,18,['#ffd23c','#ffffff','#c9b4ff'],true);
+    try{window.dispatchEvent(new CustomEvent('garro:ovo',{detail:{leg:p.egg}}))}catch(e){}hud();return}if(p.stone!==undefined){INV.st[p.stone]++;saveInv();roundWin=true;losses=0;banner(p.name+'!','Pedra rara! Use no bicho do mesmo elemento',true);fanfare();hud();return}
+  if(p.giant){evento('capture');evento('giant_capture');coll[p.i]=(coll[p.i]||0)+1;saveX();GCOLL[p.i]=(GCOLL[p.i]||0)+1;saveG();shakeWin(10);boom();for(let k=0;k<3;k++)setTimeout(()=>puff(40+Math.random()*60,FLOOR-40,26,['#ffd23c','#ff5a8a','#5ad1ff','#8aff6a','#ffffff'],true),k*300);const c0=careOf(p.i);c0.xp+=60;saveCare();if(ONL&&!DEV)srv('giant_capture',{plushId:p.i},r=>{coll[p.i]=r.count;GCOLL[p.i]=r.giants;careOf(p.i).xp=r.xp;saveX();saveG();saveCare();renderShelf();try{window.dispatchEvent(new CustomEvent('garro:gigante',{detail:r}))}catch(e){}});
+    else try{window.dispatchEvent(new CustomEvent('garro:gigante',{detail:{local:1}}))}catch(e){}
     roundWin=true;losses=0;banner('🏆 GIGANTE! '+p.name,'+60 XP · selo de gigante na coleção',true);fanfare();setTimeout(fanfare,700);renderShelf(p.i);hud();return}
   evento('capture');coll[p.i]=(coll[p.i]||0)+1;saveX();const dup=coll[p.i]>1,evo=p.i<CH0;if(dup){const c0=careOf(p.i);c0.xp+=evo?20:5;saveCare()}
   syncEstado('capture',{plushId:p.i});
@@ -425,16 +468,16 @@ function step(){
   }else if(c.state==='up'){
     const heavy=c.held&&c.held.plush.giant;c.y-=heavy?.85:1.5;
     if(c.held){
-      if(c.slipAt>0&&c.y<c.slipAt)release(c.held.plush.g>c.hold*1.25?'heavy':'slip');
-      else if(Math.random()<Math.max(0,stress()-.6)*.01+(Math.abs(c.held.angularVelocity)>.06?stress()*.012:0))release('slip');
+      if(c.slipAt>0&&c.y<c.slipAt)release(c.held.plush.egg!==undefined?'liso':c.held.plush.g>c.hold*1.25?'heavy':'slip');
+      else if(!c.firme&&Math.random()<Math.max(0,stress()-.6)*.01+(Math.abs(c.held.angularVelocity)>.06?stress()*.012:0))release('slip');
     }
     if(c.y<=REST){c.y=REST;c.state='top';c.t=0;hum(false);
-      if(c.held){c.hold*=.82;const s=stress();if(s>1&&Math.random()<.8)release('slip');else if(Math.random()<Math.pow(s,4)*.35)release('slip')}}
+      if(c.held&&!c.firme){c.hold*=.82;const s=stress();if(s>1&&Math.random()<.8)release('slip');else if(Math.random()<Math.pow(s,4)*.35)release('slip')}}
   }else if(c.state==='top'){
     if(++c.t>24){c.state='return';hum(true)}
   }else if(c.state==='return'){
     const d=HOME-c.x;c.x+=Math.sign(d)*Math.min(Math.abs(d),c.held&&c.held.plush.giant?1.05:1.8);
-    if(c.held&&Math.random()<Math.max(0,stress()-.7)*.008+(Math.abs(c.held.angularVelocity)>.07?stress()*.01:0))release('slip');
+    if(c.held&&!c.firme&&Math.random()<Math.max(0,stress()-.7)*.008+(Math.abs(c.held.angularVelocity)>.07?stress()*.01:0))release('slip');
     if(Math.abs(d)<.5){c.state='release';c.t=0;hum(false)}
   }else if(c.state==='release'){
     c.t++;if(c.t>10){c.open=Math.min(1,c.open+.04);c.oL=c.oR=c.oB=c.open}
@@ -526,7 +569,7 @@ function detail(i){
 }
 function renderShelf(focus){
   const g=$('grid');g.innerHTML='';let got=0;
-  PLUSH.forEach(p=>{const n=coll[p.i]||0;if(n)got++;
+  PLUSH.forEach(p=>{if(p.leg)return;const n=coll[p.i]||0;if(n)got++;
     const s=document.createElement('button');s.className='slot'+(n?'':' lock');s.setAttribute('aria-label',n?p.name:'Pelúcia não capturada');
     const stg=n&&p.i<CH0?careStage(p.i):0;if(stg)s.className+=' was';s.innerHTML=(GCOLL[p.i]?'<i class="gbadge">🏆'+(GCOLL[p.i]>1?GCOLL[p.i]:'')+'</i>':'')+'<img src="'+p.img+'" alt=""><span>'+(n?evName(p.i,0):'???')+'</span>'+(n>1?'<b>×'+n+'</b>':'')+(n?'<u>'+(stg?'evoluiu ↓':'NV '+lvOf(p.i))+'</u>':'');
     s.addEventListener('click',()=>{if(n){$('detail').hidden=true;openViewer(p.i)}else detail(p.i)});g.appendChild(s)});
@@ -537,7 +580,8 @@ function renderShelf(focus){
       s.innerHTML=(GCOLL[p.i]?'<i class="gbadge">🏆'+(GEVO[p.i]?'★':'')+'</i>':'')+'<img src="'+(EVOSPR[p.i]?EVOSPR[p.i].img:p.img)+'" alt=""><span>'+evName(p.i,1)+'</span><u>★ NV '+lvOf(p.i)+'</u>';
       s.addEventListener('click',()=>{$('detail').hidden=true;openViewer(p.i)});g.appendChild(s)})}
   $('count').textContent=got+' de '+NPL;
-  if(focus!==undefined)detail(focus);
+  if(focus!==undefined&&!isLeg(focus))detail(focus);
+  try{window.dispatchEvent(new Event('garro:estante'))}catch(e){}
 }
 /* ---------- 3D creatures with dog-like reactions ---------- */
 // b body, c belly, a accent, e eye, size [halfWidth, halfHeight, halfLength], h head radius, sn snout, ea ears, lg leg length, tl tail, x extras
@@ -953,6 +997,10 @@ const SKIN={};
 // forma evoluída: arquivo .glb próprio quando existir (ex.: 'models/petrun_evo.glb'); senão o mesmo corpo com a pele evoluída
 // modelos Tripo das formas evoluídas (cada arquivo veio com base+evolução; aqui só a evolução)
 const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
+// lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
+for(const L of LEGS){if(!L.modelo)continue;
+  MODELS[L.id]={file:L.modelo,skin:null,evoM:1,noDeform:1,wing:null,notail:false,hc:[0,.62,.3],hr:.16,hp:[0,.5,.2],tz:-.3,tp:[0,.3,-.3],spd:.8,wag:.25,
+    glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null};NOEXTRA.add(L.id)}
 const EVT={};
 function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img.width)return map;
   const S=Math.min(1024,img.width),cv=document.createElement('canvas');cv.width=cv.height=S;const x=cv.getContext('2d');x.drawImage(img,0,0,S,S);
@@ -975,7 +1023,19 @@ function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img
     d[p]=Math.max(0,Math.min(255,r*255));d[p+1]=Math.max(0,Math.min(255,g*255));d[p+2]=Math.max(0,Math.min(255,b*255))}
   x.putImageData(D,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=map.flipY;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t.wrapS=map.wrapS;t.wrapT=map.wrapT;return EVT[i]=t}
 function applyEvoTex(i){const C=V.C;if(!C||!C.obj)return;C.obj.traverse(o=>{if(o.isMesh&&!o.userData.keep&&o.userData.baseMap){o.material.map=evoTex(i,o.userData.baseMap);o.material.needsUpdate=true}})}
-const ASSETV='78';function loadSkin(f){if(SKIN[f])return SKIN[f];return SKIN[f]=new Promise(res=>{const src=GLBDATA[f]?'data:image/jpeg;base64,'+GLBDATA[f]:f+'?v='+ASSETV;
+const ASSETV='78';
+// lendários: mapa de brilho (partes que acendem: veias, runas, estrelas)
+// enfeite próprio de alguns lendários (auréola de ouro do Solaris), preso na cabeça do modelo
+function enfeiteLeg(obj,m){if(m.extraLeg!=='aureola')return;
+  // acha o alto da cabeça: os vértices mais altos na frente do modelo (o modelo olha para +z)
+  const v=new THREE.Vector3(),pts=[];let z0=1e9,z1=-1e9;obj.updateMatrixWorld(true);const inv=new THREE.Matrix4().copy(obj.matrixWorld).invert();
+  obj.traverse(o=>{if(!o.isMesh||!o.geometry.attributes.position)return;const M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld),p=o.geometry.attributes.position,st=Math.max(1,p.count/4000|0);
+    for(let k=0;k<p.count;k+=st){v.fromBufferAttribute(p,k).applyMatrix4(M);pts.push(v.x,v.y,v.z);z0=Math.min(z0,v.z);z1=Math.max(z1,v.z)}});
+  const zf=z1-(z1-z0)*.35;let top=-1e9,tx=0,tz=0;for(let k=0;k<pts.length;k+=3)if(pts[k+2]>zf&&pts[k+1]>top){top=pts[k+1];tx=pts[k];tz=pts[k+2]}
+  const r=(z1-z0)*.09,t=new THREE.Mesh(new THREE.TorusGeometry(r,r*.16,12,48),new THREE.MeshStandardMaterial({color:'#ffd24a',emissive:'#ffb820',emissiveIntensity:.9,roughness:.35,metalness:.6}));
+  t.rotation.x=Math.PI/2-.3;t.position.set(tx,top+r*.9,tz-r*.4);t.userData.keep=1;obj.add(t)}
+function brilhoLeg(mm,m,glow){if(!glow)return;mm.emissiveMap=glow;mm.emissive=new THREE.Color(m.glowCol||'#ffffff');mm.emissiveIntensity=m.glowK||1}
+function loadSkin(f){if(SKIN[f])return SKIN[f];return SKIN[f]=new Promise(res=>{const src=GLBDATA[f]?'data:image/jpeg;base64,'+GLBDATA[f]:f+'?v='+ASSETV;
   new THREE.TextureLoader().load(src,t=>{t.flipY=false;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;res(t)},undefined,()=>res(null))})}
 function dropTail(g,m){const w=g.attributes.uv2;if(!w)return g;g=g.clone();const p=g.attributes.position,B=m.TA;
   for(let i=0;i<p.count;i++){const k=w.getX(i);if(k<=0)continue;const x=p.getX(i),y=p.getY(i),z=p.getZ(i);p.setXYZ(i,x+(B[0]+(x-B[0])*.1-x)*k,y+(B[1]+(y-B[1])*.1-y)*k,z+(B[2]+(z-B[2])*.1-z)*k)}
@@ -996,15 +1056,15 @@ function attachParts(obj,i,m){const sp0=SPEC[i],sp=Object.assign({},sp0,{x:sp0.x
 // modelo 3D pronto para outras telas (Aventura): grandes = GLB (o evoluído quando houver), redondos = montados em código.
 // Volta um grupo com altura 1, pés em y=0 e olhando para +z. Não mexe no visualizador.
 async function montaModelo(i,evo){
-  if(i>=CH0){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
+  if(i>=CH0&&!isLeg(i)){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
     const b=new THREE.Box3().setFromObject(C.root),h=b.max.y-b.min.y||1;C.root.scale.setScalar(1/h);C.root.position.y=-b.min.y/h;return g}
   const m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
   let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;
   let src;try{src=await loadGLB(m)}catch(e){if(m===m0)throw e;m=m0;src=await loadGLB(m)}
-  const obj=src.clone(true),skin=m.skin?await loadSkin(m.skin):null;
+  const obj=src.clone(true),skin=m.skin?await loadSkin(m.skin):null,glow=m.glow?await loadSkin(m.glow):null;
   obj.traverse(o=>{if(o.isMesh){if(m.notail)o.geometry=dropTail(o.geometry,m);if(!o.geometry.attributes.normal)weldNormals(o.geometry);
-    const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;mm.roughness=.92;mm.metalness=0;o.material=mm}});
-  if(!m.evoM){try{if(m.HC)attachParts(obj,i,m);else attachExtras(obj,i,m)}catch(e){}}
+    const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;mm.roughness=.92;mm.metalness=0;brilhoLeg(mm,m,glow);o.material=mm}});
+  if(!m.evoM){try{if(m.HC)attachParts(obj,i,m);else attachExtras(obj,i,m)}catch(e){}}enfeiteLeg(obj,m);
   obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=b.max.y-b.min.y||1,g=new THREE.Group();
   obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);return g}
 // tira da cena qualquer modelo que tenha ficado de uma abertura anterior (evita dois bichinhos na tela)
@@ -1017,18 +1077,18 @@ async function openGLB(i){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir d
   if(V.C)V.spin.remove(V.C.root);if(V.T){V.spin.remove(V.T.root);V.T=null}
   const U={uHY:{value:0},uHP:{value:0},uHR:{value:0},uTail:{value:0},uT:{value:0},uWing:{value:0}};
   const obj=src.clone(true);
-  const skin=m.skin?await loadSkin(m.skin):null;
+  const skin=m.skin?await loadSkin(m.skin):null,glow=m.glow?await loadSkin(m.glow):null;
   if(tok!==V.abre)return false;
   obj.traverse(o=>{if(o.isMesh){if(m.notail)o.geometry=dropTail(o.geometry,m);if(!o.geometry.attributes.normal)weldNormals(o.geometry);
-    const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;if(evo&&!evoModel&&mm.map){o.userData.baseMap=mm.map;mm.map=evoTex(i,mm.map)}else if(mm.map)o.userData.baseMap=mm.map;mm.roughness=.92;mm.metalness=0;deformMat(mm,m,U);o.material=mm;const dm=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking});deformMat(dm,m,U);o.customDepthMaterial=dm}});
-  const box=new THREE.Box3().setFromObject(obj),sz=box.getSize(new THREE.Vector3()),k=2/Math.max(sz.x,sz.y,sz.z);
+    const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;if(evo&&!evoModel&&mm.map){o.userData.baseMap=mm.map;mm.map=evoTex(i,mm.map)}else if(mm.map)o.userData.baseMap=mm.map;mm.roughness=.92;mm.metalness=0;brilhoLeg(mm,m,glow);deformMat(mm,m,U);o.material=mm;const dm=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking});deformMat(dm,m,U);o.customDepthMaterial=dm}});
+  enfeiteLeg(obj,m);const box=new THREE.Box3().setFromObject(obj),sz=box.getSize(new THREE.Vector3()),k=2/Math.max(sz.x,sz.y,sz.z);
   const parts=m.evoM?null:(m.HC?attachParts(obj,i,m):attachExtras(obj,i,m));
   const roll=new THREE.Group(),root=new THREE.Group();obj.scale.setScalar(k);obj.position.y=-sz.y*k/2;roll.add(obj);roll.position.y=sz.y*k/2;root.add(roll);
   root.position.y=-1;tiraModelos();root.userData.modelo=1;V.spin.add(root);
   setFloor(i);castAll(root);
   V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts};V.mode='glb';V.chibi=false;V.sp={};
-  {const st=careStage(i);V.C.gs=GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
-  V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(careStage(i))makeAura(i);
+  {const st=careStage(i);V.C.gs=m.leg?GROW[1].gs*(m.escala||1):GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
+  V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(careStage(i)||m.leg)makeAura(i);
   Object.assign(V,{ry:-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
     G:{hy:0,hp:0,hr:0,tail:0,wagA:.2,wagS:4,roll:0,crouch:0,bob:0,shake:0,lift:0}});
   return true;
@@ -1207,7 +1267,7 @@ function openFoxViewer(i){if(!openFox(i)){detail(i);return}const p=PLUSH[i];$('g
 function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
 function openViewer(i){
-  vTags(i);if(i>=CH0){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
+  vTags(i);if(i>=CH0&&!isLeg(i)){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
   if(MODELS[i]){openGLB(i).then(ok=>{if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
     $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(gloop)}else openProc(i)});return}
   openProc(i)}
@@ -1572,9 +1632,9 @@ const XPG=GD.regras.XPG;
 const GROW=GD.regras.GROW;const EVO_LV=50;
 // ataque e defesa no nível 1: os grandes são bem mais fortes que os redondos (cada um tem seu jeito)
 const STAT=GD.pelucias.STAT;
-const capOf=i=>i<CH0?100:30;
-function lvOf(i){return Math.min(capOf(i),1+Math.floor(careOf(i).xp/(i<CH0?4:5)))}
-function statsAt(i,lv){const b=STAT[i],ev=i<CH0&&lv>=EVO_LV?1.35:1,gr=i<CH0?.04:.03,atk=Math.round(b[0]*(1+(lv-1)*gr)*ev),df=Math.round(b[1]*(1+(lv-1)*gr)*ev);return{lv,atk,def:df,hp:Math.round((atk+df)*2+lv*5)}}
+const capOf=i=>grande(i)?100:30;
+function lvOf(i){return Math.min(capOf(i),1+Math.floor(careOf(i).xp/(grande(i)?4:5)))}
+function statsAt(i,lv){const b=STAT[i],ev=i<CH0&&lv>=EVO_LV?1.35:1,gr=grande(i)?.04:.03,atk=Math.round(b[0]*(1+(lv-1)*gr)*ev),df=Math.round(b[1]*(1+(lv-1)*gr)*ev);return{lv,atk,def:df,hp:Math.round((atk+df)*2+lv*5)}}
 function renderPow(i){const e=$('vPow');if(!e)return;const S=statsAt(i,lvOf(i));e.innerHTML='<span>Nv <b>'+S.lv+'</b></span><span>⚔️ <b>'+S.atk+'</b></span><span>🛡️ <b>'+S.def+'</b></span><span>❤️ <b>'+S.hp+'</b></span>'}
 const EVN=GD.pelucias.EVN;
 const ECOL=GD.pelucias.ECOL;
@@ -1584,13 +1644,14 @@ function careOf(i){let c=CARE[i];const now=Date.now();
   const mins=Math.max(0,(now-c.t)/60000);if(mins>.02){for(const k in DECAY)c[k]=Math.max(0,c[k]-DECAY[k]*mins);c.t=now}
   return c}
 function careXp(i){return careOf(i).xp}
-function careStage(i){return i>=CH0?2:lvOf(i)>=EVO_LV?1:0}
+function careStage(i){return isLeg(i)?0:i>=CH0?2:lvOf(i)>=EVO_LV?1:0}
 function gsOf(i,st){return i>=CH0?1:GROW[st].gs}
 function refreshVStats(i){const p=PLUSH[i],st=careStage(i);$('vStats').textContent=Math.round(p.cm*gsOf(i,st))+' cm · '+p.g+' g · pego '+(coll[i]||0)+'x'+(i>=CH0?'':' · '+(st?'Evoluído':'Base'))+(GCOLL[i]?' · 🏆 gigante'+(GEVO[i]?' evoluído':'')+' ×'+GCOLL[i]:'');if(i<CH0)$('vName').textContent=evName(i,st);renderPow(i)}
 function renderCare(){
   if(!V.open||V.cur===undefined)return;const i=V.cur;renderSell(i);renderPow(i);
   const c=careOf(i),lv=lvOf(i),cap=capOf(i),st=careStage(i),m=(c.f+c.l+c.p)/3;
-  if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' / '+cap)+' · 2 repetidas = 1 moeda';$('cXpBar').style.width=Math.min(100,(lv-1)/(cap-1)*100)+'%'}
+  if(isLeg(i)){$('cStage').textContent='✦ Lendário · '+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' / '+cap)+' · mais forte que as pelúcias grandes';$('cXpBar').style.width=Math.min(100,(lv-1)/(cap-1)*100)+'%'}
+  else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' / '+cap)+' · 2 repetidas = 1 moeda';$('cXpBar').style.width=Math.min(100,(lv-1)/(cap-1)*100)+'%'}
   else{$('cStage').textContent=st?'★ '+evName(i,1):PLUSH[i].name;
     $('cXp').textContent=st?'Nv '+lv+' · forma evoluída!':'Nv '+lv+' · evolui no Nv '+EVO_LV+' para '+evName(i,1);
     $('cXpBar').style.width=Math.min(100,st?(lv-EVO_LV)/(cap-EVO_LV)*100:(lv-1)/(EVO_LV-1)*100)+'%'}
@@ -1600,10 +1661,10 @@ function renderCare(){
 function updFood(){const s=$('cFeed')&&$('cFeed').querySelector('span');if(s)s.textContent='🍓 Comida ×'+INV.food}
 function useStone(){const i=V.cur;if(i===undefined||i>=CH0)return;const k=STONE_OF(i);if(lvOf(i)>=EVO_LV)return;if((INV.st[k]||0)<=0){audio();renderShop();$('shMsg').textContent='Você não tem '+STONES[k].name+': compre aqui 💎';$('shop').hidden=false;return}const c=careOf(i);INV.st[k]--;saveInv();evento('stone');srv('use_stone',{plushId:i,stone:k},r=>{INV.st[k]=r.stones;const cc=careOf(i);cc.xp=Math.max(cc.xp,r.xp);saveInv();saveCare()});audio();[523,784,1046,1568].forEach((f,q)=>setTimeout(()=>tone(f,.14,'triangle',.1),q*90));for(let q=0;q<6;q++)setTimeout(()=>float('💎','love'),q*90);gainXp(i,Math.max(1,(EVO_LV-1)*4-c.xp));renderCare()}
 const SELL_PRICE=1,SELL_BIG=30,SELL_GIANT=40;// redondo 1 · bicho especial (que evolui) 30 · pelúcia gigante 40
-function renderSell(i){const b=$('cSell'),bg=$('cSellG');if(!b)return;const n=coll[i]||0,big=i<CH0;b.hidden=false;b.disabled=n<1;b.dataset.armed='';
+function renderSell(i){const b=$('cSell'),bg=$('cSellG');if(!b)return;if(isLeg(i)){b.hidden=true;bg.hidden=true;renderGiantRow(i);return}const n=coll[i]||0,big=i<CH0;b.hidden=false;b.disabled=n<1;b.dataset.armed='';
   b.textContent=n>=1?'💰 Vender 1 · +'+(big?SELL_BIG:SELL_PRICE)+' moeda'+(big?'s':'')+' (tenho '+n+')':'💰 Nenhum para vender';
   renderGiantRow(i);const gn=GCOLL[i]||0;bg.hidden=!(big&&gn);bg.dataset.armed='';bg.disabled=false;bg.textContent='🏆 Vender gigante · +'+SELL_GIANT+' moedas (tenho '+gn+')'}
-async function sellDup(){const i=V.cur;if(i===undefined)return;const n=coll[i]||0;if(n<1)return;const big=i<CH0,b=$('cSell');
+async function sellDup(){const i=V.cur;if(i===undefined||isLeg(i))return;const n=coll[i]||0;if(n<1)return;const big=i<CH0,b=$('cSell');
   if(big&&b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Toque de novo: vender '+PLUSH[i].name+' por '+SELL_BIG+' 🪙';return}
   const q=1,gain=big?SELL_BIG:SELL_PRICE;b.disabled=true;
   const r=await syncEstado('sell',{plushId:i,qty:q});
@@ -1625,7 +1686,7 @@ function evolveGiant(){const i=V.cur;if(i===undefined||!(GCOLL[i]>0)||GEVO[i])re
   const e=$('vEvo');e.innerHTML='🏆 Gigante evoluiu!<small>'+evName(i,1)+' gigante</small>';e.classList.remove('on');void e.offsetWidth;e.classList.add('on');renderGiantRow(i);renderShelf();refreshVStats(i)}
 $('cGEvo').addEventListener('click',evolveGiant);
 $('btnSwap').addEventListener('click',swapMachine);
-$('mach1').addEventListener('click',()=>setMachine(1));$('mach2').addEventListener('click',()=>setMachine(2));
+$('mach1').addEventListener('click',()=>setMachine(1));$('mach2').addEventListener('click',()=>setMachine(2));if($('mach4')){$('mach4').textContent='🥚 Ovos · '+ECOST+' 🪙';$('mach4').addEventListener('click',()=>setMachine(3))}
 {let tc=0,tt=0;$('coins').parentElement.addEventListener('click',()=>{if(!window.GARRO_OFFLINE)return;const now=Date.now();if(now-tt>1500)tc=0;tt=now;if(++tc>=7){tc=0;DEV=!DEV;try{localStorage.setItem('garro-dev',DEV?'1':'0')}catch(e){}banner(DEV?'Modo dev: moedas infinitas':'Modo dev desligado');hud()}})}
 
 /* ---------- loja ---------- */
@@ -1660,7 +1721,7 @@ $('ivBuy').addEventListener('click',()=>{$('inv').hidden=true;renderShop();$('sh
 /* ---------- batalha: cada bichinho com nível, ataque e defesa ---------- */
 let BT=null;
 function bStats(f){const S=statsAt(f.i,f.lv);if(f.giant){const k=GEVO[f.i]&&f.giant?1.6:1.35;S.atk=Math.round(S.atk*k);S.def=Math.round(S.def*k);S.hp=Math.round(S.hp*(k+.25))}return Object.assign({},f,S)}
-function pickOpp(my){const myLv=lvOf(my);const same=Math.random()<.75;let j;do{j=Math.floor(Math.random()*NPL)}while(j===my||(same&&(j<CH0)!==(my<CH0)));const lv=Math.max(1,Math.min(capOf(j),Math.round(myLv*(.75+Math.random()*.5))));return bStats({i:j,lv,giant:j<CH0&&Math.random()<.12?1:0})}
+function pickOpp(my){const myLv=lvOf(my);const same=Math.random()<.75;let j;do{j=Math.floor(Math.random()*NPL)}while(j===my||(same&&(j<CH0)!==grande(my)));const lv=Math.max(1,Math.min(capOf(j),Math.round(myLv*(.75+Math.random()*.5))));return bStats({i:j,lv,giant:j<CH0&&Math.random()<.12?1:0})}
 function bName(f){return (f.giant?'🏆 '+(GEVO[f.i]?'Gigante★ ':'Gigante '):'')+evName(f.i,f.i<CH0&&(f.lv>=EVO_LV||(f.giant&&GEVO[f.i]))?1:0)}
 // imagens da luta: todos desenhados de perfil OLHANDO PARA A DIREITA. O da esquerda fica como está, o da direita é espelhado: sempre cara a cara.
 const BSPR=GD.sprites_luta.BSPR,BSPRE=GD.sprites_luta.BSPRE;const EVOSPR=BSPRE;// coleção usa as mesmas imagens evoluídas
@@ -1763,7 +1824,7 @@ function evolve(i,from,to){
 function killAura(){V.evoK=0;if(V.evoG){if(V.evoG.parent)V.evoG.parent.remove(V.evoG);V.evoG=null;V.evoW=null}if(V.aura){V.spin.remove(V.aura.g);V.aura=null}
   if(V.C&&(V.C.obj||V.C.root))(V.C.obj||V.C.root).traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive&&!o.userData.keep&&o.material.emissiveIntensity!==undefined&&o.userData.tint){o.material.emissive.setRGB(0,0,0);o.material.emissiveIntensity=0;o.userData.tint=0}})}
 function makeAura(i){killAura();const C=V.C;if(!C||!(C.obj||C.root))return;if(C.obj)makeEvo(i);const col=new THREE.Color(ECOL[ELEM[i]]||'#ffd23c');
-  if(!(C.m&&C.m.evoM))(C.obj||C.root).traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive&&!o.userData.keep){o.material.emissive.copy(col);o.material.emissiveIntensity=.1;o.userData.tint=1}});// modelo evoluído (Tripo) já tem as cores certas: o brilho por cima lavava as cores
+  if(!(C.m&&(C.m.evoM||C.m.leg)))(C.obj||C.root).traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive&&!o.userData.keep){o.material.emissive.copy(col);o.material.emissiveIntensity=.1;o.userData.tint=1}});// modelo evoluído (Tripo) já tem as cores certas: o brilho por cima lavava as cores
   const g=new THREE.Group(),R0=Math.max(V.size.xz*.62,.7),sp=[];
   const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending});
   for(let k=0;k<22;k++){const m=new THREE.Mesh(new THREE.OctahedronGeometry(.035+Math.random()*.03,0),mat);g.add(m);sp.push({m,a:Math.random()*6.28,r:R0*(.85+Math.random()*.4),s:(.5+Math.random())*(k%2?1:-1)*.7,h:Math.random(),v:.18+Math.random()*.3})}
@@ -1888,7 +1949,7 @@ const MOODS=GD.textos.MOODS;
 let moodT=0;
 function mood(txt){const el=$('vMood');if(!el)return;if(!txt){el.classList.remove('on');return}el.textContent=txt;el.classList.add('on');clearTimeout(moodT);moodT=setTimeout(()=>el.classList.remove('on'),2200)}
 function vTags(i){const p=PLUSH[i],r=p.rare<=2?3:p.rare<=4?2:1;
-  $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span><span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>';
+  $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span>'+(p.leg?'<span class="rL">✦ Lendário</span>':'<span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>');
   const own=PLUSH.filter(q=>coll[q.i]).map(q=>q.i);V.cur=i;V.own=own;const many=own.length>1;$('vPrev').hidden=$('vNext').hidden=!many}
 function vStep(d){const o=V.own||[];if(o.length<2)return;let k=o.indexOf(V.cur);k=(k+d+o.length)%o.length;audio();click(700);openViewer(o[k])}
 $('vPrev').addEventListener('click',()=>vStep(-1));$('vNext').addEventListener('click',()=>vStep(1));
@@ -2111,7 +2172,12 @@ window.GARRO={
   name:i=>PLUSH[i].name,evName:i=>evName(i,1),sprite:(i,lv,giant)=>bSrc({i,lv,giant:giant?1:0}),EVO_LV,
   xpLocal:(i,n)=>gainXp(i,n),xpSet:(i,x)=>{careOf(i).xp=x;saveCare()},
   stoneLocal:k=>{INV.st[k]=(INV.st[k]||0)+1;saveInv()},stone:k=>STONES[k],
-  tone:(f,d,t,v)=>{audio();tone(f,d,t,v)},evento:(k,n)=>evento(k,n),hint:t=>{$('hint').textContent=t}
+  tone:(f,d,t,v)=>{audio();tone(f,d,t,v)},evento:(k,n)=>evento(k,n),hint:t=>{$('hint').textContent=t},
+  // usados pelos Lendários (js/lendarios.js)
+  LEG0,isLeg:i=>isLeg(i),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i)),
+  abrir:i=>openViewer(i),estante:()=>renderShelf(),collAdd:(i,n)=>{coll[i]=(coll[i]||0)+(n||1);saveX();renderShelf()},collSet:(i,n)=>{coll[i]=n;saveX()},
+  hud:()=>hud(),maquina:()=>MACH,
+  glb:f=>loadGLB({file:f}).then(g=>g.clone(true))
 };
 window.dispatchEvent(new Event('garro:pronto'));
 renderShelf();hud();
