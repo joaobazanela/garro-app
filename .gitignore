@@ -34,3 +34,4 @@ yarn-error.log*
 *.p12
 *.key
 *.mobileprovision
+__pycache__/
