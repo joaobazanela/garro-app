@@ -163,7 +163,7 @@ function addPlush(p,x,y){
   Body.setMass(b,p.g/100);Body.setAngle(b,(Math.random()-.5)*.6);
   b.plush=p;bodies.push(b);Composite.add(world,b);return b;
 }
-const PILE=16;
+const PILE=11;// pilha baixa: nada pode passar da linha do topo da divisória (DIVTOP)
 function pickPlush(cnt){
   const round=Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
   let t=0;pool.forEach(p=>t+=p.rare);let r=Math.random()*t;for(const p of pool){r-=p.rare;if(r<0)return p}return pool[0];
@@ -172,7 +172,12 @@ function fill(n,fromY){
   const cnt={};bodies.forEach(b=>cnt[b.plush.i]=(cnt[b.plush.i]||0)+1);
   for(let k=0;k<n;k++){let p=pickPlush(cnt);if(!bodies.some(b=>b.plush.stone!==undefined)&&!cnt.stone&&Math.random()<.012){p=STONES[Math.floor(Math.random()*STONES.length)];cnt.stone=1}cnt[p.i]=(cnt[p.i]||0)+1;addPlush(p,DIV+60+Math.random()*(W-DIV-110),fromY-k*70)}
 }
-function settlePile(){fill(PILE,FLOOR-60);for(let i=0;i<500;i++)Engine.update(engine,1000/60);
+// ninguém fica acima da linha da divisória: o que assentou lá em cima (parado) sai da máquina com uma nuvenzinha
+function abaixaPilha(mudo){let n=0;for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];if((!mudo&&b===claw.held)||b.plush.won||b.plush.giant||b.plush.leg||b.position.x<DIV)continue;
+    if(b.bounds.min.y<DIVTOP&&Math.hypot(b.velocity.x,b.velocity.y)<.5){if(!mudo)puff(b.position.x,b.position.y,10,['#fff','#ffd7ef'],true);Composite.remove(world,b);bodies.splice(i,1);n++}}return n}
+function settlePile(){// enche aos poucos: o que assentar acima da linha sai, e entra outro (até chegar em PILE bichos abaixo da linha)
+  for(let r=0;r<10&&bodies.filter(b=>b.position.x>DIV).length<PILE;r++){fill(Math.min(3,PILE-bodies.length),FLOOR-60);for(let i=0;i<260;i++)Engine.update(engine,1000/60);abaixaPilha(true)}
+  for(let i=0;i<200;i++)Engine.update(engine,1000/60);abaixaPilha(true);
   for(let i=bodies.length-1;i>=0;i--)if(bodies[i].position.x<DIV){Composite.remove(world,bodies[i]);bodies.splice(i,1)}}
 settlePile();
 // novos bichos caem devagar: 1 a cada 4 jogadas quando a pilha baixa; só repõe 3 de uma vez se estiver quase vazia
@@ -193,7 +198,7 @@ function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
 function tiraDaBorda(){const lim=DIV+EDGE_FREE+8;for(const b of bodies){if(b===claw.held||b.plush.won||b.plush.giant)continue;const x=b.position.x,e=b.plush.dw*.42;
     if(x>DIV+4&&x-e<lim){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
-function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}sinceDrop++;if(bodies.length<6){fill(Math.min(3,PILE-bodies.length),-60);sinceDrop=0}else if(bodies.length<13&&sinceDrop>=4){fill(1,-60);sinceDrop=0}}
+function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();sinceDrop++;if(bodies.length<6){fill(Math.min(3,PILE-bodies.length),-60);sinceDrop=0}else if(bodies.length<13&&sinceDrop>=4){fill(1,-60);sinceDrop=0}}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
 /* ---------- segunda máquina: um bichinho gigante ---------- */
 let MACH=1;const GCOST=50,GK=2.4;
