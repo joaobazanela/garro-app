@@ -93,7 +93,7 @@ const SKIN={};
 // modelos Tripo das formas evoluídas (cada arquivo veio com base+evolução; aqui só a evolução)
 const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
 // lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
-for(const L of LEGS){if(!L.modelo)continue;
+for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
   MODELS[L.id]={file:L.modelo,skin:null,evoM:1,noDeform:1,wing:null,notail:false,hc:[0,.62,.3],hr:.16,hp:[0,.5,.2],tz:-.3,tp:[0,.3,-.3],spd:.8,wag:.25,
     glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null};NOEXTRA.add(L.id)}
 const EVT={};

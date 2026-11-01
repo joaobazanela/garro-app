@@ -67,15 +67,17 @@ async function handle(req: Request): Promise<Response> {
   }
 
   if (body.action === "capture") {
+    // na máquina só há redondos (20 a 42); o servidor sorteia se ele vira um grande do mesmo grupo de pedra (data/regras.json → MAQUINA)
     const plushId = Number(body.plushId);
-    if (!Number.isInteger(plushId) || plushId < 0 || plushId >= 43) {
+    if (!Number.isInteger(plushId) || plushId < 20 || plushId >= 43) {
       return json({ error: "bad_plush_id" }, 400);
     }
-    const { data, error } = await admin.rpc("rpc_capture", { p_user: userId, p_plush_id: plushId }).single();
+    const chance = Number((await regras())?.MAQUINA?.transformar_chance ?? 0);
+    const { data, error } = await admin.rpc("rpc_capture", { p_user: userId, p_plush_id: plushId, p_chance: Math.min(0.5, Math.max(0, chance)) }).single();
     if (error || !data) {
       return json({ error: "capture_rejected" }, 400);
     }
-    return json({ coins: data.coins, wins: data.wins, plushId, count: data.count });
+    return json({ coins: data.coins, wins: data.wins, plushId: data.plush_id, from: plushId, transformed: data.transformed, count: data.count });
   }
 
   if (body.action === "sell") {
@@ -130,20 +132,20 @@ async function handle(req: Request): Promise<Response> {
     return call("rpc_giant_evolve", { p_plush: p, p_stone: st }, "giant_evolve_rejected");
   }
   if (body.action === "use_stone" || body.action === "rebirth") {
-    const p = int(body.plushId, 0, 52), st = body.action === "rebirth" ? 0 : int(body.stone, 0, 7);
+    const p = int(body.plushId, 0, 56), st = body.action === "rebirth" ? 0 : int(body.stone, 0, 7);
     if (p === null || st === null) return json({ error: "bad_request" }, 400);
     if (body.action === "rebirth") return call("rpc_rebirth", { p_plush: p }, "rebirth_rejected");
     const E = (await regras())?.EVOLUCAO;  // regras do jogo vêm de data/regras.json (sem o arquivo, sem pedra)
     if (!E) return json({ error: "regras_indisponiveis" }, 503);
-    return call("rpc_use_stone", { p_plush: p, p_stone: st, p_evo_lv: E.nivel, p_per: E.pedras_por_nivel }, "use_stone_rejected");
+    return call("rpc_use_stone", { p_plush: p, p_stone: st, p_lv: E.nivel, p_need: E.pedras ?? 5 }, "use_stone_rejected");  // evolui no Nv 100 com 5 pedras
   }
   if (body.action === "care") {
-    const p = int(body.plushId, 0, 52), kind = body.kind;
+    const p = int(body.plushId, 0, 56), kind = body.kind;
     if (p === null || !["f", "l", "p"].includes(kind)) return json({ error: "bad_request" }, 400);
     return call("rpc_care", { p_plush: p, p_kind: kind, p_f: num(body.f), p_l: num(body.l), p_p: num(body.p) }, "care_rejected");
   }
   if (body.action === "battle") {
-    const p = int(body.plushId, 0, 52);
+    const p = int(body.plushId, 0, 56);
     if (p === null) return json({ error: "bad_plush_id" }, 400);
     return call("rpc_battle", { p_plush: p, p_win: body.win === true }, "battle_rejected");
   }
@@ -170,16 +172,16 @@ async function handle(req: Request): Promise<Response> {
     if (!A) return json({ error: "aventura_indisponivel" }, 503);
     const E = A.energia;
     if (body.action === "adv_rest") {
-      const p = int(body.plushId, 0, 52);
+      const p = int(body.plushId, 0, 56);
       if (p === null) return json({ error: "bad_plush_id" }, 400);
       return call("rpc_adv_rest", { p_plush: p, p_cost: E.descanso_preco, p_max: E.max, p_regen_min: E.recarga_min }, "adv_rest_rejected");
     }
     const f = faseDaAventura(A, typeof body.stage === "string" ? body.stage : "");
     if (!f) return json({ error: "fase_nao_existe" }, 400);
     if (body.action === "adv_start") {
-      const p = int(body.plushId, 0, 52);
+      const p = int(body.plushId, 0, 56);
       if (p === null) return json({ error: "bad_plush_id" }, 400);
-      return call("rpc_adv_start", { p_plush: p, p_stage: f.fase.id, p_prev: f.anterior, p_max: E.max, p_regen_min: E.recarga_min }, "adv_start_rejected");
+      return call("rpc_adv_start", { p_plush: p, p_stage: f.fase.id, p_prev: f.anterior, p_max: E.max, p_regen_min: E.recarga_min, p_cost: A.custo_moedas ?? 0 }, "adv_start_rejected");
     }
     const niveis = f.fase.inimigos.map((x) => x[1]).concat(f.fase.chefe ? [f.fase.chefe[1]] : []);
     const minLv = Math.max(1, Math.max(...niveis) - (A.nivel_min_folga ?? 6));
@@ -205,6 +207,17 @@ async function handle(req: Request): Promise<Response> {
   }
 
   // ---- lendários: máquina de ovos, loja de diamantes e carinho para chocar (regras em data/lendarios.json) ----
+  // ---- épico: máquina própria, só abre com todos os normais, gigantes e lendários (o banco confere) ----
+  if (body.action === "epic_round_start" || body.action === "epic_capture") {
+    const L = await lendarios();
+    const EM = L?.epico_maquina, EPS = L?.epicos ?? [];
+    if (!EM || !EPS.length) return json({ error: "epico_indisponivel" }, 503);
+    if (body.action === "epic_round_start") return call("rpc_epic_round_start", { p_cost: EM.preco, p_grip: EM.segurar }, "epic_round_rejected");
+    // o épico do dia (igual para todos, como o lendário do dia)
+    const ep = EPS[Math.floor(Date.parse(hojeBR() + "T00:00:00Z") / 864e5) % EPS.length].id;
+    return call("rpc_epic_capture", { p_birth_lv: L.chocar?.nivel_ao_nascer ?? 30, p_epic: ep }, "epic_capture_rejected");
+  }
+
   if (body.action === "egg_round_start" || body.action === "egg_capture" || body.action === "egg_buy" || body.action === "egg_care") {
     const L = await lendarios();
     if (!L) return json({ error: "lendarios_indisponivel" }, 503);
@@ -261,6 +274,7 @@ function diariasDoDia(d: Missoes, dia: string): Missao[] {
 type Fase = { id: string; premio: number; inimigos: [number, number][]; chefe?: [number, number] };
 type Desafio = { id: string; depois_de: string; nivel: number; chance_ovo: number; premio?: number };
 type Aventura = {
+  custo_moedas?: number;  // moedas por partida (cobradas no adv_start)
   energia: { max: number; recarga_min: number; descanso_preco: number };
   xp: { vitoria: number; derrota: number; por_inimigo?: number; chefe?: number };
   mapa_variacao?: { menos: number; mais: number };
@@ -315,6 +329,8 @@ type Lendarios = {
   diamantes: { chefe_do_mundo: number; mundo_3_estrelas: number; gigante_chance: number };
   maquina: { preco: number; segurar_lendario: number; ovo_falso_moedas: number };
   loja: { preco_ovo_diamantes: number };
+  epico_maquina?: { preco: number; segurar: number };
+  epicos?: { id: number }[];
   chocar: { dias_min: number; dias_max: number; nivel_ao_nascer: number };
 };
 const LENDARIOS_URL = Deno.env.get("LENDARIOS_URL") ?? "https://joaobazanela.github.io/garro-app/data/lendarios.json";

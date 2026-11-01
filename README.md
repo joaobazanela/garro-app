@@ -73,6 +73,17 @@ Um único arquivo HTML, sem instalação. Usa Matter.js (física) e Three.js (3D
 
 - **Cenário 3D (modelos em `models/cenario/`):** o portal final é o diorama enviado (arco com redemoinho, árvores, cogumelos e cristais), com um véu escuro enquanto o chefão vive. As árvores (2 tipos) e os cogumelos das fases foram recortados do mesmo diorama e desenhados em blocos: só os blocos que a câmera alcança são desenhados (bom para celular). Tamanhos e arquivos em `cenario3d` no `data/aventura.json`. Se os modelos não carregarem, volta o cenário simples antigo.
 
+### Nova progressão (migração 0014)
+- **Pedra de evolução: 200 🪙** (antes 400).
+- **Evoluir:** no **Nv 100**, usando **5 pedras do grupo** do bichinho de uma vez; ele continua no Nv 100. Pedras não dão mais níveis. **Renascer** (Nv 100 → Nv 1, +10% sobre a força base, mantém a forma) agora vale para todos: grandes, redondos, lendários e épicos. Redondos vão até o Nv 100.
+- **Máquina só com redondos.** Ao pegar um, há **5%** de chance (`MAQUINA.transformar_chance`) de ele virar um **grande do mesmo grupo de pedra** (Fogo, Ar, Terra, Planta, Fantasma, Luz, Sombria); o sorteio é no servidor (`rpc_capture`). Os grandes só vêm assim (ou já estavam na coleção).
+- **Travas:** máquina **gigante** só com todos os 43 normais; **ovos** com todos os normais e os 20 gigantes; **épico** com tudo isso e os 10 lendários. O jogo mostra 🔒 e quantos faltam; o servidor confere de novo.
+- **Épicos** (ids 53 a 56: Infernyx 🔥, Abyssor 💧, Zephyrax ☁️, Terravyn 🌿) em `data/lendarios.json → epicos`; a máquina (`epico_maquina`: 500 🪙, garra firme só 5% das vezes, sorteio no servidor) mostra o épico do dia. **Provisórios:** modelos feitos a partir da Noctalis recolorida (`ferramentas/epicos_provisorios.py`) até chegarem os próprios.
+- **Captura mais difícil:** garra comum mais fraca (`MAQUINA.garra`), gigante também (`MAQUINA.gigante`); ovo lendário só fica firme 15% das vezes (antes 33%).
+- **Força por classe** (`FORCA` em `data/regras.json`): média no Nv 1 — redondo 19, grande 40, lendário 90, épico 400; gigante ×1,2 (×1,35 evoluído); evoluído ×1,35; o nível dá no máximo +50% no Nv 100. Redondo Nv 100 com 3 renascimentos não vence um grande Nv 1; lendário Nv 100 com 20 renascimentos fica abaixo do épico Nv 1. (A Aventura continua com a conta própria dela, `luta` em `data/aventura.json`.)
+- **Aventura: 60 🪙 por partida** (`custo_moedas` em `data/aventura.json`), cobradas no `adv_start`. Admin joga de graça.
+- Teste local: `supabase/tests/progressao.sql` (substitui `pedras.sql`, que testava as regras antigas).
+
 ### Subir de nível mais difícil (migração 0013)
 - **Curva 2,5× mais cara:** XP total para o Nv N = `linear×(N−1) + 0,03×(N−1)³`, com linear 10 (grandes e lendários) ou 12 (redondos). Nv 10 = 112 XP, Nv 30 = 1022 XP, Nv 100 ≈ 30.100 XP. O XP guardado não muda; o nível é recalculado por ele (só os administradores jogavam).
 - **Cuidar tem limite diário:** comida, carinho e brincar dão no máximo **30 XP por bichinho por dia** (`CUIDAR_XP_DIA` em `data/regras.json`, dia de Brasília). As barras continuam enchendo; a tela mostra "cuidar hoje x/30 XP". Luta e Aventura não entram no limite.

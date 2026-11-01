@@ -1,5 +1,7 @@
 {
  "versao": 1,
+  "custo_moedas": 60,
+  "_custo_nota": "Cada partida da Aventura (qualquer fase) custa custo_moedas moedas; o servidor cobra no início (rpc_adv_start, migração 0014).",
  "energia": {
   "max": 5,
   "recarga_min": 60,

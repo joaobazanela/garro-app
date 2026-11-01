@@ -42,9 +42,12 @@ function estante(){if(!sec)return;const coll=G.coll(),ovos=box().ovos.filter(o=>
   let h='<div class="leghead"><h3>✦ Lendários <small>'+LS.filter(x=>coll[x.id]>0).length+' de '+LS.length+'</small></h3><button type="button" id="legNinho">🥚 Ninho'+(ovos.length?' <b>'+ovos.length+'</b>':'')+'</button></div><div class="leggrid">';
   for(const x of LS){const n=coll[x.id]||0;if(n)got++;
     h+='<button type="button" class="legslot'+(n?'':' lock')+'" data-i="'+x.id+'"><img src="'+(n?G.plush(x.id).img:'img/lendarios/ovo_'+x.slug+'.webp')+'" alt=""><span>'+(n?x.nome:'???')+'</span>'+(n?'<u>NV '+G.lvOf(x.id)+'</u>':'')+'</button>'}
+  // épicos (data/lendarios.json → epicos): aparecem trancados até pegar; a máquina do épico abre com tudo completo
+  const EP=D.epicos||[];if(EP.length){h+='</div><div class="leghead"><h3>🔥 Épicos <small>'+EP.filter(x=>coll[x.id]>0).length+' de '+EP.length+'</small></h3></div><div class="leggrid epgrid">';
+    for(const x of EP){const n=coll[x.id]||0;h+='<button type="button" class="legslot'+(n?'':' lock')+'" data-i="'+x.id+'"><img src="'+x.sprite.img+'" alt=""><span>'+(n?x.nome:'???')+'</span>'+(n?'<u>NV '+G.lvOf(x.id)+'</u>':'')+'</button>'}}
   sec.innerHTML=h+'</div>';
   $('legNinho').addEventListener('click',()=>abrirNinho());
-  sec.querySelectorAll('.legslot').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;if(G.coll()[i]>0)G.abrir(i);else abrirNinho('loja')}))}
+  sec.querySelectorAll('.legslot').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;if(G.coll()[i]>0)G.abrir(i);else if(i>=G.LEG0+LS.length)G.banner&&G.banner('🔥 Épico','Pegue todos os normais, gigantes e lendários para abrir a máquina do épico');else abrirNinho('loja')}))}
 window.addEventListener('garro:estante',estante);
 
 // ---------- ninho (ovos) e loja de ovos ----------

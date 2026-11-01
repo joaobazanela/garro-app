@@ -109,7 +109,7 @@ function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('a
   h+='<small class="advrec">Recomendado: Nv '+recomendado(f)+' ou mais</small></div>';
   if(!meus.length)h+='<p class="advnote">Pegue uma pelúcia na máquina para começar a aventura.</p>';
   h+='<div class="advpets">'+meus.map(i=>{const lv=G.lvOf(i),E=energia(i),el=ELEM[i];return '<button type="button" class="advpet'+(i===SEL?' sel':'')+(lv<recomendado(f)-4?' fraco':'')+'" data-i="'+i+'"><img src="'+G.sprite(i,lv,0,G.rbOf(i))+'" alt=""><b>'+(lv>=G.EVO_LV&&i<G.CH0?G.evName(i):G.name(i))+'</b><small>Nv '+lv+' · '+(ELNAME[el]||'')+'</small>'+pips(E.e)+(E.e<EN.max?'<small class="advwait">+1 ⚡ em '+tempo(E.falta)+'</small>':'')+'</button>'}).join('')+'</div>';
-  if(SEL!==null){const E=energia(SEL),nm=nivelMin(f),lvs=G.lvOf(SEL);h+='<div class="advgo">'+(lvs<nm?'<button type="button" disabled>Precisa de Nv '+nm+'</button><small>'+G.name(SEL)+' ainda é fraco para esta fase. Cuide dele para subir de nível ou escolha outro bichinho.</small>':E.e>0?'<button type="button" id="advStart">Jogar! ▶</button>':'<button type="button" id="advRest">😴 Descansar · '+EN.descanso_preco+' 🪙</button><small>'+G.name(SEL)+' está cansado. Volta 1 ⚡ em '+tempo(E.falta)+', ou descanse agora.</small>')+'</div>'}
+  if(SEL!==null){const E=energia(SEL),nm=nivelMin(f),lvs=G.lvOf(SEL);h+='<div class="advgo">'+(lvs<nm?'<button type="button" disabled>Precisa de Nv '+nm+'</button><small>'+G.name(SEL)+' ainda é fraco para esta fase. Cuide dele para subir de nível ou escolha outro bichinho.</small>':E.e>0?'<button type="button" id="advStart">Jogar! ▶ '+(CUSTO&&!G.dev()?'<small>· '+CUSTO+' 🪙</small>':'')+'</button>':'<button type="button" id="advRest">😴 Descansar · '+EN.descanso_preco+' 🪙</button><small>'+G.name(SEL)+' está cansado. Volta 1 ⚡ em '+tempo(E.falta)+', ou descanse agora.</small>')+'</div>'}
   if(G.dev())h+='<div class="advdev">🛠 Modo teste (admin) · nível do bichinho nesta partida: '+[['0','real'],['rec','recomendado (Nv '+recomendado(f)+')'],['100','Nv 100']].map(([v,t])=>'<button type="button" data-lv="'+v+'"'+(String(ADMLV)===v?' class="on"':'')+'>'+t+'</button>').join('')+'</div>';
   $('advBody').innerHTML=h;
   const st=$('advStart');if(st)st.addEventListener('click',()=>comecar(k,SEL));
@@ -127,13 +127,16 @@ async function descansar(i){if(G.coins()<EN.descanso_preco){msg('Faltam moedas p
   else{G.addCoinsLocal(-EN.descanso_preco);L.en[i]={e:EN.max,s:Date.now()};saveL()}
   G.tone(523,.2,'sine',.08);msg('');escolha(FK)}
 
-const ERROS={cansado:'Seu bichinho está cansado. Descanse ou espere a energia voltar.',fase_bloqueada:'Vença a fase anterior primeiro.',nao_tem:'Você não tem esse bichinho.'};
+const ERROS={sem_moedas:'Faltam moedas para jogar.',cansado:'Seu bichinho está cansado. Descanse ou espere a energia voltar.',fase_bloqueada:'Vença a fase anterior primeiro.',nao_tem:'Você não tem esse bichinho.'};
+// cada partida custa moedas (data/aventura.json → custo_moedas); o servidor cobra no adv_start; admin (dev) joga de graça
+const CUSTO=D.custo_moedas||0;
 async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=energia(i);if(E.e<1||G.lvOf(i)<nivelMin(f)){escolha(k);return}
+  if(CUSTO&&!G.dev()&&G.coins()<CUSTO){msg('Cada partida custa '+CUSTO+' 🪙. Faltam '+(CUSTO-G.coins())+' moedas.');return}
   const b=$('advStart');if(b)b.disabled=true;G.click(820);
   if(G.online()){const r=await G.sync('adv_start',{plushId:i,stage:f.id});
     if(!r||r.error||typeof r.energy!=='number'){const det=r&&r.detail||'';msg(Object.keys(ERROS).map(x=>det.includes(x)?ERROS[x]:'').join('')||'Não deu para começar. Tente de novo.');if(b)b.disabled=false;await carregarServidor();return}
-    box().en[i]={e:r.energy,s:Date.parse(r.since)}}
-  else{L.en[i]={e:E.e-1,s:E.e>=EN.max?Date.now():E.s};saveL()}
+    box().en[i]={e:r.energy,s:Date.parse(r.since)};if(typeof r.coins==='number')G.setCoins(r.coins)}
+  else{L.en[i]={e:E.e-1,s:E.e>=EN.max?Date.now():E.s};saveL();if(CUSTO&&!G.dev())G.addCoinsLocal(-CUSTO)}
   const lv=admLv(i,f);
   // mapa novo a cada partida (js/mapas.js): percurso e quantidade de bichinhos mudam; sem o gerador usa o mapa reserva do JSON
   let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=GARRO_MAPAS.novo(f.desafio?11:f.mundo.fases.findIndex(x=>x.id===f.id)+1,{inimigos:f.inimigos,chefe:f.chefe},!!f.desafio,D.mapa_variacao,f.desafio?null:f.mundo.dif)}catch(e){console.warn('mapa',e)}
