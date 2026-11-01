@@ -1288,8 +1288,12 @@ function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}cons
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
 function openViewer(i){
   vTags(i);if(i>=CH0&&!isLeg(i)){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
-  if(MODELS[i]){openGLB(i).then(ok=>{if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
-    $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(gloop)}else openProc(i)});return}
+  if(MODELS[i]){const rq=V.rq=(V.rq|0)+1;// o corpo antigo (em código) nunca aparece: se o modelo 3D não carregar, tenta de novo e avisa
+    const tenta=n=>openGLB(i).then(ok=>{if(V.rq!==rq)return;if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
+      $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(gloop)}
+      else if(n<8){if(n===0)banner('Carregando '+PLUSH[i].name+'…','um instante');EVOFAIL[i]=0;setTimeout(()=>{if(V.rq===rq)tenta(n+1)},1200+n*500)}
+      else banner('Não carregou','Confira a internet e toque no bichinho de novo')});
+    tenta(0);return}
   openProc(i)}
 function openProc(i){
   setDet(i);
