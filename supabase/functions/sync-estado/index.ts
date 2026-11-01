@@ -155,6 +155,33 @@ async function handle(req: Request): Promise<Response> {
     return call("rpc_mission_claim", { p_mission: m.id, p_daily: daily, p_kind: m.tipo, p_target: m.meta, p_reward: m.premio, p_prev: prev }, "mission_rejected");
   }
 
+  // ---- aventura: fases e regras vêm do data/aventura.json publicado; o banco só guarda progresso e energia ----
+  if (body.action === "adv_start" || body.action === "adv_end" || body.action === "adv_rest") {
+    const A = await aventura();
+    if (!A) return json({ error: "aventura_indisponivel" }, 503);
+    const E = A.energia;
+    if (body.action === "adv_rest") {
+      const p = int(body.plushId, 0, 42);
+      if (p === null) return json({ error: "bad_plush_id" }, 400);
+      return call("rpc_adv_rest", { p_plush: p, p_cost: E.descanso_preco, p_max: E.max, p_regen_min: E.recarga_min }, "adv_rest_rejected");
+    }
+    const f = faseDaAventura(A, typeof body.stage === "string" ? body.stage : "");
+    if (!f) return json({ error: "fase_nao_existe" }, 400);
+    if (body.action === "adv_start") {
+      const p = int(body.plushId, 0, 42);
+      if (p === null) return json({ error: "bad_plush_id" }, 400);
+      return call("rpc_adv_start", { p_plush: p, p_stage: f.fase.id, p_prev: f.anterior, p_max: E.max, p_regen_min: E.recarga_min }, "adv_start_rejected");
+    }
+    const niveis = f.fase.inimigos.map((x) => x[1]).concat(f.fase.chefe ? [f.fase.chefe[1]] : []);
+    const minLv = Math.max(1, Math.max(...niveis) - (A.nivel_min_folga ?? 6));
+    const estrelas = int(body.stars, 1, 3) ?? 1;
+    return call("rpc_adv_end", {
+      p_stage: f.fase.id, p_win: body.win === true, p_stars: estrelas, p_reward: f.fase.premio,
+      p_xp_win: A.xp.vitoria, p_xp_lose: A.xp.derrota, p_min_sec: A.tempo_min_seg ?? 10, p_min_lv: minLv,
+      p_boss: !!f.fase.chefe, p_chance: f.fase.chefe ? A.chefe_pedra.chance : 0, p_stones: A.chefe_pedra.pedras,
+    }, "adv_end_rejected");
+  }
+
   return json({ error: "unknown_action" }, 400);
 }
 
@@ -186,4 +213,35 @@ function diariasDoDia(d: Missoes, dia: string): Missao[] {
   let s = (Math.floor(Date.parse(dia + "T00:00:00Z") / 864e5) * 2654435761) >>> 0;
   while (out.length < k) { s = (Math.imul(s, 1103515245) + 12345) >>> 0; const i = s % n; if (!out.includes(i)) out.push(i); }
   return out.map((i) => d.diarias[i]);
+}
+
+// ---- aventura ----
+type Fase = { id: string; premio: number; inimigos: [number, number][]; chefe?: [number, number] };
+type Aventura = {
+  energia: { max: number; recarga_min: number; descanso_preco: number };
+  xp: { vitoria: number; derrota: number };
+  tempo_min_seg?: number; nivel_min_folga?: number;
+  chefe_pedra: { chance: number; pedras: number[] };
+  mundos: { id: string; fases: Fase[] }[];
+};
+const AVENTURA_URL = Deno.env.get("AVENTURA_URL") ?? "https://joaobazanela.github.io/garro-app/data/aventura.json";
+let cacheAventura: { t: number; d: Aventura } | null = null;
+async function aventura(): Promise<Aventura | null> {
+  if (cacheAventura && Date.now() - cacheAventura.t < 5 * 60 * 1000) return cacheAventura.d;
+  try {
+    const r = await fetch(AVENTURA_URL, { headers: { "cache-control": "no-cache" } });
+    if (!r.ok) return cacheAventura?.d ?? null;
+    const d = await r.json() as Aventura;
+    if (!Array.isArray(d.mundos) || !d.energia || !d.chefe_pedra) return cacheAventura?.d ?? null;
+    cacheAventura = { t: Date.now(), d };
+    return d;
+  } catch (_e) {
+    return cacheAventura?.d ?? null;
+  }
+}
+// fase pelo id + id da fase anterior (a 1ª fase de cada mundo depende da última do mundo anterior)
+function faseDaAventura(a: Aventura, id: string): { fase: Fase; anterior: string | null } | null {
+  const todas = a.mundos.flatMap((m) => m.fases);
+  const i = todas.findIndex((f) => f.id === id);
+  return i < 0 ? null : { fase: todas[i], anterior: i > 0 ? todas[i - 1].id : null };
 }
