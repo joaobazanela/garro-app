@@ -10,7 +10,8 @@ function semente(s){s=s>>>0;const r=()=>{s=(s+0x6D2B79F5)>>>0;let t=s;t=Math.imu
   return{random:r,uniform:(a,b)=>a+(b-a)*r(),choice:l=>l[Math.floor(r()*l.length)],int:(a,b)=>a+Math.floor(r()*(b-a+1))}}
 const r2=v=>Math.round(v*100)/100;
 // n = número da fase no mundo (1..10; 11 = Desafio Lendário); f = fase (inimigos, chefe); extra = bichinhos a mais (ou a menos)
-function gera(n,f,seed,desafio,extra){
+// W = ajustes do mundo (data/aventura.json → mundos[].dif): extra = bichinhos a mais, tipos_n = adianta atiradores/curandeiro/guardas, dens = {arv,ped} (quantidade de árvores e pedras)
+function gera(n,f,seed,desafio,extra,W){W=W||{};const nt=n+(W.tipos_n|0),dens=W.dens||{};
   const rnd=semente(seed*1009+n),chefe=!!f.chefe;
   const L=desafio?64:chefe?96:58+n*6;
   const pts=[];let x=0;
@@ -32,28 +33,29 @@ function gera(n,f,seed,desafio,extra){
   while(folhas.length<3&&tent<4000){tent++;const z=rnd.uniform(10,L-12),x=xcam(z)+rnd.choice([-1,1])*rnd.uniform(4.5,8.5);
     if(Math.abs(x)<LARG/2-2&&folhas.every(([a,b])=>Math.hypot(x-a,z-b)>8)&&camps.every(c=>Math.hypot(x-c.x,z-c.z)>(tent<400?9.5:5)))folhas.push([r2(x),r2(z)])}
   // guardas nas fases finais: folha vigiada por elite (+ ajudante)
-  const ng=n<6||desafio?0:n<8?1:2,lvmax=Math.max(...inim.map(e=>e[1])),forte=inim.reduce((a,b)=>b[1]>a[1]?b:a)[0];
+  const ng=nt<6||desafio?0:nt<8?1:2,lvmax=Math.max(...inim.map(e=>e[1])),forte=inim.reduce((a,b)=>b[1]>a[1]?b:a)[0];
   const longe=folhas.filter(([fx,fz])=>camps.every(c=>Math.hypot(fx-c.x,fz-c.z)>9));
   for(let q=0;q<Math.min(ng,longe.length);q++){const[fx,fz]=longe[q],grupo=[[forte,lvmax,r2(fx+1.2),fz,'elite']];
-    if(n>=8){const[i,lv]=inim[q%inim.length];grupo.push([i,lv,r2(fx-1.2),r2(fz+.6)])}
+    if(nt>=8){const[i,lv]=inim[q%inim.length];grupo.push([i,lv,r2(fx-1.2),r2(fz+.6)])}
     camps.push({x:fx,z:fz,inimigos:grupo,guarda:true});livre.push([fx,fz,3.2])}
   // tipos: atiradores a partir da fase 3, curandeiro a partir da 8, elite no último acampamento da fase do chefão
-  const cada=n<3||desafio?0:n<6?4:3;let c=0;const nor=camps.filter(cp=>!cp.guarda);
+  const cada=nt<3||desafio?0:nt<6?4:3;let c=0;const nor=camps.filter(cp=>!cp.guarda);
   for(const cp of nor)for(const e of cp.inimigos){c++;if(cada&&c%cada===0&&e.length===4)e.push('atirador')}
-  if(n>=8&&!desafio){const big=nor[Math.floor(nor.length/2)];for(const e of big.inimigos)if(e.length===4){e.push('curandeiro');break}}
+  if(nt>=8&&!desafio){const big=nor[Math.floor(nor.length/2)];for(const e of big.inimigos)if(e.length===4){e.push('curandeiro');break}}
   if(chefe&&!desafio){const e=nor[nor.length-1].inimigos[0];if(e.length===4)e.push('elite')}
   const morangos=[];const nm=desafio?3:n<=3?4:n<=6?3:2;
   for(let q=0;q<nm;q++){const z=rnd.uniform(8,L-8);morangos.push([r2(xcam(z)+rnd.choice([-1,1])*rnd.uniform(2.2,3.4)),r2(z)])}
   // árvores, pedras e cogumelos (fora do caminho, dos acampamentos e dos itens)
   const arv=[],ped=[],cog=[],ocup=folhas.concat(morangos).map(([a,b])=>[a,b,1.6]);
   const ok=(x,z,r)=>dcam(x,z)>=2.9+r&&livre.every(([a,b,rr])=>Math.hypot(x-a,z-b)>=rr+r)&&ocup.every(([a,b,rr])=>Math.hypot(x-a,z-b)>=rr+r);
-  for(let q=0;q<Math.floor(L*2.3);q++){const x=rnd.uniform(-LARG/2+.5,LARG/2-.5),z=rnd.uniform(-2,L+2),t=rnd.random(),s=rnd.uniform(.85,1.35),r=t<.62?.55*s:t<.85?.5*s:.35*s;
-    if(!ok(x,z,r))continue;ocup.push([x,z,r+.4]);(t<.62?arv:t<.85?ped:cog).push([r2(x),r2(z),r2(s)])}
+  const pa=Math.min(.9,.62*(dens.arv??1)),pr=Math.min(.97,pa+.23*(dens.ped??1));
+  for(let q=0;q<Math.floor(L*2.3);q++){const x=rnd.uniform(-LARG/2+.5,LARG/2-.5),z=rnd.uniform(-2,L+2),t=rnd.random(),s=rnd.uniform(.85,1.35),r=t<pa?.55*s:t<pr?.5*s:.35*s;
+    if(!ok(x,z,r))continue;ocup.push([x,z,r+.4]);(t<pa?arv:t<pr?ped:cog).push([r2(x),r2(z),r2(s)])}
   for(let z=-2;z<=L+2;z+=2)for(const sx of[-1,1])arv.push([r2(sx*(LARG/2+rnd.uniform(-.3,.6))),z,r2(rnd.uniform(1,1.5))]);
   for(let x=-LARG/2;x<=LARG/2;x+=2)arv.push([x,r2(-3+rnd.uniform(-.4,.4)),r2(rnd.uniform(1,1.4))]);
   return{largura:LARG,comprimento:L,caminho:pts,inicio:[pts[0][0],1.5],portal:[pts[pts.length-1][0],L-2],acampamentos:camps,folhas,morangos,arvores:arv,pedras:ped,cogumelos:cog,arena,semente:seed,extra:extra|0}}
 // mapa de uma partida nova: semente e quantidade de bichinhos sorteadas (variacao.menos .. variacao.mais)
-function novo(n,f,desafio,V){V=V||{};const seed=1+Math.floor(Math.random()*1e9),extra=Math.floor(Math.random()*((V.mais??2)+(V.menos??1)+1))-(V.menos??1);
-  return gera(n,f,seed,desafio,extra)}
+function novo(n,f,desafio,V,W){V=V||{};W=W||{};const seed=1+Math.floor(Math.random()*1e9),extra=Math.floor(Math.random()*((V.mais??2)+(V.menos??1)+1))-(V.menos??1)+(W.extra|0);
+  return gera(n,f,seed,desafio,extra,W)}
 window.GARRO_MAPAS={gera,novo,semente};
 })();
