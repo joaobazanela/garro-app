@@ -2,6 +2,7 @@
 """Ajusta asas dos lendarios (modelos GLB 'garro-compact': 1 malha, sem esqueleto).
 
   espelha : copia a asa de um lado para o outro (Incendyr tinha asa direita minuscula)
+  focinho : alonga o focinho (de frente a cara ficava chata, sem focinho)
   abre    : inclina as asas para fora (vistas de frente ficavam finas / "deformadas")
 
 Uso: python3 ferramentas/ajusta_asas.py <nome> [--espelha esq|dir] [--abre 0.35]
@@ -97,6 +98,12 @@ def main():
         nidx = mp[idx[tri_boa]][:, ::-1]               # inverte o giro dos triangulos
         pos = np.vstack([pos, npos]); uv = np.vstack([uv, nuv]); idx = np.vstack([keep, nidx])
         print('removidos', int(tri_ruim.sum()), 'triangulos; espelhados', int(tri_boa.sum()))
+    if '--focinho' in a:
+        k, z0, y0, y1 = [float(x) for x in a[a.index('--focinho') + 1:a.index('--focinho') + 5]]
+        X, Y, Z = pos[:, 0], pos[:, 1], pos[:, 2]
+        wz = np.clip((Z - z0) / 0.08, 0, 1)
+        wy = np.clip((Y - y0) / 0.04, 0, 1) * np.clip((y1 - Y) / 0.04, 0, 1)
+        pos[:, 2] = Z + k * np.clip(Z - z0, 0, None) * wz * wy   # alonga o focinho para frente
     if abre:
         X, Y, Z = pos[:, 0], pos[:, 1], pos[:, 2]
         zona = (Y > 0.33) & (Z < 0.06)
