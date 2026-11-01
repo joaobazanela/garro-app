@@ -204,13 +204,13 @@ function prepAndar(g,mini){const T=G.THREE(),inv=new T.Matrix4(),v=new T.Vector3
 // ---- cenário ----
 function texChao(M){const T=G.THREE(),W=M.largura+24,Lz=M.comprimento+24,cw=1024,ch=Math.min(4096,Math.round(cw*Lz/W)),c=document.createElement('canvas');c.width=cw;c.height=ch;const x=c.getContext('2d');
   const px=X=>(X+W/2)/W*cw,pz=Z=>(Z+12)/Lz*ch,rnd=semente(M.comprimento*7+3);
-  const TM=M.tema||{};x.fillStyle=TM.chao||'#3f6b3a';x.fillRect(0,0,cw,ch);
-  for(let k=0;k<cw*ch/60;k++){x.fillStyle=(TM.pintas||['#4a7a40','#36602f','#557f45','#3a6838','#2f5a2c'])[k%5];const a=rnd()*cw,b=rnd()*ch;x.fillRect(a,b,1.5,3+rnd()*3)}
+  const TM=M.tema||{},texturizado=!!(TM.texturas&&TM.texturas.chao);if(!texturizado){x.fillStyle=TM.chao||'#3f6b3a';x.fillRect(0,0,cw,ch)}
+  for(let k=0;k<(texturizado?0:cw*ch/60);k++){x.fillStyle=(TM.pintas||['#4a7a40','#36602f','#557f45','#3a6838','#2f5a2c'])[k%5];const a=rnd()*cw,b=rnd()*ch;x.fillRect(a,b,1.5,3+rnd()*3)}
   const linha=(w,cor)=>{x.strokeStyle=cor;x.lineWidth=w/W*cw;x.lineCap='round';x.lineJoin='round';x.beginPath();M.caminho.forEach(([X,Z],k)=>k?x.lineTo(px(X),pz(Z)):x.moveTo(px(X),pz(Z)));x.stroke()};
   const TR=TM.trilha||['#4f6a38','#7a6446','#8f7452','#9c7f5a'];linha(4.8,TR[0]);linha(3.6,TR[1]);linha(3.0,TR[2]);linha(2.0,TR[3]);
-  for(let k=0;k<cw*ch/500;k++){const a=rnd()*cw,b=rnd()*ch;x.fillStyle='rgba(120,100,80,.35)';x.beginPath();x.arc(a,b,1+rnd()*2,0,7);x.fill()}
+  for(let k=0;k<(texturizado?0:cw*ch/500);k++){const a=rnd()*cw,b=rnd()*ch;x.fillStyle='rgba(120,100,80,.35)';x.beginPath();x.arc(a,b,1+rnd()*2,0,7);x.fill()}
   if(M.arena){const a=M.arena;x.fillStyle='#8a6f4c';x.beginPath();x.ellipse(px(a.x),pz(a.z),a.r/W*cw,a.r/Lz*ch,0,0,7);x.fill();x.strokeStyle='#c9b4ff';x.lineWidth=3;x.setLineDash([8,8]);x.stroke();x.setLineDash([])}
-  for(let k=0;k<cw*ch/1400;k++){const a=rnd()*cw,b=rnd()*ch,c=(TM.flores||['#ffb3d1','#fff3c4','#c9b4ff','#ffffff'])[k%4];for(let q=0;q<4;q++){x.fillStyle=c;x.beginPath();x.arc(a+Math.cos(q*1.57)*1.6,b+Math.sin(q*1.57)*1.6,1.3,0,7);x.fill()}x.fillStyle='#ffd23c';x.beginPath();x.arc(a,b,.9,0,7);x.fill()}
+  for(let k=0;k<(texturizado?0:cw*ch/1400);k++){const a=rnd()*cw,b=rnd()*ch,c=(TM.flores||['#ffb3d1','#fff3c4','#c9b4ff','#ffffff'])[k%4];for(let q=0;q<4;q++){x.fillStyle=c;x.beginPath();x.arc(a+Math.cos(q*1.57)*1.6,b+Math.sin(q*1.57)*1.6,1.3,0,7);x.fill()}x.fillStyle='#ffd23c';x.beginPath();x.arc(a,b,.9,0,7);x.fill()}
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t}
 function semente(s){let a=s>>>0||1;return()=>{a=(a*1664525+1013904223)>>>0;return a/4294967296}}
 function sprEmoji(e,tam,brilho){const T=G.THREE(),c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
@@ -228,6 +228,16 @@ function props3d(TT){const CF=cfgDe(TT);if(!D.cenario3d||!G.glb)return Promise.r
   return C3C[ck]=Promise.all([G.glb(CF.portal),...CF.arvores.map(f=>G.glb(f)),G.glb(CF.cogumelos),CF.lanterna?G.glb(CF.lanterna).catch(()=>null):null]).then(([por,...r])=>{const lan=r.pop(),cog=r.pop();
     por.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=.9;o.material.metalness=0;if(o.material.map)o.material.map.encoding=G.THREE().sRGBEncoding}});
     return{portal:por,arv:r.map(malha),cog:malha(cog),lan:lan?malha(lan):null}}).catch(e=>{console.warn('cenario 3d',e);delete C3C[ck];return null})}
+// Texturas PBR reais (512px, tiling). O cache mantém uma única cópia por caminho.
+// 'map' usa sRGB; normal, rugosidade e emissivo são mapas de dados lineares.
+const TEX_PBR={};
+function texPBR(caminho,cor){if(!caminho)return null;const T=G.THREE(),chave=caminho+'|'+(cor?'s':'l');if(TEX_PBR[chave])return TEX_PBR[chave];
+  const t=new T.TextureLoader().load(caminho,undefined,undefined,e=>console.warn('textura aventura',caminho,e));
+  t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=4;if(cor)t.encoding=T.sRGBEncoding;TEX_PBR[chave]=t;return t}
+function matPBR(TT,chave,opts){const T=G.THREE(),p=TT&&TT.texturas&&TT.texturas[chave];if(!p)return new T.MeshStandardMaterial(opts||{});
+  const a=Object.assign({},opts||{});if(p.map)a.map=texPBR(p.map,true);if(p.normalMap)a.normalMap=texPBR(p.normalMap,false);
+  if(p.roughnessMap)a.roughnessMap=texPBR(p.roughnessMap,false);if(p.emissiveMap)a.emissiveMap=texPBR(p.emissiveMap,false);
+  const m=new T.MeshStandardMaterial(a);if(m.normalMap)m.normalScale.set(.55,.55);return m}
 // decoração própria de cada mundo (tema.decor): inspirada nos mapas "Caverna Encantada" e "Mundo Aquático"
 function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.decor,mec={};if(!DEC)return mec;
   const perto=(lista,n,d)=>{const out=[];lista.forEach(([x,z,s],k)=>{for(let q=0;q<n;q++)out.push([x+(rnd()-.5)*d,z+(rnd()-.5)*d,s*(.5+rnd()*.6),k+q])});return out};
@@ -235,11 +245,11 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
     // cristais que brilham, em tufos perto das pedras grandes
     const cr=perto(M.arvores.filter((q,k)=>k%2===0),2,1.8).concat(perto(M.pedras,1,1.2)),cores=TT.cristais||['#ff7ad9','#6ef0ff','#b48aff'];
     cores.forEach((cor,c)=>{const L=cr.filter(q=>q[3]%cores.length===c);if(!L.length)return;
-      const mat=new T.MeshStandardMaterial({color:cor,emissive:cor,emissiveIntensity:.9,roughness:.25,metalness:.1,flatShading:true});
+      const mat=matPBR(TT,'cristal',{color:cor,emissive:cor,emissiveIntensity:.9,roughness:.25,metalness:.1,flatShading:true});
       inst(new T.ConeGeometry(.16,1,5),mat,L,(o,[x,z,s],col)=>{o.position.set(x,.45*s,z);o.scale.set(s,s*(1.2+rnd()*.8),s);o.rotation.set((rnd()-.5)*.6,rnd()*6,(rnd()-.5)*.6);col.set('#ffffff')})});
     // lanternas penduradas em postes ao longo da trilha (luz quente na caverna escura)
     if(C3&&C3.lan){const ls=[];for(let z=6;z<M.comprimento-4;z+=9){const p=M.caminho.reduce((a,b)=>Math.abs(b[1]-z)<Math.abs(a[1]-z)?b:a,M.caminho[0]);ls.push([p[0]+(z%18<9?-2.6:2.6),z])}
-      const poste=new T.MeshLambertMaterial({color:'#3a2a20'});
+      const poste=matPBR(TT,'casca',{color:'#d8b8a2',roughness:.9});
       inst(new T.CylinderGeometry(.06,.08,2.6,6),poste,ls,(o,[x,z],c)=>{o.position.set(x,1.3,z);o.scale.set(1,1,1);o.rotation.set(0,0,0);c.set('#ffffff')});
       inst(C3.lan.geo,C3.lan.mat,ls,(o,[x,z],c)=>{o.position.set(x,1.9,z);o.scale.setScalar(.75);o.rotation.set(0,0,0);c.set('#ffffff')});
       for(const [x,z] of ls){const l=new T.PointLight(TT.lanterna_cor||'#ffb35a',1.1,7,1.6);l.position.set(x,1.9,z);S.add(l)}}
@@ -248,13 +258,13 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
   }
   if(DEC==='trevas'){
     // árvores secas (tronco e galhos tortos), cristais roxos e torres escuras com ponta brilhante
-    const tr=perto(M.arvores.filter((q,k)=>k%3===0),1,1.4),tm=new T.MeshLambertMaterial({color:'#2e2636'});
+    const tr=perto(M.arvores.filter((q,k)=>k%3===0),1,1.4),tm=matPBR(TT,'casca',{color:'#aaa0b6',roughness:.9});
     inst(new T.CylinderGeometry(.05,.11,1.8,5),tm,tr,(o,[x,z,s],c)=>{o.position.set(x,.9*s,z);o.scale.set(s,s,s);o.rotation.set((rnd()-.5)*.15,0,(rnd()-.5)*.15);c.set('#ffffff')});
     for(const [ang,inc,h,y] of [[0,.9,.8,1.3],[2.2,.8,.7,1.0],[4.1,1,.6,1.5]])inst(new T.CylinderGeometry(.02,.05,1,4),tm,tr,(o,[x,z,s],c)=>{const a=ang+(x*7+z)%6;o.position.set(x+Math.sin(a)*Math.sin(inc)*.4*h*s,(y+.4*h*Math.cos(inc))*s,z+Math.cos(a)*Math.sin(inc)*.4*h*s);o.scale.set(s,h*s,s);o.rotation.set(Math.cos(a)*inc,0,-Math.sin(a)*inc);c.set('#ffffff')});
     const cr=perto(M.pedras,2,1.4),cores=TT.cristais||['#b46aff','#8a5aff','#ff6ad9'];
-    cores.forEach((cor,ci)=>{const L=cr.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=new T.MeshStandardMaterial({color:cor,emissive:cor,emissiveIntensity:.9,roughness:.3,flatShading:true});
+    cores.forEach((cor,ci)=>{const L=cr.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=matPBR(TT,'cristal',{color:cor,emissive:cor,emissiveIntensity:.9,roughness:.3,flatShading:true});
       inst(new T.ConeGeometry(.15,1,5),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.45*s,z);o.scale.set(s,s*(1.1+rnd()),s);o.rotation.set((rnd()-.5)*.5,rnd()*6,(rnd()-.5)*.5);c.set('#ffffff')})});
-    const to=perto(M.arvores.filter((q,k)=>k%9===4),1,.5),tq=new T.MeshLambertMaterial({color:'#1e1a24'}),tp=new T.MeshStandardMaterial({color:'#9a5aff',emissive:'#7a3aff',emissiveIntensity:.8,flatShading:true});
+    const to=perto(M.arvores.filter((q,k)=>k%9===4),1,.5),tq=matPBR(TT,'pedra',{color:'#aaaaaf',roughness:.9}),tp=matPBR(TT,'cristal',{color:'#9a5aff',emissive:'#7a3aff',emissiveIntensity:.8,flatShading:true});
     inst(new T.CylinderGeometry(.2,.35,3,6),tq,to,(o,[x,z,s],c)=>{o.position.set(x,1.5*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
     inst(new T.ConeGeometry(.7,1.3,6),tp,to,(o,[x,z,s],c)=>{o.position.set(x,3.5*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
     // escuro: uma luz roxa acompanha o bichinho (a "lanterna")
@@ -262,44 +272,44 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
   }
   if(DEC==='fogo'){
     // rios de lava dos dois lados da trilha, chamas e vulcões nas bordas
-    const lava=new T.MeshBasicMaterial({color:'#ff6a1a'});
+    const lava=matPBR(TT,'magma',{color:'#ffffff',emissive:'#ff7a28',emissiveIntensity:1.25,roughness:.8,side:T.DoubleSide});mec.magmaMaps=[lava.map,lava.normalMap,lava.roughnessMap,lava.emissiveMap].filter(Boolean);
     for(const sx of [-1,1]){const pts=M.caminho.map(([x,z])=>[x+sx*(4.6+Math.sin(z*.21)*.8),z]);for(let k=0;k<pts.length-1;k++){const [x0,z0]=pts[k],[x1,z1]=pts[k+1],d=Math.hypot(x1-x0,z1-z0);
       const m=new T.Mesh(new T.PlaneGeometry(1.1,d+.6),lava);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(x1-x0,z1-z0);m.position.set((x0+x1)/2,.03,(z0+z1)/2);S.add(m);(mec.lava=mec.lava||[]).push([x0,z0,x1,z1,-sx])}}
     const ch=perto(M.pedras,2,1.6).concat(perto(M.arvores.filter((q,k)=>k%3===1),1,1.2)),cores=TT.chamas||['#ff5a1a','#ff9a2a','#ffd04a'];
-    cores.forEach((cor,ci)=>{const L=ch.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=new T.MeshBasicMaterial({color:cor,transparent:true,opacity:.92});
+    cores.forEach((cor,ci)=>{const L=ch.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=matPBR(TT,'magma',{color:cor,emissive:cor,emissiveIntensity:1.1,roughness:.5,transparent:true,opacity:.92,side:T.DoubleSide});
       inst(new T.ConeGeometry(.2,1,6),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.5*s,z);o.scale.set(s,s*(1+rnd()*.9),s);o.rotation.set(0,rnd()*6,0);c.set('#ffffff')})});
-    const vu=M.arvores.filter(([x],k)=>Math.abs(x)>M.largura/2-1&&k%11===0),vm=new T.MeshLambertMaterial({color:'#3a2a26'}),vt=new T.MeshBasicMaterial({color:'#ff5a1a'});
+    const vu=M.arvores.filter(([x],k)=>Math.abs(x)>M.largura/2-1&&k%11===0),vm=matPBR(TT,'pedra',{color:'#dad0c8',roughness:.94}),vt=matPBR(TT,'magma',{color:'#ffffff',emissive:'#ff5a1a',emissiveIntensity:1.15,side:T.DoubleSide});
     inst(new T.ConeGeometry(2.4,4,7,1,true),vm,vu,(o,[x,z,s],c)=>{o.position.set(x*1.08,1.9*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
     inst(new T.CircleGeometry(.75,10),vt,vu,(o,[x,z,s],c)=>{o.position.set(x*1.08,3.6*s,z);o.scale.setScalar(s);o.rotation.set(-Math.PI/2,0,0);c.set('#ffffff')});
   }
   if(DEC==='luz'){
     // colunas antigas (algumas quebradas), cristais dourados e azuis, e orbes de luz flutuando
-    const co=perto(M.arvores.filter((q,k)=>k%4===0),1,.6),cm=new T.MeshLambertMaterial({color:'#f2ecd8'});
+    const co=perto(M.arvores.filter((q,k)=>k%4===0),1,.6),cm=matPBR(TT,'marmore',{color:'#ffffff',roughness:.45});
     inst(new T.CylinderGeometry(.32,.36,1,10),cm,co,(o,[x,z,s],c)=>{const h=1.6+((x*13+z*7)%1+1)%1*2.2;o.position.set(x,h*s/2,z);o.scale.set(s,h*s,s);o.rotation.set(0,0,0);c.set('#ffffff')});
     inst(new T.BoxGeometry(.9,.25,.9),cm,co,(o,[x,z,s],c)=>{o.position.set(x,.12*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
     const cr=perto(M.pedras,2,1.4),cores=TT.cristais||['#ffd86a','#8ac8ff','#ffffff'];
-    cores.forEach((cor,ci)=>{const L=cr.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=new T.MeshStandardMaterial({color:cor,emissive:cor,emissiveIntensity:.7,roughness:.2,flatShading:true});
+    cores.forEach((cor,ci)=>{const L=cr.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=matPBR(TT,'cristal',{color:cor,emissive:cor,emissiveIntensity:.7,roughness:.2,flatShading:true});
       inst(new T.ConeGeometry(.16,1,5),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.45*s,z);o.scale.set(s,s*(1.1+rnd()*.8),s);o.rotation.set((rnd()-.5)*.4,rnd()*6,(rnd()-.5)*.4);c.set('#ffffff')})});
-    const ob=perto(M.arvores.filter((q,k)=>k%5===2),1,2),om=new T.MeshBasicMaterial({color:'#fff2b0'});
+    const ob=perto(M.arvores.filter((q,k)=>k%5===2),1,2),om=matPBR(TT,'cristal',{color:'#fff2b0',emissive:'#fff2b0',emissiveIntensity:1.1,roughness:.15});
     inst(new T.SphereGeometry(.22,10,8),om,ob,(o,[x,z,s],c)=>{o.position.set(x,1.6+s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
     // cristais-chave: o portal só abre depois de acender os dois (ficam fora da trilha)
     mec.chaves=[];for(const fr of [.38,.7]){const z=M.comprimento*fr,p0=M.caminho.reduce((a,b)=>Math.abs(b[1]-z)<Math.abs(a[1]-z)?b:a,M.caminho[0]),x=Math.max(-M.largura/2+2,Math.min(M.largura/2-2,p0[0]+(fr<.5?-5:5)));
-      const mat=new T.MeshStandardMaterial({color:'#8a8aa0',emissive:'#2a2a40',emissiveIntensity:.5,roughness:.3,flatShading:true}),g=new T.Mesh(new T.OctahedronGeometry(.6,0),mat);g.scale.set(1,1.8,1);g.position.set(x,1.3,z);S.add(g);
-      const base=new T.Mesh(new T.CylinderGeometry(.6,.75,.4,8),new T.MeshLambertMaterial({color:'#f2ecd8'}));base.position.set(x,.2,z);S.add(base);mec.chaves.push({x,z,g,mat,ok:false})}
+      const mat=matPBR(TT,'cristal',{color:'#8a8aa0',emissive:'#2a2a40',emissiveIntensity:.5,roughness:.3,flatShading:true}),g=new T.Mesh(new T.OctahedronGeometry(.6,0),mat);g.scale.set(1,1.8,1);g.position.set(x,1.3,z);S.add(g);
+      const base=new T.Mesh(new T.CylinderGeometry(.6,.75,.4,8),matPBR(TT,'marmore',{color:'#ffffff',roughness:.55}));base.position.set(x,.2,z);S.add(base);mec.chaves.push({x,z,g,mat,ok:false})}
   }
   if(DEC==='aquatico'){
     // corais (galhos coloridos), algas altas e conchas no fundo; baú do tesouro perto do portal
     const cores=TT.corais||['#ff8a4a','#ff6aa8','#b06aff','#ffd04a'],co=perto(M.arvores.filter((q,k)=>k%2===1),2,1.6);
-    cores.forEach((cor,c)=>{const L=co.filter(q=>q[3]%cores.length===c);if(!L.length)return;const mat=new T.MeshLambertMaterial({color:cor});
+    cores.forEach((cor,c)=>{const L=co.filter(q=>q[3]%cores.length===c);if(!L.length)return;const mat=matPBR(TT,'coral',{color:cor,roughness:.84});
       for(const [ang,inc,h] of [[0,0,1],[2.1,.55,.7],[4.2,.55,.75],[1.0,.8,.5]])inst(new T.CylinderGeometry(.05,.09,1,6),mat,L,(o,[x,z,s],col)=>{const a=ang+(x*3+z)%6;o.position.set(x+Math.sin(a)*Math.sin(inc)*.5*h*s,.5*h*s*Math.cos(inc)+.05,z+Math.cos(a)*Math.sin(inc)*.5*h*s);o.scale.set(s,h*s,s);o.rotation.set(Math.cos(a)*inc,0,-Math.sin(a)*inc);col.set('#ffffff')})});
-    const al=perto(M.arvores,2,2.4),am=new T.MeshLambertMaterial({color:TT.alga||'#3fa56a',side:T.DoubleSide});
+    const al=perto(M.arvores,2,2.4),am=matPBR(TT,'alga',{color:TT.alga||'#3fa56a',roughness:.72,side:T.DoubleSide});
     inst(new T.PlaneGeometry(.22,1,1,4),am,al,(o,[x,z,s],col)=>{o.position.set(x,.8*s,z);o.scale.set(s,1.6*s,s);o.rotation.set((rnd()-.5)*.25,rnd()*6,(rnd()-.5)*.25);col.set(['#3fa56a','#2f8f7a','#5abf5a'][Math.abs(Math.round(x+z))%3])});
     // correntezas: faixas que empurram o bichinho para o lado (bolhas mostram a direção)
     mec.correntes=[];const nC=Math.max(2,Math.floor(M.comprimento/30));for(let k=0;k<nC;k++){const z0=14+(M.comprimento-30)*(k+.5)/nC,dir=k%2?1:-1,bol=[];
       for(let q=0;q<10;q++){const b=sprEmoji('🫧',.35);b.position.set((rnd()-.5)*M.largura,.6+rnd()*.8,z0+rnd()*3.2);S.add(b);bol.push(b)}
       const fx=new T.Mesh(new T.PlaneGeometry(M.largura,3.2),new T.MeshBasicMaterial({color:'#9fe6ff',transparent:true,opacity:.18,depthWrite:false}));fx.rotation.x=-Math.PI/2;fx.position.set(0,.04,z0+1.6);S.add(fx);
       mec.correntes.push({z0,z1:z0+3.2,dir,bol})}
-    const cx=M.portal[0]+3,cz=M.portal[1]-2,bau=new T.Group(),mad=new T.MeshLambertMaterial({color:'#8a5a2a'}),our=new T.MeshLambertMaterial({color:'#ffd04a',emissive:'#7a5a00'});
+    const cx=M.portal[0]+3,cz=M.portal[1]-2,bau=new T.Group(),mad=matPBR(TT,'madeira',{color:'#f2ce9b',roughness:.86}),our=new T.MeshStandardMaterial({color:'#ffd04a',metalness:.55,roughness:.3,emissive:'#493500'});
     const cx1=new T.Mesh(new T.BoxGeometry(1.2,.7,.8),mad);cx1.position.y=.35;const tampa=new T.Mesh(new T.CylinderGeometry(.4,.4,1.2,10,1,false,0,Math.PI),mad);tampa.rotation.z=Math.PI/2;tampa.position.y=.7;
     const fita=new T.Mesh(new T.BoxGeometry(.12,.75,.84),our);fita.position.y=.38;bau.add(cx1,tampa,fita);bau.position.set(cx,0,cz);bau.rotation.y=-.5;S.add(bau);
   }
@@ -309,7 +319,14 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   const emBlocos=(base,lista,f)=>{const B=CF.bloco||6,gr={};lista.forEach(q=>{const v=base.length>1?Math.abs(Math.round(q[0]*7+q[1]*3))%base.length:0,c=Math.floor(q[1]/B),cx=Math.floor(q[0]/B),k=v+'_'+c+'_'+cx;(gr[k]=gr[k]||{v,c,cx,qs:[]}).qs.push(q)});
     for(const g of Object.values(gr)){const im=new T.InstancedMesh(base[g.v].geo,base[g.v].mat,g.qs.length),o=new T.Object3D();g.qs.forEach((q,k)=>{f(o,q);o.updateMatrix();im.setMatrixAt(k,o.matrix)});
       im.instanceMatrix.needsUpdate=true;im.frustumCulled=false;S.add(im);const r=2.2;blocos.push({m:im,z0:g.c*B-r,z1:(g.c+1)*B+r,x0:g.cx*B-r,x1:(g.cx+1)*B+r})}};
-  const chao=new T.Mesh(new T.PlaneGeometry(M.largura+24,M.comprimento+24),new T.MeshLambertMaterial({map:texChao(M)}));chao.rotation.x=-Math.PI/2;chao.position.set(0,0,M.comprimento/2);S.add(chao);
+  const tx=M.tema&&M.tema.texturas&&M.tema.texturas.chao;
+  if(tx){const W=M.largura+24,L=M.comprimento+24,repX=W/7,repY=L/7,mat=matPBR(M.tema,'chao',{color:'#ffffff',roughness:.88});
+    for(const t of [mat.map,mat.normalMap,mat.roughnessMap])if(t){t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(repX,repY)}
+    const base=new T.Mesh(new T.PlaneGeometry(W,L),mat);base.rotation.x=-Math.PI/2;base.position.set(0,0,M.comprimento/2);S.add(base);
+    // Canvas só pinta a trilha/arena, mantendo o chão PBR visível e a rota intacta.
+    const trilha=new T.Mesh(new T.PlaneGeometry(W,L),new T.MeshBasicMaterial({map:texChao(M),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}));
+    trilha.rotation.x=-Math.PI/2;trilha.position.set(0,.012,M.comprimento/2);S.add(trilha)}
+  else{const chao=new T.Mesh(new T.PlaneGeometry(M.largura+24,M.comprimento+24),new T.MeshLambertMaterial({map:texChao(M)}));chao.rotation.x=-Math.PI/2;chao.position.set(0,0,M.comprimento/2);S.add(chao)}
   const inst=(geo,mat,lista,f)=>{const im=new T.InstancedMesh(geo,mat,lista.length),o=new T.Object3D(),c=new T.Color();lista.forEach((q,k)=>{f(o,q,c);o.updateMatrix();im.setMatrixAt(k,o.matrix);im.setColorAt(k,c)});im.instanceMatrix.needsUpdate=true;if(im.instanceColor)im.instanceColor.needsUpdate=true;S.add(im);return im};
   const lam=()=>new T.MeshLambertMaterial({color:0xffffff});
   const TT=M.tema||{},tinge=(base,hex)=>hex?base.map(b=>{const m=b.mat.clone();m.color=new T.Color(hex);return{geo:b.geo,mat:m}}):base;// cor do mundo multiplica a textura do modelo
@@ -411,6 +428,8 @@ function mover(o,dx,dz){const R=RUN,M=R.w.M;o.x+=dx;o.z+=dz;
 function maisPerto(o,raio,filtro){let b=null,bd=raio;for(const e of RUN.w.ents){if(!e.vivo||(filtro&&!filtro(e)))continue;const d=dist(o,e)-e.r;if(d<bd){bd=d;b=e}}return b}
 // mecânicas de cada mundo: lava queima (Fogo), correnteza empurra (Mar), lanterna no escuro (Trevas), cristais-chave (Luz), morcegos (Caverna)
 function mecanicas(dt){const R=RUN,p=R.p,mc=R.w.mec;if(!mc||!p||p.morto)return;
+  // Deslocamento visual da textura do magma: NÃO altera segmentos de colisão/dano.
+  if(mc.magmaMaps)for(const tex of mc.magmaMaps)tex.offset.y=(tex.offset.y-dt*.017+1)%1;
   if(mc.lava&&p.dash<=0){for(const [x0,z0,x1,z1,lado] of mc.lava){const vx=x1-x0,vz=z1-z0,t=Math.max(0,Math.min(1,((p.x-x0)*vx+(p.z-z0)*vz)/(vx*vx+vz*vz))),d=Math.hypot(p.x-(x0+t*vx),p.z-(z0+t*vz));
     if(d<.6){if(!R.avisoLava){R.avisoLava=1;aviso('🔥 A lava queima! Fique na trilha (ou use Esquivar para pular)',2400)}machuca(Math.max(1,Math.round(R.hero.max*.06)),lado,0);faisca(p.x,.4,p.z,'#ff7a2a',6);break}}}
   if(mc.correntes)for(const c of mc.correntes){for(const b of c.bol){b.position.x+=c.dir*3*dt;if(Math.abs(b.position.x)>R.w.M.largura/2)b.position.x=-c.dir*R.w.M.largura/2}
