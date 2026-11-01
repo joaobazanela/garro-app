@@ -93,6 +93,7 @@ async function entrarComGoogle(){
 
 async function iniciarAposLogin(){
   await carregarEstado();
+  devTudo();// admin: um de cada
   $('authGate').hidden=true;
   $('gameRoot').hidden=false;
   hud();renderShelf();
