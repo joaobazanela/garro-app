@@ -136,7 +136,7 @@ function feedPet(){
   INV.food--;saveInv();updFood();
   const k=Math.floor(Math.random()*FOODS.length),g=foodMesh(k);castAll(g);V.scene.add(g);
   const from=V.cam.position.clone().add(new THREE.Vector3(1.1*V.k,.9*V.k+.4,-3.6));
-  setState('eat',2.6);V.ry=-.15;V.vy=0;
+  setState('eat',2.6);V.ry=isLeg(i)?-.62:-.15;V.vy=0;
   FOOD={g,k,t0:performance.now(),from,done:0,i};mood('Que cheirinho! '+FOODS[k].e)}
 function tickFood(){if(!FOOD)return;const F=FOOD,u=(performance.now()-F.t0)/1000,to=mouthWorld();
   const s=V.k*.9+.18;F.g.scale.setScalar(s);
