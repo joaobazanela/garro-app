@@ -280,7 +280,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   const hU=prepAndar(hg,redondo(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
   R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);
-  R.minMobs=(M.acampamentos[0]&&M.acampamentos[0].inimigos.length)||0;// portal só abre depois de matar pelo menos os bichinhos do acampamento inicial
+  R.minMobs=((M.acampamentos[0]&&M.acampamentos[0].inimigos.length)||0)+5;// portal só abre depois de matar pelo menos os bichinhos do acampamento inicial (+5)
   if(f.chefe&&M.arena){const b=await novoInimigo(f.chefe[0],f.chefe[1],M.arena.x,M.arena.z+2,{x:M.arena.x,z:M.arena.z},true);R.w.ents.push(b);R.w.boss=b}
   if(RUN!==R)return;
   R.t=0;R.cam=null;tamanho3D();hud();const ld=$('advLoad');if(ld)ld.hidden=true;
@@ -533,7 +533,19 @@ function resultado(win,st,res){const R=RUN,f=R.f,tem=FASES[R.k+1];if(win)G.fanfa
   if(res.stone>=0){const s=G.stone(res.stone);h+='<li class="pedra">'+(s&&s.img?'<img src="'+s.img+'" alt="">':'💎')+' O chefão deixou cair: <b>'+(s?s.name:'pedra')+'</b>!</li>'}
   if(!win)h+='<li><small>Dica: quando o inimigo tremer ou aparecer um círculo vermelho no chão, use 💨 Esquivar. Derrote primeiro o curandeiro 💚, use o Poder de longe e pegue morangos 🍓. Bichinho com nível maior aguenta mais.</small></li>';
   h+='</ul><div class="advresb">'+(win&&tem?'<button type="button" data-r="prox">Próxima fase ›</button>':'')+'<button type="button" data-r="de-novo">'+(win?'Jogar de novo':'Tentar de novo')+'</button><button type="button" data-r="mapa" class="sec">Mapa</button></div></div>';
-  const d=document.createElement('div');d.innerHTML=h;$('advScene').appendChild(d.firstChild);moedas()}
+  const d=document.createElement('div');d.innerHTML=h;$('advScene').appendChild(d.firstChild);moedas();
+  // mundo completo: só na 1ª vez que a última fase dele é vencida (res.first veio do terminar())
+  if(win&&!f.desafio&&res.first){const fs=f.mundo.fases;
+    if(fs.filter(x=>x.id!==f.id).every(x=>(box().prog[x.id]||0)>=1)){
+      const moedasMundo=fs.reduce((s,x)=>s+(x.premio||0),0),tresEstrelas=fs.every(x=>(box().prog[x.id]||0)>=3);
+      let hm='<div class="advres advmundo-ok"><h4>🌎 '+f.mundo.nome+' completo! 🏆</h4><ul>';
+      hm+='<li>'+fs.length+' fases vencidas</li>';
+      if(moedasMundo>0)hm+='<li>+'+moedasMundo+' 🪙 ganhos neste mundo</li>';
+      if(tresEstrelas)hm+='<li>🍃 3 folhas em todas as fases!</li>';
+      hm+='</ul><div class="advresb"><button type="button" data-r="mapa">Continuar</button></div></div>';
+      const dm=document.createElement('div');dm.innerHTML=hm;$('advScene').appendChild(dm.firstChild)
+    }
+  }}
 
 window.GARRO_AVENTURA={FASES,lutador,dano,elemMult,energia,liberada,box,recomendado,nivelMin,run:()=>RUN,tec:(k,v)=>{if(v&&!TEC[k])TEC[k+'p']=true;TEC[k]=v},joy:(x,y)=>{JOY.x=x;JOY.y=y},sim:(n,bot)=>{for(let k=0;k<n&&RUN&&RUN.p&&!RUN.fim;k++){if(bot)bot();fisica(1/60)}if(RUN&&RUN.p)desenha()}};// usado nos testes
 setTimeout(carregarServidor,3000);
