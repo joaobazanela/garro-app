@@ -146,7 +146,7 @@ const walls=[
 ];
 // cerca invisível a EDGE_FREE do buraco do prêmio: o monte nunca chega perto da divisória, então nada fica parado quase caindo no buraco.
 // Só vale para o que está solto (bichinho na garra atravessa, como a guarda de vidro)
-const EDGE_FREE=30;
+const EDGE_FREE=0;// o monte fica escorado na divisória (só não pode ficar equilibrado no topo dela: ver tiraDaBorda)
 const fence=Bodies.rectangle(DIV+EDGE_FREE+3,(80+FLOOR)/2,6,FLOOR-80,{isStatic:true,friction:.1,collisionFilter:{category:CAT_GUARD}});Composite.add(world,fence);
 Composite.add(world,walls);
 const prongL=Bodies.rectangle(0,0,7,40,{isStatic:true,isSensor:true,collisionFilter:{category:CAT_PRONG}});
@@ -163,16 +163,24 @@ function addPlush(p,x,y){
   Body.setMass(b,p.g/100);Body.setAngle(b,(Math.random()-.5)*.6);
   b.plush=p;bodies.push(b);Composite.add(world,b);return b;
 }
-const PILE=16;
+const PILE=30;// pilha baixa: nada pode passar da linha do topo da divisória (DIVTOP)
 function pickPlush(cnt){
   const round=Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
   let t=0;pool.forEach(p=>t+=p.rare);let r=Math.random()*t;for(const p of pool){r-=p.rare;if(r<0)return p}return pool[0];
 }
+// onde a pilha está mais baixa (sorteia alguns pontos e fica com o mais vazio): assim preenche toda a área, inclusive junto da divisória
+function xBaixo(){let best=DIV+40,bt=-1;for(let q=0;q<7;q++){const x=DIV+34+Math.random()*(W-DIV-68);let topo=FLOOR;for(const b of bodies)if(b.position.x>DIV&&Math.abs(b.position.x-x)<42)topo=Math.min(topo,b.bounds.min.y);if(topo>bt){bt=topo;best=x}}return best}
 function fill(n,fromY){
   const cnt={};bodies.forEach(b=>cnt[b.plush.i]=(cnt[b.plush.i]||0)+1);
-  for(let k=0;k<n;k++){let p=pickPlush(cnt);if(!bodies.some(b=>b.plush.stone!==undefined)&&!cnt.stone&&Math.random()<.012){p=STONES[Math.floor(Math.random()*STONES.length)];cnt.stone=1}cnt[p.i]=(cnt[p.i]||0)+1;addPlush(p,DIV+60+Math.random()*(W-DIV-110),fromY-k*70)}
+  for(let k=0;k<n;k++){let p=pickPlush(cnt);if(!bodies.some(b=>b.plush.stone!==undefined)&&!cnt.stone&&Math.random()<.012){p=STONES[Math.floor(Math.random()*STONES.length)];cnt.stone=1}cnt[p.i]=(cnt[p.i]||0)+1;addPlush(p,xBaixo(),fromY-k*70)}
 }
-function settlePile(){fill(PILE,FLOOR-60);for(let i=0;i<500;i++)Engine.update(engine,1000/60);
+// ninguém fica acima da linha da divisória: o que assentou lá em cima (parado) sai da máquina com uma nuvenzinha
+const LIM_EXTRA=38;// a área marcada vai um pouco acima do topo da divisória
+function abaixaPilha(mudo){let n=0;for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];if((!mudo&&b===claw.held)||b.plush.won||b.plush.giant||b.plush.leg||b.position.x<DIV)continue;
+    if(b.bounds.min.y<DIVTOP-LIM_EXTRA&&Math.hypot(b.velocity.x,b.velocity.y)<.5){if(!mudo)puff(b.position.x,b.position.y,10,['#fff','#ffd7ef'],true);Composite.remove(world,b);bodies.splice(i,1);n++}}return n}
+function settlePile(){// enche até a linha da divisória: cai um por vez em cima da pilha; quando um assenta acima da linha, está cheio
+  for(let r=0,fora=0;r<70&&bodies.length<30&&fora<6;r++){fill(1,DIVTOP-130);for(let i=0;i<150;i++)Engine.update(engine,1000/60);fora+=abaixaPilha(true)}
+  for(let i=0;i<150;i++)Engine.update(engine,1000/60);abaixaPilha(true);
   for(let i=bodies.length-1;i>=0;i--)if(bodies[i].position.x<DIV){Composite.remove(world,bodies[i]);bodies.splice(i,1)}}
 settlePile();
 // novos bichos caem devagar: 1 a cada 4 jogadas quando a pilha baixa; só repõe 3 de uma vez se estiver quase vazia
@@ -191,9 +199,9 @@ function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
   for(let i=bodies.length-1;i>=0;i--)if(bodies[i].position.x<DIV){Composite.remove(world,bodies[i]);bodies.splice(i,1)}}
 // bichinho solto que ficou encostado na divisória do buraco do prêmio (a garra o soltou ali): empurra para dentro do monte, nunca deixa "quase caindo"
 function tiraDaBorda(){const lim=DIV+EDGE_FREE+8;for(const b of bodies){if(b===claw.held||b.plush.won||b.plush.giant)continue;const x=b.position.x,e=b.plush.dw*.42;
-    if(x>DIV+4&&x-e<lim){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
+    if(x>DIV+4&&x-e<lim&&b.position.y<DIVTOP+30){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
-function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}sinceDrop++;if(bodies.length<6){fill(Math.min(3,PILE-bodies.length),-60);sinceDrop=0}else if(bodies.length<13&&sinceDrop>=4){fill(1,-60);sinceDrop=0}}
+function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60)}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
 /* ---------- segunda máquina: um bichinho gigante ---------- */
 let MACH=1;const GCOST=50,GK=2.4;
@@ -1280,8 +1288,12 @@ function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}cons
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
 function openViewer(i){
   vTags(i);if(i>=CH0&&!isLeg(i)){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
-  if(MODELS[i]){openGLB(i).then(ok=>{if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
-    $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(gloop)}else openProc(i)});return}
+  if(MODELS[i]){const rq=V.rq=(V.rq|0)+1;// o corpo antigo (em código) nunca aparece: se o modelo 3D não carregar, tenta de novo e avisa
+    const tenta=n=>openGLB(i).then(ok=>{if(V.rq!==rq)return;if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
+      $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(gloop)}
+      else if(n<8){if(n===0)banner('Carregando '+PLUSH[i].name+'…','um instante');EVOFAIL[i]=0;setTimeout(()=>{if(V.rq===rq)tenta(n+1)},1200+n*500)}
+      else banner('Não carregou','Confira a internet e toque no bichinho de novo')});
+    tenta(0);return}
   openProc(i)}
 function openProc(i){
   setDet(i);

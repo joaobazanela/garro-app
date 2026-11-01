@@ -216,3 +216,10 @@ Botão 🛒 Loja no topo. Comida custa 5 moedas e Pedra de evolução 400. A com
 - **Renascer (Nv 100):** botão 🔄. O nível volta para 1; forma evoluída, gigantes, moedas e o resto ficam. Cada renascimento dá **+10% de ataque, defesa e vida** (soma: 3 renascimentos = +30%).
 - **Regras = conteúdo** em `data/regras.json` → `EVOLUCAO` (`nivel`, `pedras_por_nivel`, `renascer_nivel`, `bonus_por_renascimento`). O servidor (`sync-estado`) lê esse arquivo; o jogo também.
 - **Estado do jogador** no Supabase (`plush_care`): `xp`, `rebirths` (nº de renascimentos) e `stone_pending` (pedras "pela metade"). Migração `0012_pedras_e_renascer.sql`, teste em `supabase/tests/pedras.sql`.
+
+### Pilha limitada pela linha da divisória
+A máquina é enchida até a linha do topo da divisória (`DIVTOP`): os bichinhos caem um por vez em cima da pilha e o que assenta acima da linha sai com uma nuvenzinha. Durante o jogo ela repõe sempre que a pilha baixa, para ficar cheia até a linha, sem passar.
+O monte fica escorado na divisória (sem cerca invisível); só não pode ficar equilibrado no topo dela, onde cairia no buraco do prêmio.
+
+### Sem corpo antigo
+Se o modelo 3D de um bichinho demora ou falha ao carregar, o jogo mostra "Carregando…" e tenta de novo (até 8 vezes, além das 3 tentativas internas) em vez de desenhar o corpo antigo feito em código.
