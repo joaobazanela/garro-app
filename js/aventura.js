@@ -272,7 +272,7 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
   }
   if(DEC==='fogo'){
     // rios de lava dos dois lados da trilha, chamas e vulcões nas bordas
-    const lava=matPBR(TT,'magma',{color:'#ffffff',emissive:'#ff7a28',emissiveIntensity:1.25,roughness:.8,side:T.DoubleSide});mec.magmaMaps=[lava.map,lava.normalMap,lava.roughnessMap,lava.emissiveMap].filter(Boolean);
+    const lava=matPBR(TT,'magma',{color:'#ffffff',emissive:'#ff6a1a',emissiveIntensity:1.6,roughness:.7,side:T.DoubleSide});mec.magmaMaps=[lava.map,lava.normalMap,lava.roughnessMap,lava.emissiveMap].filter(Boolean);
     for(const sx of [-1,1]){const pts=M.caminho.map(([x,z])=>[x+sx*(4.6+Math.sin(z*.21)*.8),z]);for(let k=0;k<pts.length-1;k++){const [x0,z0]=pts[k],[x1,z1]=pts[k+1],d=Math.hypot(x1-x0,z1-z0);
       const m=new T.Mesh(new T.PlaneGeometry(1.1,d+.6),lava);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(x1-x0,z1-z0);m.position.set((x0+x1)/2,.03,(z0+z1)/2);S.add(m);(mec.lava=mec.lava||[]).push([x0,z0,x1,z1,-sx])}}
     const ch=perto(M.pedras,2,1.6).concat(perto(M.arvores.filter((q,k)=>k%3===1),1,1.2)),cores=TT.chamas||['#ff5a1a','#ff9a2a','#ffd04a'];
