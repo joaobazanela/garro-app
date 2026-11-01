@@ -229,7 +229,7 @@ function props3d(TT){const CF=cfgDe(TT);if(!D.cenario3d||!G.glb)return Promise.r
     por.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=.9;o.material.metalness=0;if(o.material.map)o.material.map.encoding=G.THREE().sRGBEncoding}});
     return{portal:por,arv:r.map(malha),cog:malha(cog),lan:lan?malha(lan):null}}).catch(e=>{console.warn('cenario 3d',e);delete C3C[ck];return null})}
 // decoração própria de cada mundo (tema.decor): inspirada nos mapas "Caverna Encantada" e "Mundo Aquático"
-function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.decor;if(!DEC)return;
+function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.decor,mec={};if(!DEC)return mec;
   const perto=(lista,n,d)=>{const out=[];lista.forEach(([x,z,s],k)=>{for(let q=0;q<n;q++)out.push([x+(rnd()-.5)*d,z+(rnd()-.5)*d,s*(.5+rnd()*.6),k+q])});return out};
   if(DEC==='caverna'){
     // cristais que brilham, em tufos perto das pedras grandes
@@ -243,6 +243,8 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
       inst(new T.CylinderGeometry(.06,.08,2.6,6),poste,ls,(o,[x,z],c)=>{o.position.set(x,1.3,z);o.scale.set(1,1,1);o.rotation.set(0,0,0);c.set('#ffffff')});
       inst(C3.lan.geo,C3.lan.mat,ls,(o,[x,z],c)=>{o.position.set(x,1.9,z);o.scale.setScalar(.75);o.rotation.set(0,0,0);c.set('#ffffff')});
       for(const [x,z] of ls){const l=new T.PointLight(TT.lanterna_cor||'#ffb35a',1.1,7,1.6);l.position.set(x,1.9,z);S.add(l)}}
+    // morcegos voando em círculos pela caverna
+    mec.morcegos=[];for(let k=0;k<14;k++){const sp=sprEmoji('🦇',.55),cz=rnd()*M.comprimento,cx=(rnd()-.5)*M.largura*.8;S.add(sp);mec.morcegos.push({s:sp,cx,cz,r:1.5+rnd()*2.5,v:(rnd()<.5?-1:1)*(1+rnd()),f:rnd()*6,h:2.6+rnd()*1.5})}
   }
   if(DEC==='trevas'){
     // árvores secas (tronco e galhos tortos), cristais roxos e torres escuras com ponta brilhante
@@ -255,12 +257,14 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
     const to=perto(M.arvores.filter((q,k)=>k%9===4),1,.5),tq=new T.MeshLambertMaterial({color:'#1e1a24'}),tp=new T.MeshStandardMaterial({color:'#9a5aff',emissive:'#7a3aff',emissiveIntensity:.8,flatShading:true});
     inst(new T.CylinderGeometry(.2,.35,3,6),tq,to,(o,[x,z,s],c)=>{o.position.set(x,1.5*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
     inst(new T.ConeGeometry(.7,1.3,6),tp,to,(o,[x,z,s],c)=>{o.position.set(x,3.5*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
+    // escuro: uma luz roxa acompanha o bichinho (a "lanterna")
+    mec.lanterna=new T.PointLight('#d8b8ff',1.6,9,1.4);S.add(mec.lanterna);
   }
   if(DEC==='fogo'){
     // rios de lava dos dois lados da trilha, chamas e vulcões nas bordas
     const lava=new T.MeshBasicMaterial({color:'#ff6a1a'});
     for(const sx of [-1,1]){const pts=M.caminho.map(([x,z])=>[x+sx*(4.6+Math.sin(z*.21)*.8),z]);for(let k=0;k<pts.length-1;k++){const [x0,z0]=pts[k],[x1,z1]=pts[k+1],d=Math.hypot(x1-x0,z1-z0);
-      const m=new T.Mesh(new T.PlaneGeometry(1.1,d+.6),lava);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(x1-x0,z1-z0);m.position.set((x0+x1)/2,.03,(z0+z1)/2);S.add(m)}}
+      const m=new T.Mesh(new T.PlaneGeometry(1.1,d+.6),lava);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(x1-x0,z1-z0);m.position.set((x0+x1)/2,.03,(z0+z1)/2);S.add(m);(mec.lava=mec.lava||[]).push([x0,z0,x1,z1,-sx])}}
     const ch=perto(M.pedras,2,1.6).concat(perto(M.arvores.filter((q,k)=>k%3===1),1,1.2)),cores=TT.chamas||['#ff5a1a','#ff9a2a','#ffd04a'];
     cores.forEach((cor,ci)=>{const L=ch.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=new T.MeshBasicMaterial({color:cor,transparent:true,opacity:.92});
       inst(new T.ConeGeometry(.2,1,6),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.5*s,z);o.scale.set(s,s*(1+rnd()*.9),s);o.rotation.set(0,rnd()*6,0);c.set('#ffffff')})});
@@ -278,6 +282,10 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
       inst(new T.ConeGeometry(.16,1,5),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.45*s,z);o.scale.set(s,s*(1.1+rnd()*.8),s);o.rotation.set((rnd()-.5)*.4,rnd()*6,(rnd()-.5)*.4);c.set('#ffffff')})});
     const ob=perto(M.arvores.filter((q,k)=>k%5===2),1,2),om=new T.MeshBasicMaterial({color:'#fff2b0'});
     inst(new T.SphereGeometry(.22,10,8),om,ob,(o,[x,z,s],c)=>{o.position.set(x,1.6+s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
+    // cristais-chave: o portal só abre depois de acender os dois (ficam fora da trilha)
+    mec.chaves=[];for(const fr of [.38,.7]){const z=M.comprimento*fr,p0=M.caminho.reduce((a,b)=>Math.abs(b[1]-z)<Math.abs(a[1]-z)?b:a,M.caminho[0]),x=Math.max(-M.largura/2+2,Math.min(M.largura/2-2,p0[0]+(fr<.5?-5:5)));
+      const mat=new T.MeshStandardMaterial({color:'#8a8aa0',emissive:'#2a2a40',emissiveIntensity:.5,roughness:.3,flatShading:true}),g=new T.Mesh(new T.OctahedronGeometry(.6,0),mat);g.scale.set(1,1.8,1);g.position.set(x,1.3,z);S.add(g);
+      const base=new T.Mesh(new T.CylinderGeometry(.6,.75,.4,8),new T.MeshLambertMaterial({color:'#f2ecd8'}));base.position.set(x,.2,z);S.add(base);mec.chaves.push({x,z,g,mat,ok:false})}
   }
   if(DEC==='aquatico'){
     // corais (galhos coloridos), algas altas e conchas no fundo; baú do tesouro perto do portal
@@ -286,11 +294,16 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
       for(const [ang,inc,h] of [[0,0,1],[2.1,.55,.7],[4.2,.55,.75],[1.0,.8,.5]])inst(new T.CylinderGeometry(.05,.09,1,6),mat,L,(o,[x,z,s],col)=>{const a=ang+(x*3+z)%6;o.position.set(x+Math.sin(a)*Math.sin(inc)*.5*h*s,.5*h*s*Math.cos(inc)+.05,z+Math.cos(a)*Math.sin(inc)*.5*h*s);o.scale.set(s,h*s,s);o.rotation.set(Math.cos(a)*inc,0,-Math.sin(a)*inc);col.set('#ffffff')})});
     const al=perto(M.arvores,2,2.4),am=new T.MeshLambertMaterial({color:TT.alga||'#3fa56a',side:T.DoubleSide});
     inst(new T.PlaneGeometry(.22,1,1,4),am,al,(o,[x,z,s],col)=>{o.position.set(x,.8*s,z);o.scale.set(s,1.6*s,s);o.rotation.set((rnd()-.5)*.25,rnd()*6,(rnd()-.5)*.25);col.set(['#3fa56a','#2f8f7a','#5abf5a'][Math.abs(Math.round(x+z))%3])});
+    // correntezas: faixas que empurram o bichinho para o lado (bolhas mostram a direção)
+    mec.correntes=[];const nC=Math.max(2,Math.floor(M.comprimento/30));for(let k=0;k<nC;k++){const z0=14+(M.comprimento-30)*(k+.5)/nC,dir=k%2?1:-1,bol=[];
+      for(let q=0;q<10;q++){const b=sprEmoji('🫧',.35);b.position.set((rnd()-.5)*M.largura,.6+rnd()*.8,z0+rnd()*3.2);S.add(b);bol.push(b)}
+      const fx=new T.Mesh(new T.PlaneGeometry(M.largura,3.2),new T.MeshBasicMaterial({color:'#9fe6ff',transparent:true,opacity:.18,depthWrite:false}));fx.rotation.x=-Math.PI/2;fx.position.set(0,.04,z0+1.6);S.add(fx);
+      mec.correntes.push({z0,z1:z0+3.2,dir,bol})}
     const cx=M.portal[0]+3,cz=M.portal[1]-2,bau=new T.Group(),mad=new T.MeshLambertMaterial({color:'#8a5a2a'}),our=new T.MeshLambertMaterial({color:'#ffd04a',emissive:'#7a5a00'});
     const cx1=new T.Mesh(new T.BoxGeometry(1.2,.7,.8),mad);cx1.position.y=.35;const tampa=new T.Mesh(new T.CylinderGeometry(.4,.4,1.2,10,1,false,0,Math.PI),mad);tampa.rotation.z=Math.PI/2;tampa.position.y=.7;
     const fita=new T.Mesh(new T.BoxGeometry(.12,.75,.84),our);fita.position.y=.38;bau.add(cx1,tampa,fita);bau.position.set(cx,0,cz);bau.rotation.y=-.5;S.add(bau);
   }
-}
+  return mec}
 function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cfgDe(M.tema),blocos=[];
   // instâncias em blocos ao longo do caminho: só os blocos perto da câmera são desenhados
   const emBlocos=(base,lista,f)=>{const B=CF.bloco||6,gr={};lista.forEach(q=>{const v=base.length>1?Math.abs(Math.round(q[0]*7+q[1]*3))%base.length:0,c=Math.floor(q[1]/B),cx=Math.floor(q[0]/B),k=v+'_'+c+'_'+cx;(gr[k]=gr[k]||{v,c,cx,qs:[]}).qs.push(q)});
@@ -309,7 +322,7 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   if(C3)emBlocos(tinge([C3.cog],TT.cogumelo),M.cogumelos,(o,[x,z,s])=>{const k=(CF.cogumelo_tamanho||1.5)*s;o.position.set(x,-.12*k,z);o.scale.setScalar(k);o.rotation.set(0,(x*5.1+z*9.7)%6.283,0)});
   else{inst(new T.CylinderGeometry(.09,.12,1,6),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.3*s,z);o.scale.set(s,.6*s,s);o.rotation.set(0,0,0);c.set('#efe6d8')});
   inst(new T.SphereGeometry(.42,10,6,0,Math.PI*2,0,Math.PI/2),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.58*s,z);o.scale.set(s,.8*s,s);o.rotation.set(0,0,0);c.set(['#e86a8a','#b46ae8','#f2a04a'][Math.abs(Math.round(x+z))%3])})}
-  decorMundo(S,M,C3,inst,rnd);
+  const mec=decorMundo(S,M,C3,inst,rnd);
   // sombras das árvores
   for(const [x,z,s] of M.arvores){if(z<-1||z>M.comprimento+1)continue;const sh=sombra(1.1*s);sh.position.set(x+.25,.015,z+.25);S.add(sh)}
   // morangos (moitas) e folhas douradas
@@ -334,13 +347,17 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   const VG=TT.voadores||['✨'],vg=[];for(let k=0;k<40;k++){const s=sprEmoji(VG[k%VG.length],TT.voadores?.45:.25);s.position.set((rnd()-.5)*M.largura,1+rnd()*2.5,rnd()*M.comprimento);S.add(s);vg.push({s,y:s.position.y,f:rnd()*6})}
   // obstáculos para colisão
   const obs=obsP.slice();for(const [x,z,s] of M.arvores)obs.push([x,z,(C3?.45:.38)*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
-  return{itens,portal:PORTAL,vg,obs,blocos}}
+  // área secreta: baú escondido no canto do mapa (cura tudo) e o bichinho raro que o guarda (acampamento secreto do mapa)
+  if(M.secreto){const [sx,sz]=M.secreto,b=new T.Group(),mad=new T.MeshLambertMaterial({color:'#7a4a22'}),our=new T.MeshStandardMaterial({color:'#ffd04a',emissive:'#a07000',emissiveIntensity:.6});
+    const c1=new T.Mesh(new T.BoxGeometry(.9,.55,.6),mad);c1.position.y=.28;const t1=new T.Mesh(new T.BoxGeometry(.95,.18,.65),our);t1.position.y=.62;b.add(c1,t1);b.position.set(sx,0,sz);S.add(b);
+    const br=sprEmoji('✨',.7);br.position.set(sx,1.4,sz);S.add(br);itens.push({t:'B',x:sx,z:sz,g:b,f:br})}
+  return{itens,portal:PORTAL,vg,obs,blocos,mec}}
 
 // ---- montar a fase ----
 async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||!M)throw new Error('sem 3d');
   const cv=$('advCv'),rd=new T.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));rd.outputEncoding=T.sRGBEncoding;
-  const S=new T.Scene();const TMA=(R.M&&R.M.tema)||{};S.background=new T.Color(TMA.ceu||'#2c3a52');S.fog=new T.Fog(TMA.neblina||TMA.ceu||'#2c3a52',26,52);
-  S.add(new T.HemisphereLight(0xfff2e0,0x2f4a32,1.05));const sol=new T.DirectionalLight(0xffe2c4,.95);sol.position.set(6,12,-5);S.add(sol);
+  const S=new T.Scene();const TMA=(R.M&&R.M.tema)||{};S.background=new T.Color(TMA.ceu||'#2c3a52');S.fog=new T.Fog(TMA.neblina||TMA.ceu||'#2c3a52',TMA.escuro?9:26,TMA.escuro?26:52);
+  S.add(new T.HemisphereLight(0xfff2e0,0x2f4a32,TMA.escuro?.35:1.05));const sol=new T.DirectionalLight(0xffe2c4,TMA.escuro?.25:.95);sol.position.set(6,12,-5);S.add(sol);
   const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};const C3=await props3d(R.M&&R.M.tema);if(RUN!==R)return;R.w={M,...cenario(S,M,C3),ents:[],tiros:[],efeitos:[],nums:[]};
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
@@ -392,6 +409,16 @@ function mover(o,dx,dz){const R=RUN,M=R.w.M;o.x+=dx;o.z+=dz;
   for(const [x,z,r] of R.w.obs){const d=Math.hypot(o.x-x,o.z-z),m=r+o.r;if(d<m&&d>1e-4){o.x=x+(o.x-x)/d*m;o.z=z+(o.z-z)/d*m}}
   o.x=Math.max(-M.largura/2+.8,Math.min(M.largura/2-.8,o.x));o.z=Math.max(-1,Math.min(M.comprimento+1,o.z))}
 function maisPerto(o,raio,filtro){let b=null,bd=raio;for(const e of RUN.w.ents){if(!e.vivo||(filtro&&!filtro(e)))continue;const d=dist(o,e)-e.r;if(d<bd){bd=d;b=e}}return b}
+// mecânicas de cada mundo: lava queima (Fogo), correnteza empurra (Mar), lanterna no escuro (Trevas), cristais-chave (Luz), morcegos (Caverna)
+function mecanicas(dt){const R=RUN,p=R.p,mc=R.w.mec;if(!mc||!p||p.morto)return;
+  if(mc.lava&&p.dash<=0){for(const [x0,z0,x1,z1,lado] of mc.lava){const vx=x1-x0,vz=z1-z0,t=Math.max(0,Math.min(1,((p.x-x0)*vx+(p.z-z0)*vz)/(vx*vx+vz*vz))),d=Math.hypot(p.x-(x0+t*vx),p.z-(z0+t*vz));
+    if(d<.6){if(!R.avisoLava){R.avisoLava=1;aviso('🔥 A lava queima! Fique na trilha (ou use Esquivar para pular)',2400)}machuca(Math.max(1,Math.round(R.hero.max*.06)),lado,0);faisca(p.x,.4,p.z,'#ff7a2a',6);break}}}
+  if(mc.correntes)for(const c of mc.correntes){for(const b of c.bol){b.position.x+=c.dir*3*dt;if(Math.abs(b.position.x)>R.w.M.largura/2)b.position.x=-c.dir*R.w.M.largura/2}
+    if(p.z>c.z0&&p.z<c.z1&&p.dash<=0){mover(p,c.dir*2.2*dt,0);if(!R.avisoCorr){R.avisoCorr=1;aviso('🌊 Correnteza! Ela empurra para o lado',1800)}}}
+  if(mc.lanterna)mc.lanterna.position.set(p.x,2.2,p.z);
+  if(mc.chaves)for(const c of mc.chaves){c.g.rotation.y+=dt*(c.ok?2:.4);if(!c.ok&&Math.hypot(p.x-c.x,p.z-c.z)<1.5){c.ok=true;c.mat.color.set('#ffe9a0');c.mat.emissive.set('#ffc83a');c.mat.emissiveIntensity=1.2;
+    const n=mc.chaves.filter(q=>q.ok).length;faisca(c.x,1.3,c.z,'#ffe9a0',18);G.tone(880,.15,'triangle',.08);aviso(n<mc.chaves.length?'💎 Cristal-chave aceso ('+n+'/'+mc.chaves.length+')':'💎 Todos os cristais acesos!',1800)}}
+  if(mc.morcegos)for(const m of mc.morcegos){m.f+=dt*m.v;m.s.position.set(m.cx+Math.cos(m.f)*m.r,m.h+Math.sin(m.f*3)*.3,m.cz+Math.sin(m.f)*m.r)}}
 function fisica(dt){const R=RUN,p=R.p,w=R.w;R.t+=dt;if(!p)return;
   if(p.venceu){p.venceu+=dt;p.g.rotation.y+=dt*10;p.m.scale.multiplyScalar(1-dt*1.2);if(p.venceu>1.3)vitoria();return}
   if(p.morto){p.morto+=dt;return}
@@ -414,14 +441,16 @@ function fisica(dt){const R=RUN,p=R.p,w=R.w;R.t+=dt;if(!p)return;
   // itens
   for(const it of w.itens){if(it.ok)continue;it.f.position.y=(it.t==='L'?1:.85)+Math.sin(R.t*3+it.x)*.12;if(Math.hypot(it.x-p.x,it.z-p.z)<1){it.ok=true;it.g.visible=false;
     if(it.t==='L'){R.leaves++;folhas();G.tone(988,.12,'triangle',.08);setTimeout(()=>G.tone(1318,.14,'triangle',.08),90);aviso('Folha dourada! '+R.leaves+' de 3',1400);faisca(it.x,1,it.z,'#ffd23c',14)}
+    else if(it.t==='B'){R.hero.hp=R.hero.max;num(it.x,1.4,it.z,'Área secreta! ❤','#ffd23c');faisca(it.x,1,it.z,'#ffd23c',20);G.fanfare();aviso('🗝️ Área secreta encontrada! Vida cheia',2200);hud()}
     else{const c=Math.min(R.hero.max-R.hero.hp,Math.round(R.hero.max*(AR.morango_cura||.3)));R.hero.hp+=c;num(it.x,1.2,it.z,c>0?'+'+c+' ❤':'🍓','#9dff8a');G.tone(660,.1,'sine',.08);hud()}}}
   // portal
-  const pt=w.portal,poucosMobs=(R.kills||0)<(R.minMobs||0),fech=(w.boss&&w.boss.vivo)||poucosMobs,M=w.M;
+  mecanicas(dt);
+  const faltaCh=!!(w.mec&&w.mec.chaves&&w.mec.chaves.some(c=>!c.ok)),pt=w.portal,poucosMobs=(R.kills||0)<(R.minMobs||0),fech=(w.boss&&w.boss.vivo)||poucosMobs||faltaCh,M=w.M;
   if(pt.veu){pt.veu.visible=fech;pt.luz.visible=!fech;pt.luz.material.opacity=.07+Math.sin(R.t*4)*.05;pt.luz.scale.x=(D.cenario3d.portal_tamanho||7.6)*(.086+Math.sin(R.t*3)*.004)}
   else{pt.anel.material.color.set(fech?'#7a6a9a':'#ff9ac8');pt.disco.material.opacity=fech?.15:.45+Math.sin(R.t*4)*.15;pt.anel.rotation.z+=dt*(fech?.3:1.5)}
 
   if(!fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<1.4){p.venceu=.001;G.fanfare();return}
-  if(fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<2.2&&!R.avisoPortal){R.avisoPortal=1;aviso(poucosMobs?'Derrote mais inimigos para abrir o portal ('+(R.kills||0)+'/'+R.minMobs+')':'O portal só abre depois de derrotar o chefão!',2200);setTimeout(()=>{if(RUN===R)R.avisoPortal=0},3000)}
+  if(fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<2.2&&!R.avisoPortal){R.avisoPortal=1;aviso(faltaCh?'Acenda os 2 cristais-chave para abrir o portal ('+w.mec.chaves.filter(c=>c.ok).length+'/2) 💎':poucosMobs?'Derrote mais inimigos para abrir o portal ('+(R.kills||0)+'/'+R.minMobs+')':'O portal só abre depois de derrotar o chefão!',2200);setTimeout(()=>{if(RUN===R)R.avisoPortal=0},3000)}
   // inimigos
   for(const e of w.ents)iaInimigo(e,dt);
   // tiros

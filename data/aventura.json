@@ -8116,6 +8116,7 @@
    "elemento": "shadow",
    "tema": {
     "decor": "trevas",
+     "escuro": true,
      "cenario3d": {"arvores": ["models/cenario/pedras.glb"], "arvore_tamanho": 2.3},
     "ceu": "#120c1c",
     "neblina": "#221634",

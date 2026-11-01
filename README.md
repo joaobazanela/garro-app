@@ -73,6 +73,14 @@ Um único arquivo HTML, sem instalação. Usa Matter.js (física) e Three.js (3D
 
 - **Cenário 3D (modelos em `models/cenario/`):** o portal final é o diorama enviado (arco com redemoinho, árvores, cogumelos e cristais), com um véu escuro enquanto o chefão vive. As árvores (2 tipos) e os cogumelos das fases foram recortados do mesmo diorama e desenhados em blocos: só os blocos que a câmera alcança são desenhados (bom para celular). Tamanhos e arquivos em `cenario3d` no `data/aventura.json`. Se os modelos não carregarem, volta o cenário simples antigo.
 
+### Mecânicas de cada mundo e área secreta
+- **Fogo:** a lava dos lados da trilha queima (6% da vida a cada toque); a Esquiva passa por cima.
+- **Mar:** correntezas atravessam a trilha e empurram o bichinho para o lado (bolhas mostram a direção).
+- **Trevas:** o mundo é escuro (luz e neblina mais perto); uma luz roxa acompanha o bichinho.
+- **Luz:** 2 cristais-chave fora da trilha; o portal só abre com os dois acesos.
+- **Caverna:** morcegos voando.
+- **Área secreta em toda fase** (`secreto` no mapa de `js/mapas.js`): no canto oposto ao caminho, um baú que enche a vida, guardado pelo bichinho mais forte da fase (elite, 1 nível acima).
+
 ### Lendários e épicos novos, 6 mundos e fases mais longas
 - **Lendários refeitos** (Lunária, Noctalis, Solaris, Obsidragon) e **épicos com modelo próprio** (Infernyx, Abyssor, Zephyrax, Terravyn), recortados das folhas do Tripo (`fantasy_dragon`, `elemental_dragon`): separados por posição, sem os pedaços do fundo branco, virados para a frente.
 - **Caverna Encantada** (antes Montanha de Pedra): pedras, barril, cogumelo e lanternas em postes (modelos da caverna do Tripo em `models/cenario/`), cristais brilhando, céu escuro.
