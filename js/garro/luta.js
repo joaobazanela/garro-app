@@ -91,7 +91,8 @@ function gainXp(i,n){const lv0=lvOf(i),st0=careStage(i),c=careOf(i);c.xp+=n;save
 function careGain(i,kind,amount){const c=careOf(i);if(c[kind]>=96)return false;evento(kind==='f'?'feed':kind==='l'?'pet':'play');
   c[kind]=Math.min(100,c[kind]+amount);c.t=Date.now();saveCare();
   srv('care',{plushId:i,kind,f:c.f,l:c.l,p:c.p},r=>{const cc=careOf(i);cc.xp=r.xp;INV.food=r.food;saveCare();saveInv();updFood()});
-  if(V.open&&V.cur===i)float('+'+XPG[kind]+' XP','xp');gainXp(i,XPG[kind]);return true}
+  const h=xpHoje(i),g=Math.max(0,Math.min(XPG[kind],XPDIA-h));c.xd=diaHoje();c.xh=h+g;saveCare();
+  if(V.open&&V.cur===i)float(g?'+'+g+' XP':'XP de cuidar de hoje completo','xp');if(g)gainXp(i,g);else if(V.open&&V.cur===i)renderCare();return true}
 function evolve(i,from,to){
   if(!V.open||V.cur!==i||i>=CH0)return;const p=PLUSH[i];
   const f=$('vFlash');f.classList.remove('go');void f.offsetWidth;f.classList.add('go');

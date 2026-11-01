@@ -73,6 +73,11 @@ Um único arquivo HTML, sem instalação. Usa Matter.js (física) e Three.js (3D
 
 - **Cenário 3D (modelos em `models/cenario/`):** o portal final é o diorama enviado (arco com redemoinho, árvores, cogumelos e cristais), com um véu escuro enquanto o chefão vive. As árvores (2 tipos) e os cogumelos das fases foram recortados do mesmo diorama e desenhados em blocos: só os blocos que a câmera alcança são desenhados (bom para celular). Tamanhos e arquivos em `cenario3d` no `data/aventura.json`. Se os modelos não carregarem, volta o cenário simples antigo.
 
+### Subir de nível mais difícil (migração 0013)
+- **Curva 2,5× mais cara:** XP total para o Nv N = `linear×(N−1) + 0,03×(N−1)³`, com linear 10 (grandes e lendários) ou 12 (redondos). Nv 10 = 112 XP, Nv 30 = 1022 XP, Nv 100 ≈ 30.100 XP. O XP guardado não muda; o nível é recalculado por ele (só os administradores jogavam).
+- **Cuidar tem limite diário:** comida, carinho e brincar dão no máximo **30 XP por bichinho por dia** (`CUIDAR_XP_DIA` em `data/regras.json`, dia de Brasília). As barras continuam enchendo; a tela mostra "cuidar hoje x/30 XP". Luta e Aventura não entram no limite.
+- Teste local: `supabase/tests/xp_lento.sql`.
+
 ### Aventura variada, XP por bichinho e níveis (migração 0011)
 - **Fase diferente a cada partida:** `js/mapas.js` sorteia um mapa novo (percurso, acampamentos, folhas, morangos, árvores) e a quantidade de bichinhos vai de 1 a menos até 2 a mais que o normal (`mapa_variacao` em `data/aventura.json`). O mapa fixo do JSON (feito por `ferramentas/gerar_mapas_aventura.py`) é só reserva.
 - **XP por bichinho derrotado**, como no Pokémon (5ª geração): `por_inimigo × nível ÷ 5 × ((2×inimigo+10) ÷ (inimigo+seu nível+10))^2,5 + 1`; chefão ×1,5; bichinho muito acima do inimigo ganha menos. Soma-se o XP de vitória/derrota. O jogo conta os derrotados; o servidor limita pelo máximo da fase e usa o nível mais alto dela.
