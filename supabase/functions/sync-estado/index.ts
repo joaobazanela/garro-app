@@ -132,9 +132,9 @@ async function handle(req: Request): Promise<Response> {
   if (body.action === "use_stone" || body.action === "rebirth") {
     const p = int(body.plushId, 0, 52), st = body.action === "rebirth" ? 0 : int(body.stone, 0, 7);
     if (p === null || st === null) return json({ error: "bad_request" }, 400);
+    if (body.action === "rebirth") return call("rpc_rebirth", { p_plush: p }, "rebirth_rejected");
     const E = (await regras())?.EVOLUCAO;  // regras do jogo vêm de data/regras.json (sem o arquivo, sem pedra)
     if (!E) return json({ error: "regras_indisponiveis" }, 503);
-    if (body.action === "rebirth") return call("rpc_rebirth", { p_plush: p }, "rebirth_rejected");
     return call("rpc_use_stone", { p_plush: p, p_stone: st, p_evo_lv: E.nivel, p_per: E.pedras_por_nivel }, "use_stone_rejected");
   }
   if (body.action === "care") {

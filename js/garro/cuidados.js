@@ -50,7 +50,7 @@ function renderCare(){
     $('cXpBar').style.width=xpPct(i)+'%'}
   for(const [k,id,b] of [['f','mF','cFeed'],['l','mL','cPet'],['p','mP','cPlay']]){$(id).style.width=Math.round(c[k])+'%';$(b).classList.toggle('low',c[k]<25)}
   updFood();const sb=$('cStone'),rbb=$('cRebirth');
-  if(rbb){const topo=i<CH0&&lv>=cap;rbb.hidden=!topo;rbb.dataset.armed='';rbb.innerHTML='🔄 Renascer <small>· volta ao Nv 1 · +'+Math.round(REB_B*100)+'% de força</small>'}
+  if(rbb){const topo=i<CH0&&lv>=cap;rbb.hidden=!topo;if(rbb.dataset.armedFor!=String(i)){rbb.dataset.armed='';rbb.dataset.armedFor=String(i);rbb.innerHTML='🔄 Renascer <small>· volta ao Nv 1 · +'+Math.round(REB_B*100)+'% de força</small>'}}
   if(sb){const sk=STONE_OF(i),n=INV.st[sk]||0,prim=rbOf(i)===0&&lv<EVO_LV,sp=c.sp|0;sb.hidden=!(i<CH0&&lv<cap);sb.classList.toggle('buy',!n);
     const efeito=prim?'evolui já · vai ao Nv '+EVO_LV:'pedra '+(sp+1)+'/'+PEDRAS_NV+' para +1 nível';
     sb.innerHTML=n?'💎 Usar '+STONES[sk].name+' <small>('+efeito+' · você tem '+n+')</small>':'💎 '+STONES[sk].name+' <small>· você não tem · comprar '+PRICE.stone+' 🪙</small>'}

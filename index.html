@@ -133,7 +133,9 @@ window.GD={};(function(){var V='78 · 30/10 08:07',F=["sprites", "fills", "sprit
   function iniciar(){
     Promise.all(F.map(function(f){return fetch('data/'+f+'.json?v='+V).then(function(r){if(!r.ok)throw new Error('data/'+f+'.json');return r.json()}).then(function(j){GD[f]=j})}))
     .then(function(){var P=['base','maquina','jogo','criaturas','modelos','cuidados','luta','final'],k=0;/* o jogo é dividido em js/garro/*.js: carrega um por vez, em ordem */
-      function prox(){if(k>=P.length){['missoes','mapas','aventura','lendarios'].forEach(function(n){var m=document.createElement('script');m.src='js/'+n+'.js?v='+V;document.body.appendChild(m)});return}
+      var Q=['missoes','mapas','aventura','lendarios'],qk=0;
+      function proxQ(){if(qk>=Q.length)return;var n=Q[qk++],m=document.createElement('script');m.src='js/'+n+'.js?v='+V;m.onerror=function(){err('js/'+n+'.js')};m.onload=proxQ;document.body.appendChild(m)}
+      function prox(){if(k>=P.length){proxQ();return}
         var n=P[k++],s=document.createElement('script');s.src='js/garro/'+n+'.js?v='+V;s.onerror=function(){err('js/garro/'+n+'.js')};s.onload=prox;document.body.appendChild(s)}
       prox()}).catch(err)
   }

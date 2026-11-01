@@ -123,7 +123,7 @@ $('advBody').addEventListener('click',e=>{
 
 async function descansar(i){if(G.coins()<EN.descanso_preco){msg('Faltam moedas para descansar ('+EN.descanso_preco+' 🪙).');return}
   if(G.online()){const r=await G.sync('adv_rest',{plushId:i});if(!r||r.error||typeof r.coins!=='number'){msg('Não deu para descansar agora. Tente de novo.');return}
-    G.setCoins(r.coins);S.en[i]={e:r.energy,s:Date.now()}}
+    G.setCoins(r.coins);box().en[i]={e:r.energy,s:Date.now()}}
   else{G.addCoinsLocal(-EN.descanso_preco);L.en[i]={e:EN.max,s:Date.now()};saveL()}
   G.tone(523,.2,'sine',.08);msg('');escolha(FK)}
 
@@ -132,7 +132,7 @@ async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=ener
   const b=$('advStart');if(b)b.disabled=true;G.click(820);
   if(G.online()){const r=await G.sync('adv_start',{plushId:i,stage:f.id});
     if(!r||r.error||typeof r.energy!=='number'){const det=r&&r.detail||'';msg(Object.keys(ERROS).map(x=>det.includes(x)?ERROS[x]:'').join('')||'Não deu para começar. Tente de novo.');if(b)b.disabled=false;await carregarServidor();return}
-    S.en[i]={e:r.energy,s:Date.parse(r.since)}}
+    box().en[i]={e:r.energy,s:Date.parse(r.since)}}
   else{L.en[i]={e:E.e-1,s:E.e>=EN.max?Date.now():E.s};saveL()}
   const lv=admLv(i,f);
   // mapa novo a cada partida (js/mapas.js): percurso e quantidade de bichinhos mudam; sem o gerador usa o mapa reserva do JSON
@@ -280,10 +280,11 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   const hU=prepAndar(hg,redondo(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
   R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);
+  R.minMobs=(M.acampamentos[0]&&M.acampamentos[0].inimigos.length)||0;// portal só abre depois de matar pelo menos os bichinhos do acampamento inicial
   if(f.chefe&&M.arena){const b=await novoInimigo(f.chefe[0],f.chefe[1],M.arena.x,M.arena.z+2,{x:M.arena.x,z:M.arena.z},true);R.w.ents.push(b);R.w.boss=b}
   if(RUN!==R)return;
   R.t=0;R.cam=null;tamanho3D();hud();const ld=$('advLoad');if(ld)ld.hidden=true;
-  aviso(f.chefe?'Atravesse a floresta e derrote o chefão!':'Siga o caminho até o portal ✨ · 3 folhas douradas escondidas',3200);
+  aviso(f.chefe?'Atravesse a floresta e derrote o chefão!':'Derrote ao menos '+R.minMobs+' inimigos para abrir o portal ✨ · 3 folhas douradas escondidas',3200);
   R.last=performance.now();R.acc=0;R.raf=requestAnimationFrame(passo)}
 async function novoInimigo(j,lv,x,z,camp,chefe,tipo){const R=RUN,T=G.THREE(),L_=lutador(j,lv,{chefe}),Tp=(tipo&&TP[tipo])||{};const k=(chefe?(AR.chefe_vida||1.6):(AR.inimigo_vida||.45))*(Tp.vida||1);L_.hp=L_.max=Math.max(10,Math.round(L_.hp*k));
   if(Tp.dano)L_.atk*=Tp.dano;const esc=Tp.escudo?Math.round(L_.max*Tp.escudo):0;
@@ -347,12 +348,12 @@ function fisica(dt){const R=RUN,p=R.p,w=R.w;R.t+=dt;if(!p)return;
     if(it.t==='L'){R.leaves++;folhas();G.tone(988,.12,'triangle',.08);setTimeout(()=>G.tone(1318,.14,'triangle',.08),90);aviso('Folha dourada! '+R.leaves+' de 3',1400);faisca(it.x,1,it.z,'#ffd23c',14)}
     else{const c=Math.min(R.hero.max-R.hero.hp,Math.round(R.hero.max*(AR.morango_cura||.3)));R.hero.hp+=c;num(it.x,1.2,it.z,c>0?'+'+c+' ❤':'🍓','#9dff8a');G.tone(660,.1,'sine',.08);hud()}}}
   // portal
-  const pt=w.portal,fech=w.boss&&w.boss.vivo,M=w.M;
+  const pt=w.portal,poucosMobs=(R.kills||0)<(R.minMobs||0),fech=(w.boss&&w.boss.vivo)||poucosMobs,M=w.M;
   if(pt.veu){pt.veu.visible=fech;pt.luz.visible=!fech;pt.luz.material.opacity=.07+Math.sin(R.t*4)*.05;pt.luz.scale.x=(D.cenario3d.portal_tamanho||7.6)*(.086+Math.sin(R.t*3)*.004)}
   else{pt.anel.material.color.set(fech?'#7a6a9a':'#ff9ac8');pt.disco.material.opacity=fech?.15:.45+Math.sin(R.t*4)*.15;pt.anel.rotation.z+=dt*(fech?.3:1.5)}
-  
+
   if(!fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<1.4){p.venceu=.001;G.fanfare();return}
-  if(fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<2.2&&!R.avisoPortal){R.avisoPortal=1;aviso('O portal só abre depois de derrotar o chefão!',2200);setTimeout(()=>{if(RUN===R)R.avisoPortal=0},3000)}
+  if(fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<2.2&&!R.avisoPortal){R.avisoPortal=1;aviso(poucosMobs?'Derrote mais inimigos para abrir o portal ('+(R.kills||0)+'/'+R.minMobs+')':'O portal só abre depois de derrotar o chefão!',2200);setTimeout(()=>{if(RUN===R)R.avisoPortal=0},3000)}
   // inimigos
   for(const e of w.ents)iaInimigo(e,dt);
   // tiros
@@ -505,7 +506,7 @@ async function terminar(win){const R=RUN;if(!R||R.salvo)return;R.salvo=1;R.fim=t
   const antes=G.stats(R.i),xp0=G.xp(R.i);
   let res={first:false,stone:-1,coins:0,diam:0,ovo:-1,xp:(win?D.xp.vitoria:D.xp.derrota)+xpK,erro:''};
   if(G.online()){const r=await G.sync('adv_end',{stage:id,win,stars:Math.max(1,st),kills:nk,bossKill:!!R.chefeMorto});
-    if(r&&!r.error&&typeof r.coins==='number'){res.coins=r.coins-G.coins();G.setCoins(r.coins);res.xp=r.xp-xp0;G.xpSet(R.i,r.xp);res.first=!!r.first;res.stone=r.stone;res.diam=r.diamonds_got|0;res.ovo=typeof r.egg_leg==='number'?r.egg_leg:-1;if(window.GARRO_LEND)window.GARRO_LEND.servidor(r);if(win)S.prog[id]=Math.max(S.prog[id]||0,Math.max(1,st));if(r.stone>=0)G.stoneLocal(r.stone)}
+    if(r&&!r.error&&typeof r.coins==='number'){res.coins=r.coins-G.coins();G.setCoins(r.coins);res.xp=r.xp-xp0;G.xpSet(R.i,r.xp);res.first=!!r.first;res.stone=r.stone;res.diam=r.diamonds_got|0;res.ovo=typeof r.egg_leg==='number'?r.egg_leg:-1;if(window.GARRO_LEND)window.GARRO_LEND.servidor(r);if(win)box().prog[id]=Math.max(box().prog[id]||0,Math.max(1,st));if(r.stone>=0)G.stoneLocal(r.stone)}
     else{const det=r&&r.detail||'';res.erro=det.includes('nivel_baixo')?'O servidor não aceitou: seu bichinho ainda é fraco demais para esta fase.':'Não deu para salvar o resultado. Tente de novo.';res.xp=0}}
   else{if(win){res.first=!L.prog[id];L.prog[id]=Math.max(L.prog[id]||0,Math.max(1,st));if(res.first&&f.premio){G.addCoinsLocal(f.premio);res.coins=f.premio}
       if(f.chefe&&!f.desafio&&Math.random()<D.chefe_pedra.chance){const p=D.chefe_pedra.pedras;res.stone=p[Math.floor(Math.random()*p.length)];G.stoneLocal(res.stone)}
