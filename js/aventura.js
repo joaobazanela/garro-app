@@ -10,13 +10,18 @@ if(!G||!D||!PD)return;
 const $=id=>document.getElementById(id);
 const LT=D.luta,EN=D.energia,STAT=PD.STAT,ELEM=PD.ELEM,ECOL=PD.ECOL,ELNAME=PD.ELNAME,BFX=(GD.modelos&&GD.modelos.BFX)||{};
 const FASES=[];D.mundos.forEach(m=>m.fases.forEach(f=>FASES.push(Object.assign({mundo:m},f))));
+// lendários (js/lendarios.js, ids a partir de G.LEG0): contam como bichinhos grandes
+const LEG0=G.LEG0||43,NLEG=((GD.lendarios||{}).lendarios||[]).length,grande=i=>i<G.CH0||(NLEG>0&&i>=LEG0),redondo=i=>!grande(i);
+// Desafio Lendário: fase extra depois do chefão do mundo; o chefão é o lendário do dia (troca à meia-noite de Brasília, igual ao servidor)
+function legDoDia(){const h=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);return Math.floor(Date.parse(h+'T00:00:00Z')/864e5)%10}
+if(D.desafio&&D.desafio.mapa3d&&NLEG>=10){const f=Object.assign({mundo:D.mundos[0],desafio:true},D.desafio);Object.defineProperty(f,'chefe',{get:()=>[LEG0+legDoDia(),D.desafio.nivel],enumerable:true});FASES.push(f)}
 const LKEY='garro-aventura';
 
 // ---------- números da luta (mesmas fórmulas usadas para equilibrar as fases) ----------
 const media=a=>a.reduce((x,y)=>x+y,0)/a.length;
-const MB=media(STAT.slice(0,G.CH0).map(s=>(s[0]+s[1])/2)),MS=media(STAT.slice(G.CH0).map(s=>(s[0]+s[1])/2));
+const MB=media(STAT.slice(0,G.CH0).map(s=>(s[0]+s[1])/2)),MS=media(STAT.slice(G.CH0,G.LEG0||43).map(s=>(s[0]+s[1])/2));
 // o nível pesa muito: ataque, defesa e vida crescem juntos; bichinhos redondos são equiparados aos grandes
-function lutador(i,lv,o){o=o||{};const s=STAT[i],M=i<G.CH0?MB:MS,k=MB/M,a=(s[0]+M)/2*k,d=(s[1]+M)/2*k;
+function lutador(i,lv,o){o=o||{};const s=STAT[i],M=grande(i)?MB:MS,k=MB/M,a=(s[0]+M)/2*k,d=(s[1]+M)/2*k;
   const P=1+LT.nivel_k*(lv-1),ev=(i<G.CH0&&lv>=G.EVO_LV)?LT.evoluido:1;
   let atk=a*P*ev,def=d*P*ev,hp=(a+d)*P*ev*LT.vida_k*(o.heroi?LT.heroi_vida:1);
   if(o.chefe){hp*=LT.chefe_vida;atk*=LT.chefe_ataque}
@@ -72,9 +77,9 @@ function mapa(){limpa3D();TELA='mapa';RUN=null;moedas();const M=FASES[0].mundo;$
   const deco=['🌲','🌳','🍄','🌿','🌸','🌲','🌳','🪨'];for(let k=0;k<26;k++){const x=(k*37+11)%92+2,y=(k*131+40)%(H-40);h+='<span class="advdeco" style="left:'+x+'%;top:'+y+'px">'+deco[k%deco.length]+'</span>'}
   let cur=FASES.findIndex((f,k)=>liberada(k)&&!box().prog[f.id]);if(cur<0)cur=n;
   FASES.forEach((f,k)=>{const ok=liberada(k),st=box().prog[f.id]||0,cls=st?'feita':ok?'atual':'bloq';
-    h+='<button type="button" class="advnode '+cls+(f.chefe?' chefe':'')+'" data-k="'+k+'" style="left:'+pos[k].x+'%;top:'+pos[k].y+'px"'+(ok?'':' disabled')+'>'+
-      (f.chefe?'<img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt="">':'<b>'+(k+1)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>';
-    if(k===cur)h+='<div class="advlabel" style="left:'+pos[k].x+'%;top:'+(pos[k].y+40)+'px">'+f.nome+'</div>'});
+    h+='<button type="button" class="advnode '+cls+(f.chefe?' chefe':'')+(f.desafio?' lenda':'')+'" data-k="'+k+'" style="left:'+pos[k].x+'%;top:'+pos[k].y+'px"'+(ok?'':' disabled')+'>'+
+      (f.chefe?'<img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt="">':'<b>'+(k+1)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(f.desafio?'':st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>';
+    if(k===cur||f.desafio)h+='<div class="advlabel'+(f.desafio?' lenda':'')+'" style="left:'+pos[k].x+'%;top:'+(pos[k].y+(f.desafio?-84:40))+'px">'+(f.desafio?'👑 ':'')+f.nome+'</div>'});
   h+='</div><p class="advnote">Jogar não custa nada. Cada fase cansa um pouco o bichinho (⚡). Vencer pela 1ª vez dá moedas.</p>';
   $('advBody').innerHTML=h;
   const alvo=$('advBody').querySelector('.advnode.atual')||$('advBody').querySelector('.advnode.feita:last-of-type');
@@ -82,10 +87,11 @@ function mapa(){limpa3D();TELA='mapa';RUN=null;moedas();const M=FASES[0].mundo;$
 
 // escolher o bichinho
 function pips(e){let s='';for(let k=0;k<EN.max;k++)s+='<i class="'+(k<e?'on':'')+'"></i>';return '<span class="advpips">'+s+'</span>'}
-function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('advTitle').textContent='Fase '+(k+1);
+function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('advTitle').textContent=f.desafio?f.nome:'Fase '+(k+1);
   const coll=G.coll(),meus=Object.keys(coll).map(Number).filter(i=>coll[i]>0).sort((a,b)=>G.lvOf(b)-G.lvOf(a));
   if(SEL===null||!meus.includes(SEL))SEL=meus[0]??null;
-  let h='<div class="advfase"><b>'+f.nome+'</b><small>'+(box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução':''))+'</small>';
+  const LG=f.desafio&&window.GARRO_LEND?window.GARRO_LEND.porId(f.chefe[0]):null;
+  let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b><small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
   const meuLv=SEL!==null?G.lvOf(SEL):1,tps=tiposDa(f);
   h+='<div class="advdif"><span class="cav">'+caveiras(f)+'</span>'+Object.keys(tps).map(t=>TP[t]?'<span class="tp">'+TP[t].icone+' '+TP[t].nome+(tps[t]>1?' ×'+tps[t]:'')+'</span>':'').join('')+'</div>';
   h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+G.sprite(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
@@ -192,17 +198,30 @@ function sprEmoji(e,tam,brilho){const T=G.THREE(),c=document.createElement('canv
 let SOMBRA=null;function sombra(r){const T=G.THREE();if(!SOMBRA){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(32,32,2,32,32,31);
     g.addColorStop(0,'rgba(0,0,0,.45)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);SOMBRA=new T.CanvasTexture(c)}
   const m=new T.Mesh(new T.PlaneGeometry(r*2,r*2),new T.MeshBasicMaterial({map:SOMBRA,transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.02;return m}
-function cenario(S,M){const T=G.THREE(),rnd=semente(M.comprimento*13+1);
+// cenário 3D (data/aventura.json → cenario3d; modelos em models/cenario/ recortados do diorama do portal). Carrega uma vez só.
+let C3P=null;
+function props3d(){const CF=D.cenario3d;if(!CF||!G.glb)return Promise.resolve(null);if(C3P)return C3P;
+  const malha=g=>{let m=null;g.traverse(o=>{if(o.isMesh&&!m)m=o});if(!m)throw new Error('sem malha');const mat=m.material;mat.roughness=.9;mat.metalness=0;if(mat.map)mat.map.encoding=G.THREE().sRGBEncoding;return{geo:m.geometry,mat}};
+  return C3P=Promise.all([G.glb(CF.portal),...CF.arvores.map(f=>G.glb(f)),G.glb(CF.cogumelos)]).then(([por,...r])=>{const cog=r.pop();
+    por.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=.9;o.material.metalness=0;if(o.material.map)o.material.map.encoding=G.THREE().sRGBEncoding}});
+    return{portal:por,arv:r.map(malha),cog:malha(cog)}}).catch(e=>{console.warn('cenario 3d',e);C3P=null;return null})}
+function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=D.cenario3d||{},blocos=[];
+  // instâncias em blocos ao longo do caminho: só os blocos perto da câmera são desenhados
+  const emBlocos=(base,lista,f)=>{const B=CF.bloco||6,gr={};lista.forEach(q=>{const v=base.length>1?Math.abs(Math.round(q[0]*7+q[1]*3))%base.length:0,c=Math.floor(q[1]/B),cx=Math.floor(q[0]/B),k=v+'_'+c+'_'+cx;(gr[k]=gr[k]||{v,c,cx,qs:[]}).qs.push(q)});
+    for(const g of Object.values(gr)){const im=new T.InstancedMesh(base[g.v].geo,base[g.v].mat,g.qs.length),o=new T.Object3D();g.qs.forEach((q,k)=>{f(o,q);o.updateMatrix();im.setMatrixAt(k,o.matrix)});
+      im.instanceMatrix.needsUpdate=true;im.frustumCulled=false;S.add(im);const r=2.2;blocos.push({m:im,z0:g.c*B-r,z1:(g.c+1)*B+r,x0:g.cx*B-r,x1:(g.cx+1)*B+r})}};
   const chao=new T.Mesh(new T.PlaneGeometry(M.largura+24,M.comprimento+24),new T.MeshLambertMaterial({map:texChao(M)}));chao.rotation.x=-Math.PI/2;chao.position.set(0,0,M.comprimento/2);S.add(chao);
   const inst=(geo,mat,lista,f)=>{const im=new T.InstancedMesh(geo,mat,lista.length),o=new T.Object3D(),c=new T.Color();lista.forEach((q,k)=>{f(o,q,c);o.updateMatrix();im.setMatrixAt(k,o.matrix);im.setColorAt(k,c)});im.instanceMatrix.needsUpdate=true;if(im.instanceColor)im.instanceColor.needsUpdate=true;S.add(im);return im};
   const lam=()=>new T.MeshLambertMaterial({color:0xffffff});
-  inst(new T.CylinderGeometry(.13,.2,1,6),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,.75*s,z);o.scale.set(s,1.5*s,s);o.rotation.set(0,0,0);c.set('#6b4a32')});
+  if(C3){emBlocos(C3.arv,M.arvores,(o,[x,z,s])=>{const k=(CF.arvore_tamanho||3.4)*s;o.position.set(x,-.22*k,z);o.scale.setScalar(k);o.rotation.set(0,(x*13.7+z*7.3)%6.283,0)})}
+  else{inst(new T.CylinderGeometry(.13,.2,1,6),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,.75*s,z);o.scale.set(s,1.5*s,s);o.rotation.set(0,0,0);c.set('#6b4a32')});
   const cores=['#2e6b4a','#3a7d4e','#2a5e52','#4a8a4a','#365f3a'];
   inst(new T.IcosahedronGeometry(1,0),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,1.9*s,z);o.scale.set(.95*s,1.05*s,.95*s);o.rotation.set(0,(x*7+z)%6,0);c.set(cores[Math.abs(Math.round(x*3+z))%5])});
-  inst(new T.IcosahedronGeometry(1,0),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,2.7*s,z);o.scale.set(.6*s,.7*s,.6*s);o.rotation.set(0,(x+z*5)%6,0);c.set(cores[Math.abs(Math.round(x+z*3))%5]).offsetHSL(0,0,.05)});
+  inst(new T.IcosahedronGeometry(1,0),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,2.7*s,z);o.scale.set(.6*s,.7*s,.6*s);o.rotation.set(0,(x+z*5)%6,0);c.set(cores[Math.abs(Math.round(x+z*3))%5]).offsetHSL(0,0,.05)})}
   inst(new T.DodecahedronGeometry(.5,0),lam(),M.pedras,(o,[x,z,s],c)=>{o.position.set(x,.2*s,z);o.scale.set(s,.65*s,s*1.1);o.rotation.set(0,(x*3+z)%6,0);c.set('#8a8a7e')});
-  inst(new T.CylinderGeometry(.09,.12,1,6),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.3*s,z);o.scale.set(s,.6*s,s);o.rotation.set(0,0,0);c.set('#efe6d8')});
-  inst(new T.SphereGeometry(.42,10,6,0,Math.PI*2,0,Math.PI/2),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.58*s,z);o.scale.set(s,.8*s,s);o.rotation.set(0,0,0);c.set(['#e86a8a','#b46ae8','#f2a04a'][Math.abs(Math.round(x+z))%3])});
+  if(C3)emBlocos([C3.cog],M.cogumelos,(o,[x,z,s])=>{const k=(CF.cogumelo_tamanho||1.5)*s;o.position.set(x,-.12*k,z);o.scale.setScalar(k);o.rotation.set(0,(x*5.1+z*9.7)%6.283,0)});
+  else{inst(new T.CylinderGeometry(.09,.12,1,6),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.3*s,z);o.scale.set(s,.6*s,s);o.rotation.set(0,0,0);c.set('#efe6d8')});
+  inst(new T.SphereGeometry(.42,10,6,0,Math.PI*2,0,Math.PI/2),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.58*s,z);o.scale.set(s,.8*s,s);o.rotation.set(0,0,0);c.set(['#e86a8a','#b46ae8','#f2a04a'][Math.abs(Math.round(x+z))%3])})}
   // sombras das árvores
   for(const [x,z,s] of M.arvores){if(z<-1||z>M.comprimento+1)continue;const sh=sombra(1.1*s);sh.position.set(x+.25,.015,z+.25);S.add(sh)}
   // morangos (moitas) e folhas douradas
@@ -210,27 +229,35 @@ function cenario(S,M){const T=G.THREE(),rnd=semente(M.comprimento*13+1);
   for(const [x,z] of M.morangos){const g=new T.Group(),b=new T.Mesh(new T.IcosahedronGeometry(.45,1),new T.MeshLambertMaterial({color:'#3f8a4a'}));b.position.y=.35;b.scale.y=.75;g.add(b);
     const f=sprEmoji('🍓',.6);f.position.y=.85;g.add(f);g.position.set(x,0,z);S.add(g);itens.push({t:'S',x,z,g,f})}
   for(const [x,z] of M.folhas){const g=new T.Group(),f=sprEmoji('🍃',.9,'rgba(255,220,90,.9)');f.position.y=1;g.add(f);g.position.set(x,0,z);S.add(g);itens.push({t:'L',x,z,g,f})}
-  // portal
-  const pg=new T.Group(),anel=new T.Mesh(new T.TorusGeometry(1.25,.13,10,40),new T.MeshBasicMaterial({color:'#ff9ac8'})),
+  // portal: o diorama (arco, árvores, cogumelos, cristais) virado para quem chega; fechado (véu escuro) enquanto o chefão vive
+  const obsP=[];
+  if(C3){const K=CF.portal_tamanho||7.6,pg=new T.Group(),dio=C3.portal;dio.scale.setScalar(K);dio.position.y=-.18;pg.add(dio);
+    const veu=new T.Mesh(new T.CircleGeometry(1,40),new T.MeshBasicMaterial({color:'#140822',transparent:true,opacity:.9,side:T.DoubleSide,depthWrite:false}));veu.scale.set(.084*K,.106*K,1);veu.position.set(0,.246*K-.18,.012*K);
+    const luz=new T.Mesh(new T.CircleGeometry(1,40),new T.MeshBasicMaterial({color:'#ffc8f0',transparent:true,opacity:0,blending:T.AdditiveBlending,side:T.DoubleSide,depthWrite:false}));luz.scale.set(.086*K,.108*K,1);luz.position.set(0,.246*K-.18,.014*K);
+    luz.visible=false;pg.add(veu,luz);pg.rotation.y=Math.PI;pg.position.set(M.portal[0],0,M.portal[1]);S.add(pg);
+    // árvores e colunas do diorama também barram o caminho (só se passa pelo arco)
+    for(const [dx,dz,r] of [[.3,.1,.16],[-.3,.1,.16],[.125,-.01,.045],[-.125,-.01,.045],[.42,-.05,.1],[-.42,-.05,.1]])obsP.push([M.portal[0]+dx*K,M.portal[1]+dz*K,r*K]);
+    var PORTAL={g:pg,veu,luz}}
+  else{const pg=new T.Group(),anel=new T.Mesh(new T.TorusGeometry(1.25,.13,10,40),new T.MeshBasicMaterial({color:'#ff9ac8'})),
     disco=new T.Mesh(new T.CircleGeometry(1.15,32),new T.MeshBasicMaterial({color:'#ffd0ea',transparent:true,opacity:.55,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide}));
   anel.position.y=1.45;disco.position.y=1.45;pg.add(anel,disco);const base=new T.Mesh(new T.CylinderGeometry(1.4,1.5,.15,24),new T.MeshLambertMaterial({color:'#6b5a7a'}));base.position.y=.07;pg.add(base);
-  pg.position.set(M.portal[0],0,M.portal[1]);S.add(pg);
+  pg.position.set(M.portal[0],0,M.portal[1]);S.add(pg);var PORTAL={g:pg,anel,disco}}
   // vagalumes
   const vg=[];for(let k=0;k<40;k++){const s=sprEmoji('✨',.25);s.position.set((rnd()-.5)*M.largura,1+rnd()*2.5,rnd()*M.comprimento);S.add(s);vg.push({s,y:s.position.y,f:rnd()*6})}
   // obstáculos para colisão
-  const obs=[];for(const [x,z,s] of M.arvores)obs.push([x,z,.38*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,.3*s]);
-  return{itens,portal:{g:pg,anel,disco},vg,obs}}
+  const obs=obsP.slice();for(const [x,z,s] of M.arvores)obs.push([x,z,(C3?.45:.38)*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
+  return{itens,portal:PORTAL,vg,obs,blocos}}
 
 // ---- montar a fase ----
 async function iniciar3D(){const R=RUN,f=R.f,M=f.mapa3d,T=G.THREE();if(!T||!M)throw new Error('sem 3d');
   const cv=$('advCv'),rd=new T.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));rd.outputEncoding=T.sRGBEncoding;
   const S=new T.Scene();S.background=new T.Color('#2c3a52');S.fog=new T.Fog('#2c3a52',26,52);
   S.add(new T.HemisphereLight(0xfff2e0,0x2f4a32,1.05));const sol=new T.DirectionalLight(0xffe2c4,.95);sol.position.set(6,12,-5);S.add(sol);
-  const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};R.w={M,...cenario(S,M),ents:[],tiros:[],efeitos:[],nums:[]};
+  const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};const C3=await props3d();if(RUN!==R)return;R.w={M,...cenario(S,M,C3),ents:[],tiros:[],efeitos:[],nums:[]};
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=R.i<G.CH0&&R.hero.lv>=G.EVO_LV;
-  const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=R.i>=G.CH0?(AR.tam_redondo||.95):(AR.tam_heroi||1.3);hg.scale.setScalar(Hs);
-  const hU=prepAndar(hg,R.i>=G.CH0);const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
+  const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1);hg.scale.setScalar(Hs);
+  const hU=prepAndar(hg,redondo(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
   R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);
   if(f.chefe&&M.arena){const b=await novoInimigo(f.chefe[0],f.chefe[1],M.arena.x,M.arena.z+2,{x:M.arena.x,z:M.arena.z},true);R.w.ents.push(b);R.w.boss=b}
@@ -240,8 +267,8 @@ async function iniciar3D(){const R=RUN,f=R.f,M=f.mapa3d,T=G.THREE();if(!T||!M)th
   R.last=performance.now();R.acc=0;R.raf=requestAnimationFrame(passo)}
 async function novoInimigo(j,lv,x,z,camp,chefe,tipo){const R=RUN,T=G.THREE(),L_=lutador(j,lv,{chefe}),Tp=(tipo&&TP[tipo])||{};const k=(chefe?(AR.chefe_vida||1.6):(AR.inimigo_vida||.45))*(Tp.vida||1);L_.hp=L_.max=Math.max(10,Math.round(L_.hp*k));
   if(Tp.dano)L_.atk*=Tp.dano;const esc=Tp.escudo?Math.round(L_.max*Tp.escudo):0;
-  const g=await G.modelo(j,chefe),s=(chefe?(AR.tam_chefe||3):j>=G.CH0?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
-  const U=prepAndar(g,j>=G.CH0),root=new T.Group();root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
+  const g=await G.modelo(j,chefe),s=(chefe?(AR.tam_chefe||3):redondo(j)?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
+  const U=prepAndar(g,redondo(j)),root=new T.Group();root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
   const bar=document.createElement('div');bar.className='advebar'+(chefe?' chefe':'')+(tipo?' '+tipo:'');bar.innerHTML='<small class="'+corNv(lv,R.hero.lv)+'">'+(Tp.icone?Tp.icone+' ':'')+'Nv '+lv+'</small>'+(esc?'<i class="esc"><b></b></i>':'')+'<i><b></b></i>';bar.hidden=true;$('advFx').appendChild(bar);
   if(tipo==='elite'){const a=new T.Mesh(new T.RingGeometry(.55*s,.68*s,32),new T.MeshBasicMaterial({color:'#7ad0ff',transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide}));a.rotation.x=-Math.PI/2;a.position.y=.04;root.add(a)}
   if(tipo==='curandeiro'){const a=sprEmoji('💚',.45);a.position.y=1.55*s;root.add(a)}
@@ -300,7 +327,10 @@ function fisica(dt){const R=RUN,p=R.p,w=R.w;R.t+=dt;if(!p)return;
     if(it.t==='L'){R.leaves++;folhas();G.tone(988,.12,'triangle',.08);setTimeout(()=>G.tone(1318,.14,'triangle',.08),90);aviso('Folha dourada! '+R.leaves+' de 3',1400);faisca(it.x,1,it.z,'#ffd23c',14)}
     else{const c=Math.min(R.hero.max-R.hero.hp,Math.round(R.hero.max*(AR.morango_cura||.3)));R.hero.hp+=c;num(it.x,1.2,it.z,c>0?'+'+c+' ❤':'🍓','#9dff8a');G.tone(660,.1,'sine',.08);hud()}}}
   // portal
-  const pt=w.portal,fech=w.boss&&w.boss.vivo,M=w.M;pt.anel.material.color.set(fech?'#7a6a9a':'#ff9ac8');pt.disco.material.opacity=fech?.15:.45+Math.sin(R.t*4)*.15;pt.anel.rotation.z+=dt*(fech?.3:1.5);
+  const pt=w.portal,fech=w.boss&&w.boss.vivo,M=w.M;
+  if(pt.veu){pt.veu.visible=fech;pt.luz.visible=!fech;pt.luz.material.opacity=.07+Math.sin(R.t*4)*.05;pt.luz.scale.x=(D.cenario3d.portal_tamanho||7.6)*(.086+Math.sin(R.t*3)*.004)}
+  else{pt.anel.material.color.set(fech?'#7a6a9a':'#ff9ac8');pt.disco.material.opacity=fech?.15:.45+Math.sin(R.t*4)*.15;pt.anel.rotation.z+=dt*(fech?.3:1.5)}
+  
   if(!fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<1.4){p.venceu=.001;G.fanfare();return}
   if(fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<2.2&&!R.avisoPortal){R.avisoPortal=1;aviso('O portal só abre depois de derrotar o chefão!',2200);setTimeout(()=>{if(RUN===R)R.avisoPortal=0},3000)}
   // inimigos
@@ -422,6 +452,8 @@ function desenha(){const R=RUN;if(!R||!R.r3||!R.p)return;const {rd,S,cam}=R.r3,p
   if(!R.cam)R.cam={x:p.x,z:p.z+(AR.cam_frente||2.2)};
   let ox=0,oz=0;if(R.tremor>0&&!R.pausa){R.tremor=Math.max(0,R.tremor-1/60);ox=(Math.random()-.5)*R.tremor*1.2;oz=(Math.random()-.5)*R.tremor*1.2}
   cam.position.set(R.cam.x+ox,AR.cam_altura||11.5,R.cam.z-(AR.cam_tras||8.5)+oz);cam.lookAt(R.cam.x+ox,0,R.cam.z+oz);
+  // só desenha os blocos de árvores/cogumelos que a câmera alcança (largura depende da tela)
+  if(w.blocos){const cz=R.cam.z+oz,cx=R.cam.x+ox,hw=2+27*Math.tan(Math.atan(Math.tan(21*Math.PI/180)*cam.aspect));for(const b of w.blocos)b.m.visible=b.z1>cz-9.5&&b.z0<cz+12.5&&b.x1>cx-hw&&b.x0<cx+hw}
   rd.render(S,cam);
   // barras de vida, números e minimapa (HTML por cima do 3D)
   const cv=$('advCv'),W=cv.clientWidth,H=cv.clientHeight,v=V3();
@@ -447,12 +479,18 @@ function minimapa(){const R=RUN,c=$('advMini');if(!c)return;const x=c.getContext
 
 async function terminar(win){const R=RUN;if(!R||R.salvo)return;R.salvo=1;R.fim=true;
   const f=R.f,id=f.id,st=win?Math.min(3,R.leaves):0;
-  let res={first:false,stone:-1,coins:0,xp:win?D.xp.vitoria:D.xp.derrota,erro:''};
+  let res={first:false,stone:-1,coins:0,diam:0,ovo:-1,xp:win?D.xp.vitoria:D.xp.derrota,erro:''};
   if(G.online()){const r=await G.sync('adv_end',{stage:id,win,stars:Math.max(1,st)});
-    if(r&&!r.error&&typeof r.coins==='number'){res.coins=r.coins-G.coins();G.setCoins(r.coins);G.xpSet(R.i,r.xp);res.first=!!r.first;res.stone=r.stone;if(win)S.prog[id]=Math.max(S.prog[id]||0,Math.max(1,st));if(r.stone>=0)G.stoneLocal(r.stone)}
+    if(r&&!r.error&&typeof r.coins==='number'){res.coins=r.coins-G.coins();G.setCoins(r.coins);G.xpSet(R.i,r.xp);res.first=!!r.first;res.stone=r.stone;res.diam=r.diamonds_got|0;res.ovo=typeof r.egg_leg==='number'?r.egg_leg:-1;if(window.GARRO_LEND)window.GARRO_LEND.servidor(r);if(win)S.prog[id]=Math.max(S.prog[id]||0,Math.max(1,st));if(r.stone>=0)G.stoneLocal(r.stone)}
     else{const det=r&&r.detail||'';res.erro=det.includes('nivel_baixo')?'O servidor não aceitou: seu bichinho ainda é fraco demais para esta fase.':'Não deu para salvar o resultado. Tente de novo.';res.xp=0}}
   else{if(win){res.first=!L.prog[id];L.prog[id]=Math.max(L.prog[id]||0,Math.max(1,st));if(res.first&&f.premio){G.addCoinsLocal(f.premio);res.coins=f.premio}
-      if(f.chefe&&Math.random()<D.chefe_pedra.chance){const p=D.chefe_pedra.pedras;res.stone=p[Math.floor(Math.random()*p.length)];G.stoneLocal(res.stone)}}
+      if(f.chefe&&!f.desafio&&Math.random()<D.chefe_pedra.chance){const p=D.chefe_pedra.pedras;res.stone=p[Math.floor(Math.random()*p.length)];G.stoneLocal(res.stone)}
+      // sem login: os mesmos prêmios do servidor, guardados no aparelho (js/lendarios.js)
+      const GL=window.GARRO_LEND,DM=((GD.lendarios||{}).diamantes)||{};
+      if(GL){let dd=0,ov=-1;if(f.chefe&&!f.desafio&&GL.premio('chefe_'+id))dd+=DM.chefe_do_mundo||0;
+        const fs=f.mundo.fases;if(!f.desafio&&fs.every(x=>(L.prog[x.id]||0)>=3)&&GL.premio('mundo3_'+f.mundo.id))dd+=DM.mundo_3_estrelas||0;
+        if(f.desafio&&GL.sorteioHoje()&&Math.random()<(f.chance_ovo||0))ov=f.chefe[0]-LEG0;
+        if(dd||ov>=0)GL.local(dd,ov);res.diam=dd;res.ovo=ov}}
     saveL();G.xpLocal(R.i,res.xp)}
   if(win&&!res.erro)G.evento('adventure',1);
   resultado(win,st,res)}
@@ -460,8 +498,10 @@ function resultado(win,st,res){const R=RUN,f=R.f,tem=FASES[R.k+1];if(win)G.fanfa
   let h='<div class="advres '+(win?'win':'lose')+'"><h4>'+(win?'Vitória! 🏆':'Derrota 💔')+'</h4>';
   if(win)h+='<div class="advstars">'+estrelas(st)+'</div><small class="advst">'+st+' de 3 folhas douradas 🍃</small>';
   h+='<ul>';if(res.erro)h+='<li>'+res.erro+'</li>';
-  if(res.erro){}else if(win&&res.first&&res.coins>0)h+='<li>+'+res.coins+' 🪙 <small>(1ª vitória nesta fase)</small></li>';else if(win)h+='<li><small>Fase já vencida antes: sem moedas desta vez</small></li>';
+  if(res.erro){}else if(win&&res.first&&res.coins>0)h+='<li>+'+res.coins+' 🪙 <small>(1ª vitória nesta fase)</small></li>';else if(win&&!R.f.desafio)h+='<li><small>Fase já vencida antes: sem moedas desta vez</small></li>';
   if(!res.erro)h+='<li>+'+res.xp+' XP para '+G.name(R.i)+'</li>';
+  if(res.diam>0)h+='<li class="pedra">💎 +'+res.diam+' diamante'+(res.diam>1?'s':'')+' raro'+(res.diam>1?'s':'')+'! <small>(use no Ninho)</small></li>';
+  if(res.ovo>=0&&window.GARRO_LEND){const x=window.GARRO_LEND.lendarios[res.ovo];h+='<li class="pedra"><img src="img/lendarios/ovo_'+x.slug+'.webp" alt=""> Ovo de <b>'+x.nome+'</b>! Foi para o 🥚 Ninho</li>'}
   if(res.stone>=0){const s=G.stone(res.stone);h+='<li class="pedra">'+(s&&s.img?'<img src="'+s.img+'" alt="">':'💎')+' O chefão deixou cair: <b>'+(s?s.name:'pedra')+'</b>!</li>'}
   if(!win)h+='<li><small>Dica: quando o inimigo tremer ou aparecer um círculo vermelho no chão, use 💨 Esquivar. Derrote primeiro o curandeiro 💚, use o Poder de longe e pegue morangos 🍓. Bichinho com nível maior aguenta mais.</small></li>';
   h+='</ul><div class="advresb">'+(win&&tem?'<button type="button" data-r="prox">Próxima fase ›</button>':'')+'<button type="button" data-r="de-novo">'+(win?'Jogar de novo':'Tentar de novo')+'</button><button type="button" data-r="mapa" class="sec">Mapa</button></div></div>';
