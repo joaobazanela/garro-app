@@ -15,12 +15,12 @@ O jogo deixou de ser um `index.html` gigante. Agora:
 |---|---|
 | `index.html` | Só a estrutura da página (HTML) e um carregador pequeno. |
 | `css/garro.css` | Todo o visual. |
-| `js/garro.js` | Toda a lógica do jogo. |
+| `js/garro/*.js` | Lógica do jogo, em 8 partes por assunto: `base` (dados, login, sincronização), `maquina` (física, garra), `jogo` (estado, som, toques, coleção), `criaturas` (3D esculpido), `modelos` (GLB, visualizador, redondos), `cuidados` (evolução, pedras, loja, inventário), `luta`, `final` (vitrine, bichos em código, API `GARRO`, entrada). |
 | `data/*.json` | **Conteúdo estático do jogo**: `pelucias.json` (lista, força, elementos, nomes das evoluções, pedras), `modelos.json` (ajustes dos modelos 3D), `textos.json`, `regras.json` (preços, decaimento, XP), `sprites*.json` e `fills.json` (imagens). |
 | `models/` | Modelos 3D e texturas. |
 | `supabase/` | Migrações e a função `sync-estado` (deploy automático pelo GitHub Actions ao dar push em `main`). |
 
-O carregador do `index.html` busca os `data/*.json` e só depois carrega `js/garro.js`; se algum arquivo falhar, aparece um aviso na tela em vez de tela branca.
+O carregador do `index.html` busca os `data/*.json` e só depois carrega `js/garro/*.js` (um por vez, em ordem; dividem o mesmo escopo global, então a ordem importa); se algum arquivo falhar, aparece um aviso na tela em vez de tela branca.
 
 ### Regras do projeto
 1. **Banco (Supabase "appgarro") guarda só ESTADO do jogador** (`profiles`, `player_state`, `collection`: moedas, vitórias, o que capturou). Nunca conteúdo do jogo, sprites, base64, textos ou configuração de pelúcias.
@@ -223,3 +223,6 @@ O monte fica escorado na divisória (sem cerca invisível); só não pode ficar 
 
 ### Sem corpo antigo
 Se o modelo 3D de um bichinho demora ou falha ao carregar, o jogo mostra "Carregando…" e tenta de novo (até 8 vezes, além das 3 tentativas internas) em vez de desenhar o corpo antigo feito em código.
+
+### Jogo dividido em arquivos
+O antigo `js/garro.js` (2.200 linhas) virou `js/garro/*.js`. Foi só mover blocos, na ordem original, sem mudar comportamento (único ajuste: o código de entrada/login foi para o fim de `final.js`, porque agora precisa esperar todas as partes). Nome novo no escopo global: não use `const`/`let` com nome igual a uma propriedade de `window` que não possa ser redefinida (`top`, `location`...). Para mexer: ache o assunto na lista da tabela acima.
