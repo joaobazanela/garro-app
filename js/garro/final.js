@@ -237,3 +237,6 @@ $('btnRetryLogin').addEventListener('click',()=>showAuthState('Default'));
   const {data:{session:s}}=await sb.auth.getSession();
   if(s)await iniciarAposLogin();
 })();
+/* admin (DEV): já começa com um bichinho de cada, só na memória do jogo (não vai para o servidor) */
+function devTudo(){if(!DEV)return;for(const p of PLUSH)if(!(coll[p.i]>0))coll[p.i]=1;try{renderShelf();hud()}catch(e){}}
+setTimeout(devTudo,150);

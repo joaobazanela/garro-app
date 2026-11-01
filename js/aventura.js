@@ -34,7 +34,7 @@ function dano(A,B,mult){const em=elemMult(A,B);let d=A.atk*mult*(1-LT.variacao+M
 function nivelMax(f){return Math.max(...f.inimigos.map(x=>x[1]).concat(f.chefe?[f.chefe[1]]:[]))}
 function recomendado(f){return nivelMax(f)+(f.chefe?2:3)}
 // o servidor só aceita vitória se o bichinho tiver pelo menos este nível (nível do inimigo mais forte − folga)
-function nivelMin(f){return Math.max(1,nivelMax(f)-(D.nivel_min_folga??6))}
+function nivelMin(f){if(G.dev())return 1;return Math.max(1,nivelMax(f)-(D.nivel_min_folga??6))}
 
 // ---------- estado: progresso (estrelas por fase) e energia por bichinho ----------
 let L={prog:{},en:{}};try{const o=JSON.parse(localStorage.getItem(LKEY)||'');if(o&&o.prog)L=Object.assign(L,o)}catch(e){}
@@ -42,10 +42,13 @@ function saveL(){try{localStorage.setItem(LKEY,JSON.stringify(L))}catch(e){}}
 let S=null;// vindo do servidor quando logado
 const box=()=>G.online()&&S?S:L;
 // libera depois da fase anterior (o Desafio Lendário depende do chefão do mundo 1; o mundo seguinte não depende do Desafio)
-function liberada(k){const f=FASES[k];if(f.desafio)return !!box().prog[f.depois_de];let j=k-1;while(j>=0&&FASES[j].desafio)j--;return j<0||!!box().prog[FASES[j].id]}
+function liberada(k){const f=FASES[k];if(G.dev())return true;// administradores (data/regras.json → DEV_EMAILS): qualquer fase, para teste
+  if(f.desafio)return !!box().prog[f.depois_de];let j=k-1;while(j>=0&&FASES[j].desafio)j--;return j<0||!!box().prog[FASES[j].id]}
+// nível do bichinho nesta partida: o real, ou (só admin, para testar) o recomendado da fase ou 100
+let ADMLV=0;const admLv=(i,f)=>G.dev()&&ADMLV?(ADMLV==='rec'?recomendado(f):ADMLV):G.lvOf(i);
 const numDe=k=>FASES.slice(0,k).filter(x=>!x.desafio).length+1;// número da fase (o Desafio não conta)
 const temaDe=f=>(f&&f.mundo&&f.mundo.tema)||null;
-function energia(i){const r=box().en[i];if(!r)return{e:EN.max,s:Date.now(),falta:0};let e=r.e,s=r.s;const step=EN.recarga_min*6e4;
+function energia(i){if(G.dev())return{e:EN.max,s:Date.now(),falta:0};const r=box().en[i];if(!r)return{e:EN.max,s:Date.now(),falta:0};let e=r.e,s=r.s;const step=EN.recarga_min*6e4;
   if(e<EN.max){const n=Math.floor((Date.now()-s)/step);if(n>0){e=Math.min(EN.max,e+n);s=e>=EN.max?Date.now():s+n*step}}
   return{e,s,falta:e>=EN.max?0:Math.max(0,s+step-Date.now())}}
 function tempo(ms){const m=Math.ceil(ms/6e4);return m>=60?Math.floor(m/60)+'h'+(m%60?String(m%60).padStart(2,'0'):''):m+' min'}
@@ -88,7 +91,7 @@ function mapa(){limpa3D();TELA='mapa';RUN=null;moedas();$('advTitle').textConten
     h+='<button type="button" class="advnode '+cls+(f.chefe?' chefe':'')+(f.desafio?' lenda':'')+'" data-k="'+k+'" style="left:'+pos[k].x+'%;top:'+pos[k].y+'px"'+(ok?'':' disabled')+'>'+
       (f.chefe?'<img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt="">':'<b>'+numDe(k)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(f.desafio?'':st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>';
     if(k===cur||f.desafio)h+='<div class="advlabel'+(f.desafio?' lenda':'')+'" style="left:'+pos[k].x+'%;top:'+(pos[k].y+(f.desafio?-84:40))+'px">'+(f.desafio?'👑 ':'')+f.nome+'</div>'});
-  h+='</div><p class="advnote">Jogar não custa nada. Cada fase cansa um pouco o bichinho (⚡). Vencer pela 1ª vez dá moedas.</p>';
+  h+='</div>'+(G.dev()?'<p class="advnote">🛠 Modo teste (admin): todas as fases liberadas, sem cansaço e sem nível mínimo.</p>':'')+'<p class="advnote">Jogar não custa nada. Cada fase cansa um pouco o bichinho (⚡). Vencer pela 1ª vez dá moedas.</p>';
   $('advBody').innerHTML=h;
   const alvo=$('advBody').querySelector('.advnode.atual')||$('advBody').querySelector('.advnode.feita:last-of-type');
   if(alvo)setTimeout(()=>alvo.scrollIntoView({block:'center'}),30)}
@@ -107,11 +110,13 @@ function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('a
   if(!meus.length)h+='<p class="advnote">Pegue uma pelúcia na máquina para começar a aventura.</p>';
   h+='<div class="advpets">'+meus.map(i=>{const lv=G.lvOf(i),E=energia(i),el=ELEM[i];return '<button type="button" class="advpet'+(i===SEL?' sel':'')+(lv<recomendado(f)-4?' fraco':'')+'" data-i="'+i+'"><img src="'+G.sprite(i,lv,0,G.rbOf(i))+'" alt=""><b>'+(lv>=G.EVO_LV&&i<G.CH0?G.evName(i):G.name(i))+'</b><small>Nv '+lv+' · '+(ELNAME[el]||'')+'</small>'+pips(E.e)+(E.e<EN.max?'<small class="advwait">+1 ⚡ em '+tempo(E.falta)+'</small>':'')+'</button>'}).join('')+'</div>';
   if(SEL!==null){const E=energia(SEL),nm=nivelMin(f),lvs=G.lvOf(SEL);h+='<div class="advgo">'+(lvs<nm?'<button type="button" disabled>Precisa de Nv '+nm+'</button><small>'+G.name(SEL)+' ainda é fraco para esta fase. Cuide dele para subir de nível ou escolha outro bichinho.</small>':E.e>0?'<button type="button" id="advStart">Jogar! ▶</button>':'<button type="button" id="advRest">😴 Descansar · '+EN.descanso_preco+' 🪙</button><small>'+G.name(SEL)+' está cansado. Volta 1 ⚡ em '+tempo(E.falta)+', ou descanse agora.</small>')+'</div>'}
+  if(G.dev())h+='<div class="advdev">🛠 Modo teste (admin) · nível do bichinho nesta partida: '+[['0','real'],['rec','recomendado (Nv '+recomendado(f)+')'],['100','Nv 100']].map(([v,t])=>'<button type="button" data-lv="'+v+'"'+(String(ADMLV)===v?' class="on"':'')+'>'+t+'</button>').join('')+'</div>';
   $('advBody').innerHTML=h;
   const st=$('advStart');if(st)st.addEventListener('click',()=>comecar(k,SEL));
   const rs=$('advRest');if(rs)rs.addEventListener('click',()=>descansar(SEL))}
 $('advBody').addEventListener('click',e=>{
   const n=e.target.closest('.advnode');if(n&&TELA==='mapa'){G.click(700);msg('');escolha(+n.dataset.k);return}
+  const dv=e.target.closest('.advdev button');if(dv&&TELA==='escolha'){ADMLV=dv.dataset.lv==='0'?0:dv.dataset.lv==='rec'?'rec':+dv.dataset.lv;G.click(700);escolha(FK);return}
   const p=e.target.closest('.advpet');if(p&&TELA==='escolha'){G.click(760);SEL=+p.dataset.i;msg('');escolha(FK);return}
   const r=e.target.closest('[data-r]');if(r){const v=r.dataset.r;if(v==='mapa')mapa();else if(v==='prox')escolha(FK+1);else escolha(FK)}
 });
@@ -129,7 +134,7 @@ async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=ener
     if(!r||r.error||typeof r.energy!=='number'){const det=r&&r.detail||'';msg(Object.keys(ERROS).map(x=>det.includes(x)?ERROS[x]:'').join('')||'Não deu para começar. Tente de novo.');if(b)b.disabled=false;await carregarServidor();return}
     S.en[i]={e:r.energy,s:Date.parse(r.since)}}
   else{L.en[i]={e:E.e-1,s:E.e>=EN.max?Date.now():E.s};saveL()}
-  const lv=G.lvOf(i);
+  const lv=admLv(i,f);
   // mapa novo a cada partida (js/mapas.js): percurso e quantidade de bichinhos mudam; sem o gerador usa o mapa reserva do JSON
   let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=GARRO_MAPAS.novo(f.desafio?11:f.mundo.fases.findIndex(x=>x.id===f.id)+1,{inimigos:f.inimigos,chefe:f.chefe},!!f.desafio,D.mapa_variacao,f.desafio?null:f.mundo.dif)}catch(e){console.warn('mapa',e)}
   if(M3&&!f.desafio&&f.mundo.tema)M3.tema=f.mundo.tema;

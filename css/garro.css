@@ -459,3 +459,4 @@ style#btnMis{position:relative}
 .cb.stone#cRebirth{background:linear-gradient(135deg,#e0a020,#f06a2a)}
 
 .advmundo{position:absolute;left:50%;transform:translateX(-50%);z-index:1;background:linear-gradient(90deg,#2a4a7a,#4a7ac0);color:#fff;border-radius:999px;padding:4px 14px;font-size:13px;font-weight:900;letter-spacing:.3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4);pointer-events:none}.advmundo.bloq{background:#3a3040;color:#bba}
+.advdev{margin-top:10px;padding:8px;border:1px dashed #c9a14a;border-radius:10px;font-size:12px;font-weight:700;color:#ffe9a8;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.advdev button{background:#3a3040;color:#fff;border:0;border-radius:8px;padding:5px 9px;font-weight:800;font-size:12px}.advdev button.on{background:#c9a14a;color:#2a1a00}
