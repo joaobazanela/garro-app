@@ -13,14 +13,14 @@ const r2=v=>Math.round(v*100)/100;
 // W = ajustes do mundo (data/aventura.json → mundos[].dif): extra = bichinhos a mais, tipos_n = adianta atiradores/curandeiro/guardas, dens = {arv,ped} (quantidade de árvores e pedras)
 function gera(n,f,seed,desafio,extra,W){W=W||{};const nt=n+(W.tipos_n|0),dens=W.dens||{};
   const rnd=semente(seed*1009+n),chefe=!!f.chefe;
-  const L=desafio?64:chefe?96:58+n*6;
+  const L=desafio?96:chefe?150:92+n*9;// percurso mais longo (antes 58+6n / chefão 96 / desafio 64): as fases acabavam rápido demais
   const pts=[];let x=0;
   for(let z=0;z<=L;z+=6){if(z>6&&z<L-6)x=Math.max(-8,Math.min(8,x+rnd.uniform(-4.5,4.5)));else if(z>=L-6)x*=.4;pts.push([r2(x),z])}
   const dcam=(px,pz)=>{let best=1e9;for(let k=0;k<pts.length-1;k++){const[ax,az]=pts[k],[bx,bz]=pts[k+1],vx=bx-ax,vz=bz-az;const t=Math.max(0,Math.min(1,((px-ax)*vx+(pz-az)*vz)/(vx*vx+vz*vz)));best=Math.min(best,Math.hypot(px-(ax+t*vx),pz-(az+t*vz)))}return best};
   const xcam=z=>{for(let k=0;k<pts.length-1;k++){const[ax,az]=pts[k],[bx,bz]=pts[k+1];if(az<=z&&z<=bz)return ax+(bx-ax)*(z-az)/(bz-az)}return pts[pts.length-1][0]};
   const livre=[[chefe?0:pts[pts.length-1][0],L-2,5.2]];// diorama do portal
   // acampamentos de inimigos ao longo do caminho
-  const total=Math.max(2,(desafio?3:chefe?7:4+n)+(extra|0)),inim=f.inimigos,camps=[];let k=0;
+  const total=Math.max(2,(desafio?4:chefe?9:6+n)+(extra|0)),inim=f.inimigos,camps=[];let k=0;
   const fim=chefe?L-30:L-14,nc=Math.max(2,Math.ceil(total/2)),zs=[];for(let q=0;q<nc;q++)zs.push(14+(fim-14)*q/(nc-1));
   for(let q=0;q<nc;q++){const z=zs[q],cx=xcam(z)+rnd.uniform(-2.5,2.5),quant=q<nc-1?Math.min(desafio?2:3,total-k):total-k;if(quant<=0)break;
     const grupo=[];for(let j=0;j<quant;j++){const[i,lv]=inim[k%inim.length];k++;const a=j/Math.max(1,quant)*6.283+rnd.uniform(0,1);

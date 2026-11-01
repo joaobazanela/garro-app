@@ -221,13 +221,77 @@ let SOMBRA=null;function sombra(r){const T=G.THREE();if(!SOMBRA){const c=documen
     g.addColorStop(0,'rgba(0,0,0,.45)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);SOMBRA=new T.CanvasTexture(c)}
   const m=new T.Mesh(new T.PlaneGeometry(r*2,r*2),new T.MeshBasicMaterial({map:SOMBRA,transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.02;return m}
 // cenário 3D (data/aventura.json → cenario3d; modelos em models/cenario/ recortados do diorama do portal). Carrega uma vez só.
-let C3P=null;
-function props3d(){const CF=D.cenario3d;if(!CF||!G.glb)return Promise.resolve(null);if(C3P)return C3P;
+// cada mundo pode trocar os modelos (tema.cenario3d no data/aventura.json): a Caverna Encantada usa pedras, barril e lanterna da caverna
+const C3C={};const cfgDe=TT=>Object.assign({},D.cenario3d||{},(TT&&TT.cenario3d)||{});
+function props3d(TT){const CF=cfgDe(TT);if(!D.cenario3d||!G.glb)return Promise.resolve(null);const ck=JSON.stringify(CF);if(C3C[ck])return C3C[ck];
   const malha=g=>{let m=null;g.traverse(o=>{if(o.isMesh&&!m)m=o});if(!m)throw new Error('sem malha');const mat=m.material;mat.roughness=.9;mat.metalness=0;if(mat.map)mat.map.encoding=G.THREE().sRGBEncoding;return{geo:m.geometry,mat}};
-  return C3P=Promise.all([G.glb(CF.portal),...CF.arvores.map(f=>G.glb(f)),G.glb(CF.cogumelos)]).then(([por,...r])=>{const cog=r.pop();
+  return C3C[ck]=Promise.all([G.glb(CF.portal),...CF.arvores.map(f=>G.glb(f)),G.glb(CF.cogumelos),CF.lanterna?G.glb(CF.lanterna).catch(()=>null):null]).then(([por,...r])=>{const lan=r.pop(),cog=r.pop();
     por.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=.9;o.material.metalness=0;if(o.material.map)o.material.map.encoding=G.THREE().sRGBEncoding}});
-    return{portal:por,arv:r.map(malha),cog:malha(cog)}}).catch(e=>{console.warn('cenario 3d',e);C3P=null;return null})}
-function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=D.cenario3d||{},blocos=[];
+    return{portal:por,arv:r.map(malha),cog:malha(cog),lan:lan?malha(lan):null}}).catch(e=>{console.warn('cenario 3d',e);delete C3C[ck];return null})}
+// decoração própria de cada mundo (tema.decor): inspirada nos mapas "Caverna Encantada" e "Mundo Aquático"
+function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.decor;if(!DEC)return;
+  const perto=(lista,n,d)=>{const out=[];lista.forEach(([x,z,s],k)=>{for(let q=0;q<n;q++)out.push([x+(rnd()-.5)*d,z+(rnd()-.5)*d,s*(.5+rnd()*.6),k+q])});return out};
+  if(DEC==='caverna'){
+    // cristais que brilham, em tufos perto das pedras grandes
+    const cr=perto(M.arvores.filter((q,k)=>k%2===0),2,1.8).concat(perto(M.pedras,1,1.2)),cores=TT.cristais||['#ff7ad9','#6ef0ff','#b48aff'];
+    cores.forEach((cor,c)=>{const L=cr.filter(q=>q[3]%cores.length===c);if(!L.length)return;
+      const mat=new T.MeshStandardMaterial({color:cor,emissive:cor,emissiveIntensity:.9,roughness:.25,metalness:.1,flatShading:true});
+      inst(new T.ConeGeometry(.16,1,5),mat,L,(o,[x,z,s],col)=>{o.position.set(x,.45*s,z);o.scale.set(s,s*(1.2+rnd()*.8),s);o.rotation.set((rnd()-.5)*.6,rnd()*6,(rnd()-.5)*.6);col.set('#ffffff')})});
+    // lanternas penduradas em postes ao longo da trilha (luz quente na caverna escura)
+    if(C3&&C3.lan){const ls=[];for(let z=6;z<M.comprimento-4;z+=9){const p=M.caminho.reduce((a,b)=>Math.abs(b[1]-z)<Math.abs(a[1]-z)?b:a,M.caminho[0]);ls.push([p[0]+(z%18<9?-2.6:2.6),z])}
+      const poste=new T.MeshLambertMaterial({color:'#3a2a20'});
+      inst(new T.CylinderGeometry(.06,.08,2.6,6),poste,ls,(o,[x,z],c)=>{o.position.set(x,1.3,z);o.scale.set(1,1,1);o.rotation.set(0,0,0);c.set('#ffffff')});
+      inst(C3.lan.geo,C3.lan.mat,ls,(o,[x,z],c)=>{o.position.set(x,1.9,z);o.scale.setScalar(.75);o.rotation.set(0,0,0);c.set('#ffffff')});
+      for(const [x,z] of ls){const l=new T.PointLight(TT.lanterna_cor||'#ffb35a',1.1,7,1.6);l.position.set(x,1.9,z);S.add(l)}}
+  }
+  if(DEC==='trevas'){
+    // árvores secas (tronco e galhos tortos), cristais roxos e torres escuras com ponta brilhante
+    const tr=perto(M.arvores.filter((q,k)=>k%3===0),1,1.4),tm=new T.MeshLambertMaterial({color:'#2e2636'});
+    inst(new T.CylinderGeometry(.05,.11,1.8,5),tm,tr,(o,[x,z,s],c)=>{o.position.set(x,.9*s,z);o.scale.set(s,s,s);o.rotation.set((rnd()-.5)*.15,0,(rnd()-.5)*.15);c.set('#ffffff')});
+    for(const [ang,inc,h,y] of [[0,.9,.8,1.3],[2.2,.8,.7,1.0],[4.1,1,.6,1.5]])inst(new T.CylinderGeometry(.02,.05,1,4),tm,tr,(o,[x,z,s],c)=>{const a=ang+(x*7+z)%6;o.position.set(x+Math.sin(a)*Math.sin(inc)*.4*h*s,(y+.4*h*Math.cos(inc))*s,z+Math.cos(a)*Math.sin(inc)*.4*h*s);o.scale.set(s,h*s,s);o.rotation.set(Math.cos(a)*inc,0,-Math.sin(a)*inc);c.set('#ffffff')});
+    const cr=perto(M.pedras,2,1.4),cores=TT.cristais||['#b46aff','#8a5aff','#ff6ad9'];
+    cores.forEach((cor,ci)=>{const L=cr.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=new T.MeshStandardMaterial({color:cor,emissive:cor,emissiveIntensity:.9,roughness:.3,flatShading:true});
+      inst(new T.ConeGeometry(.15,1,5),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.45*s,z);o.scale.set(s,s*(1.1+rnd()),s);o.rotation.set((rnd()-.5)*.5,rnd()*6,(rnd()-.5)*.5);c.set('#ffffff')})});
+    const to=perto(M.arvores.filter((q,k)=>k%9===4),1,.5),tq=new T.MeshLambertMaterial({color:'#1e1a24'}),tp=new T.MeshStandardMaterial({color:'#9a5aff',emissive:'#7a3aff',emissiveIntensity:.8,flatShading:true});
+    inst(new T.CylinderGeometry(.2,.35,3,6),tq,to,(o,[x,z,s],c)=>{o.position.set(x,1.5*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
+    inst(new T.ConeGeometry(.7,1.3,6),tp,to,(o,[x,z,s],c)=>{o.position.set(x,3.5*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
+  }
+  if(DEC==='fogo'){
+    // rios de lava dos dois lados da trilha, chamas e vulcões nas bordas
+    const lava=new T.MeshBasicMaterial({color:'#ff6a1a'});
+    for(const sx of [-1,1]){const pts=M.caminho.map(([x,z])=>[x+sx*(4.6+Math.sin(z*.21)*.8),z]);for(let k=0;k<pts.length-1;k++){const [x0,z0]=pts[k],[x1,z1]=pts[k+1],d=Math.hypot(x1-x0,z1-z0);
+      const m=new T.Mesh(new T.PlaneGeometry(1.1,d+.6),lava);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(x1-x0,z1-z0);m.position.set((x0+x1)/2,.03,(z0+z1)/2);S.add(m)}}
+    const ch=perto(M.pedras,2,1.6).concat(perto(M.arvores.filter((q,k)=>k%3===1),1,1.2)),cores=TT.chamas||['#ff5a1a','#ff9a2a','#ffd04a'];
+    cores.forEach((cor,ci)=>{const L=ch.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=new T.MeshBasicMaterial({color:cor,transparent:true,opacity:.92});
+      inst(new T.ConeGeometry(.2,1,6),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.5*s,z);o.scale.set(s,s*(1+rnd()*.9),s);o.rotation.set(0,rnd()*6,0);c.set('#ffffff')})});
+    const vu=M.arvores.filter(([x],k)=>Math.abs(x)>M.largura/2-1&&k%11===0),vm=new T.MeshLambertMaterial({color:'#3a2a26'}),vt=new T.MeshBasicMaterial({color:'#ff5a1a'});
+    inst(new T.ConeGeometry(2.4,4,7,1,true),vm,vu,(o,[x,z,s],c)=>{o.position.set(x*1.08,1.9*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
+    inst(new T.CircleGeometry(.75,10),vt,vu,(o,[x,z,s],c)=>{o.position.set(x*1.08,3.6*s,z);o.scale.setScalar(s);o.rotation.set(-Math.PI/2,0,0);c.set('#ffffff')});
+  }
+  if(DEC==='luz'){
+    // colunas antigas (algumas quebradas), cristais dourados e azuis, e orbes de luz flutuando
+    const co=perto(M.arvores.filter((q,k)=>k%4===0),1,.6),cm=new T.MeshLambertMaterial({color:'#f2ecd8'});
+    inst(new T.CylinderGeometry(.32,.36,1,10),cm,co,(o,[x,z,s],c)=>{const h=1.6+((x*13+z*7)%1+1)%1*2.2;o.position.set(x,h*s/2,z);o.scale.set(s,h*s,s);o.rotation.set(0,0,0);c.set('#ffffff')});
+    inst(new T.BoxGeometry(.9,.25,.9),cm,co,(o,[x,z,s],c)=>{o.position.set(x,.12*s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
+    const cr=perto(M.pedras,2,1.4),cores=TT.cristais||['#ffd86a','#8ac8ff','#ffffff'];
+    cores.forEach((cor,ci)=>{const L=cr.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=new T.MeshStandardMaterial({color:cor,emissive:cor,emissiveIntensity:.7,roughness:.2,flatShading:true});
+      inst(new T.ConeGeometry(.16,1,5),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.45*s,z);o.scale.set(s,s*(1.1+rnd()*.8),s);o.rotation.set((rnd()-.5)*.4,rnd()*6,(rnd()-.5)*.4);c.set('#ffffff')})});
+    const ob=perto(M.arvores.filter((q,k)=>k%5===2),1,2),om=new T.MeshBasicMaterial({color:'#fff2b0'});
+    inst(new T.SphereGeometry(.22,10,8),om,ob,(o,[x,z,s],c)=>{o.position.set(x,1.6+s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
+  }
+  if(DEC==='aquatico'){
+    // corais (galhos coloridos), algas altas e conchas no fundo; baú do tesouro perto do portal
+    const cores=TT.corais||['#ff8a4a','#ff6aa8','#b06aff','#ffd04a'],co=perto(M.arvores.filter((q,k)=>k%2===1),2,1.6);
+    cores.forEach((cor,c)=>{const L=co.filter(q=>q[3]%cores.length===c);if(!L.length)return;const mat=new T.MeshLambertMaterial({color:cor});
+      for(const [ang,inc,h] of [[0,0,1],[2.1,.55,.7],[4.2,.55,.75],[1.0,.8,.5]])inst(new T.CylinderGeometry(.05,.09,1,6),mat,L,(o,[x,z,s],col)=>{const a=ang+(x*3+z)%6;o.position.set(x+Math.sin(a)*Math.sin(inc)*.5*h*s,.5*h*s*Math.cos(inc)+.05,z+Math.cos(a)*Math.sin(inc)*.5*h*s);o.scale.set(s,h*s,s);o.rotation.set(Math.cos(a)*inc,0,-Math.sin(a)*inc);col.set('#ffffff')})});
+    const al=perto(M.arvores,2,2.4),am=new T.MeshLambertMaterial({color:TT.alga||'#3fa56a',side:T.DoubleSide});
+    inst(new T.PlaneGeometry(.22,1,1,4),am,al,(o,[x,z,s],col)=>{o.position.set(x,.8*s,z);o.scale.set(s,1.6*s,s);o.rotation.set((rnd()-.5)*.25,rnd()*6,(rnd()-.5)*.25);col.set(['#3fa56a','#2f8f7a','#5abf5a'][Math.abs(Math.round(x+z))%3])});
+    const cx=M.portal[0]+3,cz=M.portal[1]-2,bau=new T.Group(),mad=new T.MeshLambertMaterial({color:'#8a5a2a'}),our=new T.MeshLambertMaterial({color:'#ffd04a',emissive:'#7a5a00'});
+    const cx1=new T.Mesh(new T.BoxGeometry(1.2,.7,.8),mad);cx1.position.y=.35;const tampa=new T.Mesh(new T.CylinderGeometry(.4,.4,1.2,10,1,false,0,Math.PI),mad);tampa.rotation.z=Math.PI/2;tampa.position.y=.7;
+    const fita=new T.Mesh(new T.BoxGeometry(.12,.75,.84),our);fita.position.y=.38;bau.add(cx1,tampa,fita);bau.position.set(cx,0,cz);bau.rotation.y=-.5;S.add(bau);
+  }
+}
+function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cfgDe(M.tema),blocos=[];
   // instâncias em blocos ao longo do caminho: só os blocos perto da câmera são desenhados
   const emBlocos=(base,lista,f)=>{const B=CF.bloco||6,gr={};lista.forEach(q=>{const v=base.length>1?Math.abs(Math.round(q[0]*7+q[1]*3))%base.length:0,c=Math.floor(q[1]/B),cx=Math.floor(q[0]/B),k=v+'_'+c+'_'+cx;(gr[k]=gr[k]||{v,c,cx,qs:[]}).qs.push(q)});
     for(const g of Object.values(gr)){const im=new T.InstancedMesh(base[g.v].geo,base[g.v].mat,g.qs.length),o=new T.Object3D();g.qs.forEach((q,k)=>{f(o,q);o.updateMatrix();im.setMatrixAt(k,o.matrix)});
@@ -245,6 +309,7 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=D.
   if(C3)emBlocos(tinge([C3.cog],TT.cogumelo),M.cogumelos,(o,[x,z,s])=>{const k=(CF.cogumelo_tamanho||1.5)*s;o.position.set(x,-.12*k,z);o.scale.setScalar(k);o.rotation.set(0,(x*5.1+z*9.7)%6.283,0)});
   else{inst(new T.CylinderGeometry(.09,.12,1,6),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.3*s,z);o.scale.set(s,.6*s,s);o.rotation.set(0,0,0);c.set('#efe6d8')});
   inst(new T.SphereGeometry(.42,10,6,0,Math.PI*2,0,Math.PI/2),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.58*s,z);o.scale.set(s,.8*s,s);o.rotation.set(0,0,0);c.set(['#e86a8a','#b46ae8','#f2a04a'][Math.abs(Math.round(x+z))%3])})}
+  decorMundo(S,M,C3,inst,rnd);
   // sombras das árvores
   for(const [x,z,s] of M.arvores){if(z<-1||z>M.comprimento+1)continue;const sh=sombra(1.1*s);sh.position.set(x+.25,.015,z+.25);S.add(sh)}
   // morangos (moitas) e folhas douradas
@@ -265,8 +330,8 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=D.
     disco=new T.Mesh(new T.CircleGeometry(1.15,32),new T.MeshBasicMaterial({color:'#ffd0ea',transparent:true,opacity:.55,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide}));
   anel.position.y=1.45;disco.position.y=1.45;pg.add(anel,disco);const base=new T.Mesh(new T.CylinderGeometry(1.4,1.5,.15,24),new T.MeshLambertMaterial({color:'#6b5a7a'}));base.position.y=.07;pg.add(base);
   pg.position.set(M.portal[0],0,M.portal[1]);S.add(pg);var PORTAL={g:pg,anel,disco}}
-  // vagalumes
-  const vg=[];for(let k=0;k<40;k++){const s=sprEmoji('✨',.25);s.position.set((rnd()-.5)*M.largura,1+rnd()*2.5,rnd()*M.comprimento);S.add(s);vg.push({s,y:s.position.y,f:rnd()*6})}
+  // vagalumes (no mar: peixinhos e bolhas; na caverna: esporos brilhando)
+  const VG=TT.voadores||['✨'],vg=[];for(let k=0;k<40;k++){const s=sprEmoji(VG[k%VG.length],TT.voadores?.45:.25);s.position.set((rnd()-.5)*M.largura,1+rnd()*2.5,rnd()*M.comprimento);S.add(s);vg.push({s,y:s.position.y,f:rnd()*6})}
   // obstáculos para colisão
   const obs=obsP.slice();for(const [x,z,s] of M.arvores)obs.push([x,z,(C3?.45:.38)*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
   return{itens,portal:PORTAL,vg,obs,blocos}}
@@ -276,7 +341,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   const cv=$('advCv'),rd=new T.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));rd.outputEncoding=T.sRGBEncoding;
   const S=new T.Scene();const TMA=(R.M&&R.M.tema)||{};S.background=new T.Color(TMA.ceu||'#2c3a52');S.fog=new T.Fog(TMA.neblina||TMA.ceu||'#2c3a52',26,52);
   S.add(new T.HemisphereLight(0xfff2e0,0x2f4a32,1.05));const sol=new T.DirectionalLight(0xffe2c4,.95);sol.position.set(6,12,-5);S.add(sol);
-  const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};const C3=await props3d();if(RUN!==R)return;R.w={M,...cenario(S,M,C3),ents:[],tiros:[],efeitos:[],nums:[]};
+  const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};const C3=await props3d(R.M&&R.M.tema);if(RUN!==R)return;R.w={M,...cenario(S,M,C3),ents:[],tiros:[],efeitos:[],nums:[]};
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
   const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1);hg.scale.setScalar(Hs);

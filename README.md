@@ -73,6 +73,14 @@ Um único arquivo HTML, sem instalação. Usa Matter.js (física) e Three.js (3D
 
 - **Cenário 3D (modelos em `models/cenario/`):** o portal final é o diorama enviado (arco com redemoinho, árvores, cogumelos e cristais), com um véu escuro enquanto o chefão vive. As árvores (2 tipos) e os cogumelos das fases foram recortados do mesmo diorama e desenhados em blocos: só os blocos que a câmera alcança são desenhados (bom para celular). Tamanhos e arquivos em `cenario3d` no `data/aventura.json`. Se os modelos não carregarem, volta o cenário simples antigo.
 
+### Lendários e épicos novos, 6 mundos e fases mais longas
+- **Lendários refeitos** (Lunária, Noctalis, Solaris, Obsidragon) e **épicos com modelo próprio** (Infernyx, Abyssor, Zephyrax, Terravyn), recortados das folhas do Tripo (`fantasy_dragon`, `elemental_dragon`): separados por posição, sem os pedaços do fundo branco, virados para a frente.
+- **Caverna Encantada** (antes Montanha de Pedra): pedras, barril, cogumelo e lanternas em postes (modelos da caverna do Tripo em `models/cenario/`), cristais brilhando, céu escuro.
+- **Mar Cristalino**: corais, algas, peixes e bolhas, baú do tesouro perto do portal.
+- **Mundos novos** (`ferramentas/gerar_mundos_456.py`): **Reino das Trevas** (árvores secas, cristais roxos, torres), **Terra do Fogo** (rios de lava, chamas, vulcões), **Santuário da Luz** (colunas, cristais dourados/azuis, orbes). Os 8 bichinhos que faltavam aparecem aqui; os chefões são Noctalis, Incendyr e Solaris. Níveis continuam da Caverna (Nv 72 a 100). Visual inspirado nos mapas `GARRO_Mundo_*`.
+- Cada mundo escolhe a decoração em `tema.decor` e pode trocar os modelos em `tema.cenario3d` (`data/aventura.json`).
+- **Percurso mais longo:** fases normais 92+9n m (antes 58+6n), chefão 150 m (antes 96), desafio 96 m; mais bichinhos por fase (6+n). A `sync-estado` aceita o novo máximo de derrotados.
+
 ### Nova progressão (migração 0014)
 - **Pedra de evolução: 200 🪙** (antes 400).
 - **Evoluir:** no **Nv 100**, usando **5 pedras do grupo** do bichinho de uma vez; ele continua no Nv 100. Pedras não dão mais níveis. **Renascer** (Nv 100 → Nv 1, +10% sobre a força base, mantém a forma) agora vale para todos: grandes, redondos, lendários e épicos. Redondos vão até o Nv 100.
