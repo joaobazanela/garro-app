@@ -144,6 +144,10 @@ const walls=[
   Bodies.rectangle(W+20,H/2-200,40,H+400,wallOpts),
   Bodies.rectangle(DIV,(DIVTOP+FLOOR)/2+10,6,FLOOR-DIVTOP+20,{...wallOpts,chamfer:{radius:3}})
 ];
+// cerca invisível a EDGE_FREE do buraco do prêmio: o monte nunca chega perto da divisória, então nada fica parado quase caindo no buraco.
+// Só vale para o que está solto (bichinho na garra atravessa, como a guarda de vidro)
+const EDGE_FREE=30;
+const fence=Bodies.rectangle(DIV+EDGE_FREE+3,(80+FLOOR)/2,6,FLOOR-80,{isStatic:true,friction:.1,collisionFilter:{category:CAT_GUARD}});Composite.add(world,fence);
 Composite.add(world,walls);
 const prongL=Bodies.rectangle(0,0,7,40,{isStatic:true,isSensor:true,collisionFilter:{category:CAT_PRONG}});
 const prongR=Bodies.rectangle(0,0,7,40,{isStatic:true,isSensor:true,collisionFilter:{category:CAT_PRONG}});
@@ -185,6 +189,9 @@ function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
   fillEggs(n-perto,FLOOR-60);for(let i=0;i<120;i++)Engine.update(engine,1000/60);
   fillEggs(perto,FLOOR-120,true);for(let i=0;i<400;i++)Engine.update(engine,1000/60);
   for(let i=bodies.length-1;i>=0;i--)if(bodies[i].position.x<DIV){Composite.remove(world,bodies[i]);bodies.splice(i,1)}}
+// bichinho solto que ficou encostado na divisória do buraco do prêmio (a garra o soltou ali): empurra para dentro do monte, nunca deixa "quase caindo"
+function tiraDaBorda(){const lim=DIV+EDGE_FREE+8;for(const b of bodies){if(b===claw.held||b.plush.won||b.plush.giant)continue;const x=b.position.x,e=b.plush.dw*.42;
+    if(x>DIV+4&&x-e<lim){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
 function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}sinceDrop++;if(bodies.length<6){fill(Math.min(3,PILE-bodies.length),-60);sinceDrop=0}else if(bodies.length<13&&sinceDrop>=4){fill(1,-60);sinceDrop=0}}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
@@ -491,6 +498,7 @@ function step(){
   }
   if(c.link){c.link.pointA.x=c.x;c.link.pointA.y=c.y+30*CS}
   setProngs();
+  tiraDaBorda();
   Engine.update(engine,1000/60);
   for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];
     if(b.position.y>H+60){Composite.remove(world,b);bodies.splice(i,1);if(b.position.x<DIV+20)won(b)}
