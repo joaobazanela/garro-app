@@ -168,15 +168,18 @@ function pickPlush(cnt){
   const round=Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
   let t=0;pool.forEach(p=>t+=p.rare);let r=Math.random()*t;for(const p of pool){r-=p.rare;if(r<0)return p}return pool[0];
 }
+// onde a pilha está mais baixa (sorteia alguns pontos e fica com o mais vazio): assim preenche toda a área, inclusive junto da divisória
+function xBaixo(){let best=DIV+40,bt=-1;for(let q=0;q<7;q++){const x=DIV+30+Math.random()*(W-DIV-60);let topo=FLOOR;for(const b of bodies)if(b.position.x>DIV&&Math.abs(b.position.x-x)<42)topo=Math.min(topo,b.bounds.min.y);if(topo>bt){bt=topo;best=x}}return best}
 function fill(n,fromY){
   const cnt={};bodies.forEach(b=>cnt[b.plush.i]=(cnt[b.plush.i]||0)+1);
-  for(let k=0;k<n;k++){let p=pickPlush(cnt);if(!bodies.some(b=>b.plush.stone!==undefined)&&!cnt.stone&&Math.random()<.012){p=STONES[Math.floor(Math.random()*STONES.length)];cnt.stone=1}cnt[p.i]=(cnt[p.i]||0)+1;addPlush(p,DIV+42+Math.random()*(W-DIV-84),fromY-k*70)}
+  for(let k=0;k<n;k++){let p=pickPlush(cnt);if(!bodies.some(b=>b.plush.stone!==undefined)&&!cnt.stone&&Math.random()<.012){p=STONES[Math.floor(Math.random()*STONES.length)];cnt.stone=1}cnt[p.i]=(cnt[p.i]||0)+1;addPlush(p,xBaixo(),fromY-k*70)}
 }
 // ninguém fica acima da linha da divisória: o que assentou lá em cima (parado) sai da máquina com uma nuvenzinha
+const LIM_EXTRA=38;// a área marcada vai um pouco acima do topo da divisória
 function abaixaPilha(mudo){let n=0;for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];if((!mudo&&b===claw.held)||b.plush.won||b.plush.giant||b.plush.leg||b.position.x<DIV)continue;
-    if(b.bounds.min.y<DIVTOP&&Math.hypot(b.velocity.x,b.velocity.y)<.5){if(!mudo)puff(b.position.x,b.position.y,10,['#fff','#ffd7ef'],true);Composite.remove(world,b);bodies.splice(i,1);n++}}return n}
+    if(b.bounds.min.y<DIVTOP-LIM_EXTRA&&Math.hypot(b.velocity.x,b.velocity.y)<.5){if(!mudo)puff(b.position.x,b.position.y,10,['#fff','#ffd7ef'],true);Composite.remove(world,b);bodies.splice(i,1);n++}}return n}
 function settlePile(){// enche até a linha da divisória: cai um por vez em cima da pilha; quando um assenta acima da linha, está cheio
-  for(let r=0,fora=0;r<60&&bodies.length<30&&fora<5;r++){fill(1,DIVTOP-90);for(let i=0;i<150;i++)Engine.update(engine,1000/60);fora+=abaixaPilha(true)}
+  for(let r=0,fora=0;r<70&&bodies.length<30&&fora<6;r++){fill(1,DIVTOP-130);for(let i=0;i<150;i++)Engine.update(engine,1000/60);fora+=abaixaPilha(true)}
   for(let i=0;i<150;i++)Engine.update(engine,1000/60);abaixaPilha(true);
   for(let i=bodies.length-1;i>=0;i--)if(bodies[i].position.x<DIV){Composite.remove(world,bodies[i]);bodies.splice(i,1)}}
 settlePile();
@@ -198,7 +201,7 @@ function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
 function tiraDaBorda(){const lim=DIV+EDGE_FREE+8;for(const b of bodies){if(b===claw.held||b.plush.won||b.plush.giant)continue;const x=b.position.x,e=b.plush.dw*.42;
     if(x>DIV+4&&x-e<lim){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
-function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP+50&&bodies.length<30)fill(topo>DIVTOP+110?2:1,-60)}
+function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60)}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
 /* ---------- segunda máquina: um bichinho gigante ---------- */
 let MACH=1;const GCOST=50,GK=2.4;
