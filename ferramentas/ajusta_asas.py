@@ -116,4 +116,5 @@ def main():
     print(nome, 'vertices', len(pos[u]), 'x', pos[u][:, 0].min().round(3), pos[u][:, 0].max().round(3))
 
 
-main()
+if __name__ == '__main__':
+    main()
