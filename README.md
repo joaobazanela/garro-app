@@ -73,6 +73,12 @@ Um único arquivo HTML, sem instalação. Usa Matter.js (física) e Three.js (3D
 
 - **Cenário 3D (modelos em `models/cenario/`):** o portal final é o diorama enviado (arco com redemoinho, árvores, cogumelos e cristais), com um véu escuro enquanto o chefão vive. As árvores (2 tipos) e os cogumelos das fases foram recortados do mesmo diorama e desenhados em blocos: só os blocos que a câmera alcança são desenhados (bom para celular). Tamanhos e arquivos em `cenario3d` no `data/aventura.json`. Se os modelos não carregarem, volta o cenário simples antigo.
 
+### Fases em labirinto e portais de cada mundo
+- **Labirinto** (`js/mapas.js`): grade de 4 colunas × linhas de 8 m; o caminho vai para os lados, sobe e às vezes **volta para baixo**, sem repetir casa. Paredes (os modelos de "árvore" de cada mundo) fecham o que não é caminho; casas fechadas ficam cheias de mato/pedra. No fim, uma praça aberta com o portal. A **área secreta** é uma casa fechada com a parede aberta só para ela.
+- Lava (Fogo) nas beiradas dos corredores e riachos atravessando a trilha (passe com Esquivar); lanternas e cristais-chave seguem o caminho.
+- **Portal de cada mundo** = diorama do Tripo no fim da fase (`tema.cenario3d.portal`, com `portal_centro`, `veu`, `portal_obs`): Mar e Caverna recortados de `underwater_cavern`, Fogo, Luz e Trevas de `fantasy_portal`. Mar usa corais e concha do diorama nas paredes; a Caverna, pedras e cogumelo brilhante.
+- Lava mais clara (magma laranja/amarelo com crosta escura).
+
 ### Mecânicas de cada mundo e área secreta
 - **Fogo:** a lava dos lados da trilha queima (6% da vida a cada toque); a Esquiva passa por cima.
 - **Mar:** correntezas atravessam a trilha e empurram o bichinho para o lado (bolhas mostram a direção).

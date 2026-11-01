@@ -239,6 +239,8 @@ function matPBR(TT,chave,opts){const T=G.THREE(),p=TT&&TT.texturas&&TT.texturas[
   if(p.roughnessMap)a.roughnessMap=texPBR(p.roughnessMap,false);if(p.emissiveMap)a.emissiveMap=texPBR(p.emissiveMap,false);
   const m=new T.MeshStandardMaterial(a);if(m.normalMap)m.normalScale.set(.55,.55);return m}
 // decoração própria de cada mundo (tema.decor): inspirada nos mapas "Caverna Encantada" e "Mundo Aquático"
+// trechos do caminho (o labirinto vai para os lados, sobe e às vezes desce): [x0,z0,x1,z1,comprimento,ux,uz]
+function trechos(M){const out=[];for(let k=0;k<M.caminho.length-1;k++){const [x0,z0]=M.caminho[k],[x1,z1]=M.caminho[k+1],d=Math.hypot(x1-x0,z1-z0);if(d>.5)out.push([x0,z0,x1,z1,d,(x1-x0)/d,(z1-z0)/d])}return out}
 function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.decor,mec={};if(!DEC)return mec;
   const perto=(lista,n,d)=>{const out=[];lista.forEach(([x,z,s],k)=>{for(let q=0;q<n;q++)out.push([x+(rnd()-.5)*d,z+(rnd()-.5)*d,s*(.5+rnd()*.6),k+q])});return out};
   if(DEC==='caverna'){
@@ -248,7 +250,7 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
       const mat=matPBR(TT,'cristal',{color:cor,emissive:cor,emissiveIntensity:.9,roughness:.25,metalness:.1,flatShading:true});
       inst(new T.ConeGeometry(.16,1,5),mat,L,(o,[x,z,s],col)=>{o.position.set(x,.45*s,z);o.scale.set(s,s*(1.2+rnd()*.8),s);o.rotation.set((rnd()-.5)*.6,rnd()*6,(rnd()-.5)*.6);col.set('#ffffff')})});
     // lanternas penduradas em postes ao longo da trilha (luz quente na caverna escura)
-    if(C3&&C3.lan){const ls=[];for(let z=6;z<M.comprimento-4;z+=9){const p=M.caminho.reduce((a,b)=>Math.abs(b[1]-z)<Math.abs(a[1]-z)?b:a,M.caminho[0]);ls.push([p[0]+(z%18<9?-2.6:2.6),z])}
+    if(C3&&C3.lan){const ls=[];trechos(M).forEach(([x0,z0,x1,z1,d,ux,uz],k)=>{if(k%2)return;const lado=k%4?1:-1;ls.push([(x0+x1)/2-uz*2.4*lado,(z0+z1)/2+ux*2.4*lado])});
       const poste=matPBR(TT,'casca',{color:'#d8b8a2',roughness:.9});
       inst(new T.CylinderGeometry(.06,.08,2.6,6),poste,ls,(o,[x,z],c)=>{o.position.set(x,1.3,z);o.scale.set(1,1,1);o.rotation.set(0,0,0);c.set('#ffffff')});
       inst(C3.lan.geo,C3.lan.mat,ls,(o,[x,z],c)=>{o.position.set(x,1.9,z);o.scale.setScalar(.75);o.rotation.set(0,0,0);c.set('#ffffff')});
@@ -273,8 +275,12 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
   if(DEC==='fogo'){
     // rios de lava dos dois lados da trilha, chamas e vulcões nas bordas
     const lava=matPBR(TT,'magma',{color:'#ffffff',emissive:'#ff6a1a',emissiveIntensity:1.6,roughness:.7,side:T.DoubleSide});mec.magmaMaps=[lava.map,lava.normalMap,lava.roughnessMap,lava.emissiveMap].filter(Boolean);
-    for(const sx of [-1,1]){const pts=M.caminho.map(([x,z])=>[x+sx*(4.6+Math.sin(z*.21)*.8),z]);for(let k=0;k<pts.length-1;k++){const [x0,z0]=pts[k],[x1,z1]=pts[k+1],d=Math.hypot(x1-x0,z1-z0);
-      const m=new T.Mesh(new T.PlaneGeometry(1.1,d+.6),lava);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(x1-x0,z1-z0);m.position.set((x0+x1)/2,.03,(z0+z1)/2);S.add(m);(mec.lava=mec.lava||[]).push([x0,z0,x1,z1,-sx])}}
+    // magma nas beiradas dos corredores do labirinto e riachos de lava atravessando a trilha (passe com Esquivar)
+    const tira=(cx,cz,len,larg,ax,az,px,pz)=>{const m=new T.Mesh(new T.PlaneGeometry(larg,len),lava);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(ax,az);m.position.set(cx,.03,cz);S.add(m);
+      (mec.lava=mec.lava||[]).push([cx-ax*len/2,cz-az*len/2,cx+ax*len/2,cz+az*len/2,px,pz])};
+    trechos(M).forEach(([x0,z0,x1,z1,d,ux,uz],k)=>{const mx=(x0+x1)/2,mz=(z0+z1)/2;
+      if(d>4.6)for(const sd of [-1,1])tira(mx-uz*2.15*sd,mz+ux*2.15*sd,d-4.2,.85,ux,uz,uz*sd,-ux*sd);
+      if(k>1&&k%3===2&&d>=6&&mz<M.comprimento-20)tira(mx,mz,4.2,1.0,-uz,ux,-ux,-uz)});
     const ch=perto(M.pedras,2,1.6).concat(perto(M.arvores.filter((q,k)=>k%3===1),1,1.2)),cores=TT.chamas||['#ff5a1a','#ff9a2a','#ffd04a'];
     cores.forEach((cor,ci)=>{const L=ch.filter(q=>q[3]%cores.length===ci);if(!L.length)return;const mat=matPBR(TT,'magma',{color:cor,emissive:cor,emissiveIntensity:1.1,roughness:.5,transparent:true,opacity:.92,side:T.DoubleSide});
       inst(new T.ConeGeometry(.2,1,6),mat,L,(o,[x,z,s],c)=>{o.position.set(x,.5*s,z);o.scale.set(s,s*(1+rnd()*.9),s);o.rotation.set(0,rnd()*6,0);c.set('#ffffff')})});
@@ -293,7 +299,7 @@ function decorMundo(S,M,C3,inst,rnd){const T=G.THREE(),TT=M.tema||{},DEC=TT.deco
     const ob=perto(M.arvores.filter((q,k)=>k%5===2),1,2),om=matPBR(TT,'cristal',{color:'#fff2b0',emissive:'#fff2b0',emissiveIntensity:1.1,roughness:.15});
     inst(new T.SphereGeometry(.22,10,8),om,ob,(o,[x,z,s],c)=>{o.position.set(x,1.6+s,z);o.scale.setScalar(s);o.rotation.set(0,0,0);c.set('#ffffff')});
     // cristais-chave: o portal só abre depois de acender os dois (ficam fora da trilha)
-    mec.chaves=[];for(const fr of [.38,.7]){const z=M.comprimento*fr,p0=M.caminho.reduce((a,b)=>Math.abs(b[1]-z)<Math.abs(a[1]-z)?b:a,M.caminho[0]),x=Math.max(-M.largura/2+2,Math.min(M.largura/2-2,p0[0]+(fr<.5?-5:5)));
+    mec.chaves=[];for(const fr of [.38,.7]){const tr=trechos(M),q=tr[Math.floor(tr.length*fr)],sd=fr<.5?-1:1,x=(q[0]+q[2])/2-q[6]*1.9*sd,z=(q[1]+q[3])/2+q[5]*1.9*sd;
       const mat=matPBR(TT,'cristal',{color:'#8a8aa0',emissive:'#2a2a40',emissiveIntensity:.5,roughness:.3,flatShading:true}),g=new T.Mesh(new T.OctahedronGeometry(.6,0),mat);g.scale.set(1,1.8,1);g.position.set(x,1.3,z);S.add(g);
       const base=new T.Mesh(new T.CylinderGeometry(.6,.75,.4,8),matPBR(TT,'marmore',{color:'#ffffff',roughness:.55}));base.position.set(x,.2,z);S.add(base);mec.chaves.push({x,z,g,mat,ok:false})}
   }
@@ -349,13 +355,13 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   for(const [x,z] of M.folhas){const g=new T.Group(),f=sprEmoji('🍃',.9,'rgba(255,220,90,.9)');f.position.y=1;g.add(f);g.position.set(x,0,z);S.add(g);itens.push({t:'L',x,z,g,f})}
   // portal: o diorama (arco, árvores, cogumelos, cristais) virado para quem chega; fechado (véu escuro) enquanto o chefão vive
   const obsP=[];
-  if(C3){const K=CF.portal_tamanho||7.6,pg=new T.Group(),dio=C3.portal;dio.scale.setScalar(K);dio.position.y=-.18;pg.add(dio);
-    const veu=new T.Mesh(new T.CircleGeometry(1,40),new T.MeshBasicMaterial({color:'#140822',transparent:true,opacity:.9,side:T.DoubleSide,depthWrite:false}));veu.scale.set(.084*K,.106*K,1);veu.position.set(0,.246*K-.18,.012*K);
-    const luz=new T.Mesh(new T.CircleGeometry(1,40),new T.MeshBasicMaterial({color:'#ffc8f0',transparent:true,opacity:0,blending:T.AdditiveBlending,side:T.DoubleSide,depthWrite:false}));luz.scale.set(.086*K,.108*K,1);luz.position.set(0,.246*K-.18,.014*K);
+  if(C3){const K=CF.portal_tamanho||7.6,pg=new T.Group(),dio=C3.portal,PC=CF.portal_centro;dio.scale.setScalar(K);dio.position.set(PC?-PC[0]*K:0,-.18,PC?-PC[2]*K:0);pg.add(dio);// portal_centro: o arco do diorama fica no ponto do portal
+    const veu=new T.Mesh(new T.CircleGeometry(1,40),new T.MeshBasicMaterial({color:'#140822',transparent:true,opacity:.9,side:T.DoubleSide,depthWrite:false}));const VE=PC?[0,PC[1],.012,CF.veu[0],CF.veu[1]]:(CF.veu||[0,.246,.012,.084,.106]);veu.scale.set(VE[3]*K,VE[4]*K,1);veu.position.set(VE[0]*K,VE[1]*K-.18,VE[2]*K);
+    const luz=new T.Mesh(new T.CircleGeometry(1,40),new T.MeshBasicMaterial({color:'#ffc8f0',transparent:true,opacity:0,blending:T.AdditiveBlending,side:T.DoubleSide,depthWrite:false}));luz.scale.set((VE[3]+.002)*K,(VE[4]+.002)*K,1);luz.position.set(VE[0]*K,VE[1]*K-.18,(VE[2]+.002)*K);
     luz.visible=false;pg.add(veu,luz);pg.rotation.y=Math.PI;pg.position.set(M.portal[0],0,M.portal[1]);S.add(pg);
     // árvores e colunas do diorama também barram o caminho (só se passa pelo arco)
-    for(const [dx,dz,r] of [[.3,.1,.16],[-.3,.1,.16],[.125,-.01,.045],[-.125,-.01,.045],[.42,-.05,.1],[-.42,-.05,.1]])obsP.push([M.portal[0]+dx*K,M.portal[1]+dz*K,r*K]);
-    var PORTAL={g:pg,veu,luz}}
+    for(const [dx,dz,r] of (CF.portal_obs||[[.3,.1,.16],[-.3,.1,.16],[.125,-.01,.045],[-.125,-.01,.045],[.42,-.05,.1],[-.42,-.05,.1]]))obsP.push([M.portal[0]+dx*K,M.portal[1]+dz*K,r*K]);
+    var PORTAL={g:pg,veu,luz,VE}}
   else{const pg=new T.Group(),anel=new T.Mesh(new T.TorusGeometry(1.25,.13,10,40),new T.MeshBasicMaterial({color:'#ff9ac8'})),
     disco=new T.Mesh(new T.CircleGeometry(1.15,32),new T.MeshBasicMaterial({color:'#ffd0ea',transparent:true,opacity:.55,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide}));
   anel.position.y=1.45;disco.position.y=1.45;pg.add(anel,disco);const base=new T.Mesh(new T.CylinderGeometry(1.4,1.5,.15,24),new T.MeshLambertMaterial({color:'#6b5a7a'}));base.position.y=.07;pg.add(base);
@@ -430,8 +436,8 @@ function maisPerto(o,raio,filtro){let b=null,bd=raio;for(const e of RUN.w.ents){
 function mecanicas(dt){const R=RUN,p=R.p,mc=R.w.mec;if(!mc||!p||p.morto)return;
   // Deslocamento visual da textura do magma: NÃO altera segmentos de colisão/dano.
   if(mc.magmaMaps)for(const tex of mc.magmaMaps)tex.offset.y=(tex.offset.y-dt*.017+1)%1;
-  if(mc.lava&&p.dash<=0){for(const [x0,z0,x1,z1,lado] of mc.lava){const vx=x1-x0,vz=z1-z0,t=Math.max(0,Math.min(1,((p.x-x0)*vx+(p.z-z0)*vz)/(vx*vx+vz*vz))),d=Math.hypot(p.x-(x0+t*vx),p.z-(z0+t*vz));
-    if(d<.6){if(!R.avisoLava){R.avisoLava=1;aviso('🔥 A lava queima! Fique na trilha (ou use Esquivar para pular)',2400)}machuca(Math.max(1,Math.round(R.hero.max*.06)),lado,0);faisca(p.x,.4,p.z,'#ff7a2a',6);break}}}
+  if(mc.lava&&p.dash<=0){for(const [x0,z0,x1,z1,lado,lz] of mc.lava){const vx=x1-x0,vz=z1-z0,t=Math.max(0,Math.min(1,((p.x-x0)*vx+(p.z-z0)*vz)/(vx*vx+vz*vz))),d=Math.hypot(p.x-(x0+t*vx),p.z-(z0+t*vz));
+    if(d<.6){if(!R.avisoLava){R.avisoLava=1;aviso('🔥 A lava queima! Fique na trilha (ou use Esquivar para pular)',2400)}machuca(Math.max(1,Math.round(R.hero.max*.06)),lado,lz||0);faisca(p.x,.4,p.z,'#ff7a2a',6);break}}}
   if(mc.correntes)for(const c of mc.correntes){for(const b of c.bol){b.position.x+=c.dir*3*dt;if(Math.abs(b.position.x)>R.w.M.largura/2)b.position.x=-c.dir*R.w.M.largura/2}
     if(p.z>c.z0&&p.z<c.z1&&p.dash<=0){mover(p,c.dir*2.2*dt,0);if(!R.avisoCorr){R.avisoCorr=1;aviso('🌊 Correnteza! Ela empurra para o lado',1800)}}}
   if(mc.lanterna)mc.lanterna.position.set(p.x,2.2,p.z);
@@ -465,7 +471,7 @@ function fisica(dt){const R=RUN,p=R.p,w=R.w;R.t+=dt;if(!p)return;
   // portal
   mecanicas(dt);
   const faltaCh=!!(w.mec&&w.mec.chaves&&w.mec.chaves.some(c=>!c.ok)),pt=w.portal,poucosMobs=(R.kills||0)<(R.minMobs||0),fech=(w.boss&&w.boss.vivo)||poucosMobs||faltaCh,M=w.M;
-  if(pt.veu){pt.veu.visible=fech;pt.luz.visible=!fech;pt.luz.material.opacity=.07+Math.sin(R.t*4)*.05;pt.luz.scale.x=(D.cenario3d.portal_tamanho||7.6)*(.086+Math.sin(R.t*3)*.004)}
+  if(pt.veu){pt.veu.visible=fech;pt.luz.visible=!fech;pt.luz.material.opacity=.07+Math.sin(R.t*4)*.05;pt.luz.scale.x=(cfgDe(w.M.tema).portal_tamanho||7.6)*(pt.VE[3]+.002+Math.sin(R.t*3)*.004)}
   else{pt.anel.material.color.set(fech?'#7a6a9a':'#ff9ac8');pt.disco.material.opacity=fech?.15:.45+Math.sin(R.t*4)*.15;pt.anel.rotation.z+=dt*(fech?.3:1.5)}
 
   if(!fech&&Math.hypot(p.x-M.portal[0],p.z-M.portal[1])<1.4){p.venceu=.001;G.fanfare();return}
