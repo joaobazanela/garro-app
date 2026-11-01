@@ -219,3 +219,4 @@ Botão 🛒 Loja no topo. Comida custa 5 moedas e Pedra de evolução 400. A com
 
 ### Pilha limitada pela linha da divisória
 A máquina é enchida até a linha do topo da divisória (`DIVTOP`): os bichinhos caem um por vez em cima da pilha e o que assenta acima da linha sai com uma nuvenzinha. Durante o jogo ela repõe sempre que a pilha baixa, para ficar cheia até a linha, sem passar.
+O monte fica escorado na divisória (sem cerca invisível); só não pode ficar equilibrado no topo dela, onde cairia no buraco do prêmio.

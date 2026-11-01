@@ -146,7 +146,7 @@ const walls=[
 ];
 // cerca invisível a EDGE_FREE do buraco do prêmio: o monte nunca chega perto da divisória, então nada fica parado quase caindo no buraco.
 // Só vale para o que está solto (bichinho na garra atravessa, como a guarda de vidro)
-const EDGE_FREE=30;
+const EDGE_FREE=0;// o monte fica escorado na divisória (só não pode ficar equilibrado no topo dela: ver tiraDaBorda)
 const fence=Bodies.rectangle(DIV+EDGE_FREE+3,(80+FLOOR)/2,6,FLOOR-80,{isStatic:true,friction:.1,collisionFilter:{category:CAT_GUARD}});Composite.add(world,fence);
 Composite.add(world,walls);
 const prongL=Bodies.rectangle(0,0,7,40,{isStatic:true,isSensor:true,collisionFilter:{category:CAT_PRONG}});
@@ -169,7 +169,7 @@ function pickPlush(cnt){
   let t=0;pool.forEach(p=>t+=p.rare);let r=Math.random()*t;for(const p of pool){r-=p.rare;if(r<0)return p}return pool[0];
 }
 // onde a pilha está mais baixa (sorteia alguns pontos e fica com o mais vazio): assim preenche toda a área, inclusive junto da divisória
-function xBaixo(){let best=DIV+40,bt=-1;for(let q=0;q<7;q++){const x=DIV+30+Math.random()*(W-DIV-60);let topo=FLOOR;for(const b of bodies)if(b.position.x>DIV&&Math.abs(b.position.x-x)<42)topo=Math.min(topo,b.bounds.min.y);if(topo>bt){bt=topo;best=x}}return best}
+function xBaixo(){let best=DIV+40,bt=-1;for(let q=0;q<7;q++){const x=DIV+34+Math.random()*(W-DIV-68);let topo=FLOOR;for(const b of bodies)if(b.position.x>DIV&&Math.abs(b.position.x-x)<42)topo=Math.min(topo,b.bounds.min.y);if(topo>bt){bt=topo;best=x}}return best}
 function fill(n,fromY){
   const cnt={};bodies.forEach(b=>cnt[b.plush.i]=(cnt[b.plush.i]||0)+1);
   for(let k=0;k<n;k++){let p=pickPlush(cnt);if(!bodies.some(b=>b.plush.stone!==undefined)&&!cnt.stone&&Math.random()<.012){p=STONES[Math.floor(Math.random()*STONES.length)];cnt.stone=1}cnt[p.i]=(cnt[p.i]||0)+1;addPlush(p,xBaixo(),fromY-k*70)}
@@ -199,7 +199,7 @@ function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
   for(let i=bodies.length-1;i>=0;i--)if(bodies[i].position.x<DIV){Composite.remove(world,bodies[i]);bodies.splice(i,1)}}
 // bichinho solto que ficou encostado na divisória do buraco do prêmio (a garra o soltou ali): empurra para dentro do monte, nunca deixa "quase caindo"
 function tiraDaBorda(){const lim=DIV+EDGE_FREE+8;for(const b of bodies){if(b===claw.held||b.plush.won||b.plush.giant)continue;const x=b.position.x,e=b.plush.dw*.42;
-    if(x>DIV+4&&x-e<lim){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
+    if(x>DIV+4&&x-e<lim&&b.position.y<DIVTOP+30){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
 function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60)}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
