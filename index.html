@@ -132,7 +132,7 @@ window.GD={};(function(){var V='78 · 30/10 08:07',F=["sprites", "fills", "sprit
   function err(e){var d=document.createElement('p');d.style.cssText='color:#fff;background:#3a1020;padding:16px;margin:0;font:600 14px system-ui';d.textContent='Não foi possível carregar o jogo ('+(e&&e.message||e)+'). Recarregue a página.';document.body.insertBefore(d,document.body.firstChild)}
   function iniciar(){
     Promise.all(F.map(function(f){return fetch('data/'+f+'.json?v='+V).then(function(r){if(!r.ok)throw new Error('data/'+f+'.json');return r.json()}).then(function(j){GD[f]=j})}))
-    .then(function(){var s=document.createElement('script');s.src='js/garro.js?v='+V;s.onerror=function(){err('js/garro.js')};s.onload=function(){['missoes','aventura','lendarios'].forEach(function(n){var m=document.createElement('script');m.src='js/'+n+'.js?v='+V;document.body.appendChild(m)})};document.body.appendChild(s)}).catch(err)
+    .then(function(){var s=document.createElement('script');s.src='js/garro.js?v='+V;s.onerror=function(){err('js/garro.js')};s.onload=function(){['missoes','mapas','aventura','lendarios'].forEach(function(n){var m=document.createElement('script');m.src='js/'+n+'.js?v='+V;document.body.appendChild(m)})};document.body.appendChild(s)}).catch(err)
   }
   /* os scripts de CDN (Matter/Three/Supabase) usam defer; esperar o DOM pronto
      garante que eles já terminaram antes do garro.js rodar */

@@ -7,7 +7,15 @@
  },
  "xp": {
   "vitoria": 8,
-  "derrota": 2
+  "derrota": 2,
+  "por_inimigo": 1.0,
+  "chefe": 1.5,
+  "_nota": "XP por bichinho derrotado, como no Pokémon (5ª geração): (por_inimigo × nível do inimigo ÷ 5) × ((2×inimigo+10) ÷ (inimigo+seu nível+10))^2,5 + 1. O chefão vale chefe × isso. Conta também na derrota. Vitória dá +vitoria, derrota +derrota."
+ },
+ "mapa_variacao": {
+  "menos": 1,
+  "mais": 2,
+  "_nota": "Cada partida sorteia um mapa novo (js/mapas.js); a quantidade de bichinhos vai de menos a mais em relação ao normal da fase."
  },
  "tempo_min_seg": 10,
  "nivel_min_folga": 6,

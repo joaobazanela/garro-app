@@ -73,6 +73,14 @@ Um único arquivo HTML, sem instalação. Usa Matter.js (física) e Three.js (3D
 
 - **Cenário 3D (modelos em `models/cenario/`):** o portal final é o diorama enviado (arco com redemoinho, árvores, cogumelos e cristais), com um véu escuro enquanto o chefão vive. As árvores (2 tipos) e os cogumelos das fases foram recortados do mesmo diorama e desenhados em blocos: só os blocos que a câmera alcança são desenhados (bom para celular). Tamanhos e arquivos em `cenario3d` no `data/aventura.json`. Se os modelos não carregarem, volta o cenário simples antigo.
 
+### Aventura variada, XP por bichinho e níveis (migração 0011)
+- **Fase diferente a cada partida:** `js/mapas.js` sorteia um mapa novo (percurso, acampamentos, folhas, morangos, árvores) e a quantidade de bichinhos vai de 1 a menos até 2 a mais que o normal (`mapa_variacao` em `data/aventura.json`). O mapa fixo do JSON (feito por `ferramentas/gerar_mapas_aventura.py`) é só reserva.
+- **XP por bichinho derrotado**, como no Pokémon (5ª geração): `por_inimigo × nível ÷ 5 × ((2×inimigo+10) ÷ (inimigo+seu nível+10))^2,5 + 1`; chefão ×1,5; bichinho muito acima do inimigo ganha menos. Soma-se o XP de vitória/derrota. O jogo conta os derrotados; o servidor limita pelo máximo da fase e usa o nível mais alto dela.
+- **Curva de níveis:** XP total para o Nv N = `linear×(N−1) + 0,012×(N−1)³` (`NIVEL` em `data/regras.json`): começo igual ao antigo e níveis altos cada vez mais caros (Nv 50 = 1608 XP). A 0011 converte uma vez o XP salvo mantendo o nível de cada bichinho.
+- **Resultado da Aventura** mostra a barra de XP e, ao subir, ATAQUE/DEFESA/VIDA antes e depois. Os atributos sobem por nível como antes (+4% grandes, +3% redondos).
+- **Banco:** só o XP de cada bichinho (já existia). `supabase/tests/xp_aventura.sql` testa localmente.
+- Carregar modelo 3D que falha (rede ruim no celular) agora tenta de novo até 3 vezes em vez de deixar o bichinho com o corpo simples.
+
 ### Lendários (migração 0010)
 - **10 lendários** (ids 43–52), mais fortes que as pelúcias grandes: Obsidragon, Lunária, Incendyr, Verdantis, Noctalis, Ocearion, Terralith, Solaris, Crystalyn e Astrakai. Não caem na máquina comum: **nascem de ovos**.
 - **Ovos:** cada ovo tem um número **secreto** de dias de carinho para chocar (sorteado entre 7 e 90). Dá para contar **1 dia por dia** (horário de Brasília); pular dias não zera. O jogo só mostra dicas (frio → morninho → balança → batidinhas). Ao chocar, o lendário entra na coleção no Nv 30 (vai até o Nv 100) e aparece a carta dele.

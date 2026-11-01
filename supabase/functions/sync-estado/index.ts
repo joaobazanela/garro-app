@@ -175,6 +175,9 @@ async function handle(req: Request): Promise<Response> {
     }
     const niveis = f.fase.inimigos.map((x) => x[1]).concat(f.fase.chefe ? [f.fase.chefe[1]] : []);
     const minLv = Math.max(1, Math.max(...niveis) - (A.nivel_min_folga ?? 6));
+    // máximo de bichinhos comuns numa partida: normal da fase + variação + guardas das fases finais
+    const nFase = f.mundo ? f.mundo.fases.findIndex((x) => x.id === f.fase.id) + 1 : 11;
+    const maxKills = (f.desafio ? 3 : f.fase.chefe ? 7 : 4 + nFase) + (A.mapa_variacao?.mais ?? 0) + 3;
     const estrelas = int(body.stars, 1, 3) ?? 1;
     const L = await lendarios(), DM = L?.diamantes, ch = L?.chocar;
     return call("rpc_adv_end", {
@@ -187,6 +190,9 @@ async function handle(req: Request): Promise<Response> {
       // Desafio Lendário: lendário do dia e chance do ovo (sorteada só na 1ª vitória do dia)
       p_leg: f.desafio ? legDoDia(hojeBR()) : -1, p_leg_chance: f.desafio ? (A.desafio?.chance_ovo ?? 0) : 0,
       p_egg_min: ch?.dias_min ?? 7, p_egg_max: ch?.dias_max ?? 90,
+      // XP por bichinho derrotado: o jogo conta, o servidor limita pelo máximo da fase e usa o nível mais alto da fase
+      p_kills: Math.min(int(body.kills, 0, 60) ?? 0, maxKills), p_kill_lv: Math.max(1, ...niveis), p_boss_kill: body.bossKill === true && !!f.fase.chefe,
+      p_xp_k: A.xp.por_inimigo ?? 0, p_xp_boss: A.xp.chefe ?? 1, p_max_kills: maxKills,
     }, "adv_end_rejected");
   }
 
@@ -207,7 +213,7 @@ async function handle(req: Request): Promise<Response> {
     }
     const egg = Number(body.eggId);
     if (!Number.isSafeInteger(egg) || egg < 1) return json({ error: "bad_egg" }, 400);
-    return call("rpc_egg_care", { p_egg: egg, p_birth_xp: Math.max(0, (ch.nivel_ao_nascer - 1) * 4) }, "egg_care_rejected");
+    return call("rpc_egg_care", { p_egg: egg, p_birth_lv: ch.nivel_ao_nascer }, "egg_care_rejected");
   }
 
   return json({ error: "unknown_action" }, 400);
@@ -248,7 +254,8 @@ type Fase = { id: string; premio: number; inimigos: [number, number][]; chefe?: 
 type Desafio = { id: string; depois_de: string; nivel: number; chance_ovo: number; premio?: number };
 type Aventura = {
   energia: { max: number; recarga_min: number; descanso_preco: number };
-  xp: { vitoria: number; derrota: number };
+  xp: { vitoria: number; derrota: number; por_inimigo?: number; chefe?: number };
+  mapa_variacao?: { menos: number; mais: number };
   tempo_min_seg?: number; nivel_min_folga?: number;
   chefe_pedra: { chance: number; pedras: number[] };
   mundos: { id: string; fases: Fase[] }[];

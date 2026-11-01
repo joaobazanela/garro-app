@@ -960,10 +960,14 @@ for(const [k,b,o] of [[6,'glacien',{spd:.8,wag:.25}],[13,'petrun',{spd:.4,wag:.1
 NOEXTRA.add(0);// Terranox: modelo Tripo próprio (dinossauro)
 const GLB={};
 const GLBDATA={};
-function loadGLB(m){if(GLB[m.file])return GLB[m.file];
-  GLB[m.file]=new Promise((res,rej)=>{if(!THREE.GLTFLoader)return rej('noloader');const b64=GLBDATA[m.file];if(!b64&&(window.GARRO_GLBTXT||(window.GARRO_EVOTXT&&m.evoM))){fetch(m.file+'.txt?v='+ASSETV).then(r=>{if(!r.ok)throw new Error('evo');return r.text()}).then(t=>{const bin=Uint8Array.from(atob(t.trim()),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>res(g.scene),rej)}).catch(rej);return}
+// um carregamento que falha (rede ruim no celular) não fica guardado: tenta de novo até 3 vezes antes de desistir
+function loadGLB(m,t){t=t|0;if(GLB[m.file])return GLB[m.file];
+  const pr=loadGLB1(m);GLB[m.file]=pr;pr.catch(()=>{if(GLB[m.file]===pr)delete GLB[m.file]});
+  return t>=2?pr:pr.catch(e=>new Promise(r=>setTimeout(r,700*(t+1))).then(()=>loadGLB(m,t+1)))}
+function loadGLB1(m){
+  return new Promise((res,rej)=>{if(!THREE.GLTFLoader)return rej('noloader');const b64=GLBDATA[m.file];if(!b64&&(window.GARRO_GLBTXT||(window.GARRO_EVOTXT&&m.evoM))){fetch(m.file+'.txt?v='+ASSETV).then(r=>{if(!r.ok)throw new Error('evo');return r.text()}).then(t=>{const bin=Uint8Array.from(atob(t.trim()),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>res(g.scene),rej)}).catch(rej);return}
     if(!b64)return new THREE.GLTFLoader().load(((window.GARRO_REMOTE&&m.remote)?window.GARRO_REMOTE:'')+m.file+'?v='+ASSETV,g=>res(g.scene),undefined,rej);
-    const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>res(g.scene),rej)});return GLB[m.file]}
+    const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>res(g.scene),rej)})}
 // pelo fofo nas formas evoluídas (modelos Tripo saem lisos/em placas): mesma textura de pelo dos bichos de pelúcia, por cima da cor do modelo
 function furDet(mat,k){const U={uDet:DETU.uDet,uDS:{value:.22},uFS:{value:k}};
   mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
@@ -1632,8 +1636,15 @@ const XPG=GD.regras.XPG;
 const GROW=GD.regras.GROW;const EVO_LV=50;
 // ataque e defesa no nível 1: os grandes são bem mais fortes que os redondos (cada um tem seu jeito)
 const STAT=GD.pelucias.STAT;
-const capOf=i=>grande(i)?100:30;
-function lvOf(i){return Math.min(capOf(i),1+Math.floor(careOf(i).xp/(grande(i)?4:5)))}
+// curva de níveis (data/regras.json → NIVEL): XP total para o nível N = linear×(N−1) + cubo×(N−1)³ (como as curvas cúbicas do Pokémon)
+const NV=GD.regras.NIVEL||{grande:{max:100,linear:4,cubo:.012},redondo:{max:30,linear:5,cubo:.012}},nvP=i=>grande(i)?NV.grande:NV.redondo;
+const capOf=i=>nvP(i).max;
+function xpTotal(i,L){const p=nvP(i),n=Math.max(0,Math.min(L,capOf(i))-1);return p.linear*n+Math.round(Math.round(p.cubo*1000)*n*n*n/1000)}
+function lvFromXp(i,xp){const cap=capOf(i);let L=1;while(L<cap&&xpTotal(i,L+1)<=xp)L++;return L}
+function lvOf(i){return lvFromXp(i,careOf(i).xp)}
+// XP salvo no aparelho na escala antiga (4 ou 5 XP por nível): converte uma vez mantendo o nível (o servidor converte na migração 0011)
+try{if(localStorage.getItem('garro-xp-curva')!=='2'){for(const k in CARE){const i=+k,c=CARE[k];if(!c||!(c.xp>0)||!PLUSH[i])continue;const dv=grande(i)?4:5,cap=capOf(i),L0=Math.min(cap,1+Math.floor(c.xp/dv)),rest=c.xp-(L0-1)*dv;
+    c.xp=L0>=cap?xpTotal(i,cap):xpTotal(i,L0)+Math.floor(rest/dv*(xpTotal(i,L0+1)-xpTotal(i,L0)))}saveCare();localStorage.setItem('garro-xp-curva','2')}}catch(e){}
 function statsAt(i,lv){const b=STAT[i],ev=i<CH0&&lv>=EVO_LV?1.35:1,gr=grande(i)?.04:.03,atk=Math.round(b[0]*(1+(lv-1)*gr)*ev),df=Math.round(b[1]*(1+(lv-1)*gr)*ev);return{lv,atk,def:df,hp:Math.round((atk+df)*2+lv*5)}}
 function renderPow(i){const e=$('vPow');if(!e)return;const S=statsAt(i,lvOf(i));e.innerHTML='<span>Nv <b>'+S.lv+'</b></span><span>⚔️ <b>'+S.atk+'</b></span><span>🛡️ <b>'+S.def+'</b></span><span>❤️ <b>'+S.hp+'</b></span>'}
 const EVN=GD.pelucias.EVN;
@@ -1644,17 +1655,20 @@ function careOf(i){let c=CARE[i];const now=Date.now();
   const mins=Math.max(0,(now-c.t)/60000);if(mins>.02){for(const k in DECAY)c[k]=Math.max(0,c[k]-DECAY[k]*mins);c.t=now}
   return c}
 function careXp(i){return careOf(i).xp}
+// quanto falta para o próximo nível (barra de XP como no Pokémon)
+function xpPct(i){const lv=lvOf(i);if(lv>=capOf(i))return 100;const a=xpTotal(i,lv),b=xpTotal(i,lv+1);return Math.max(0,Math.min(100,(careOf(i).xp-a)/(b-a)*100))}
+function xpTxt(i){const lv=lvOf(i),a=xpTotal(i,lv),b=xpTotal(i,lv+1);return 'XP '+Math.max(0,careOf(i).xp-a)+'/'+(b-a)}
 function careStage(i){return isLeg(i)?0:i>=CH0?2:lvOf(i)>=EVO_LV?1:0}
 function gsOf(i,st){return i>=CH0?1:GROW[st].gs}
 function refreshVStats(i){const p=PLUSH[i],st=careStage(i);$('vStats').textContent=Math.round(p.cm*gsOf(i,st))+' cm · '+p.g+' g · pego '+(coll[i]||0)+'x'+(i>=CH0?'':' · '+(st?'Evoluído':'Base'))+(GCOLL[i]?' · 🏆 gigante'+(GEVO[i]?' evoluído':'')+' ×'+GCOLL[i]:'');if(i<CH0)$('vName').textContent=evName(i,st);renderPow(i)}
 function renderCare(){
   if(!V.open||V.cur===undefined)return;const i=V.cur;renderSell(i);renderPow(i);
   const c=careOf(i),lv=lvOf(i),cap=capOf(i),st=careStage(i),m=(c.f+c.l+c.p)/3;
-  if(isLeg(i)){$('cStage').textContent='✦ Lendário · '+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' / '+cap)+' · mais forte que as pelúcias grandes';$('cXpBar').style.width=Math.min(100,(lv-1)/(cap-1)*100)+'%'}
-  else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' / '+cap)+' · 2 repetidas = 1 moeda';$('cXpBar').style.width=Math.min(100,(lv-1)/(cap-1)*100)+'%'}
+  if(isLeg(i)){$('cStage').textContent='✦ Lendário · '+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+' · mais forte que as pelúcias grandes';$('cXpBar').style.width=xpPct(i)+'%'}
+  else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+' · 2 repetidas = 1 moeda';$('cXpBar').style.width=xpPct(i)+'%'}
   else{$('cStage').textContent=st?'★ '+evName(i,1):PLUSH[i].name;
-    $('cXp').textContent=st?'Nv '+lv+' · forma evoluída!':'Nv '+lv+' · evolui no Nv '+EVO_LV+' para '+evName(i,1);
-    $('cXpBar').style.width=Math.min(100,st?(lv-EVO_LV)/(cap-EVO_LV)*100:(lv-1)/(EVO_LV-1)*100)+'%'}
+    $('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(st?' · forma evoluída!':' · evolui no Nv '+EVO_LV);
+    $('cXpBar').style.width=xpPct(i)+'%'}
   for(const [k,id,b] of [['f','mF','cFeed'],['l','mL','cPet'],['p','mP','cPlay']]){$(id).style.width=Math.round(c[k])+'%';$(b).classList.toggle('low',c[k]<25)}
   updFood();const sb=$('cStone');if(sb){const sk=STONE_OF(i),n=INV.st[sk]||0;sb.hidden=!(i<CH0&&!st);sb.classList.toggle('buy',!n);sb.innerHTML=n?'💎 Evoluir agora com '+STONES[sk].name+' <small>(você tem '+n+')</small>':'💎 Evoluir com '+STONES[sk].name+' <small>· você não tem · comprar '+PRICE.stone+' 🪙</small>'}
 }
@@ -2170,7 +2184,7 @@ window.GARRO={
   // usados pela Aventura (js/aventura.js)
   modelo:(i,evo)=>montaModelo(i,evo),THREE:()=>window.THREE,
   name:i=>PLUSH[i].name,evName:i=>evName(i,1),sprite:(i,lv,giant)=>bSrc({i,lv,giant:giant?1:0}),EVO_LV,
-  xpLocal:(i,n)=>gainXp(i,n),xpSet:(i,x)=>{careOf(i).xp=x;saveCare()},
+  xpLocal:(i,n)=>gainXp(i,n),xpSet:(i,x)=>{careOf(i).xp=x;saveCare()},xpTotal,lvFromXp,xp:i=>careOf(i).xp,xpBar:i=>({pct:xpPct(i),txt:lvOf(i)>=capOf(i)?'Nível máximo':'Nv '+lvOf(i)+' · '+xpTxt(i)}),
   stoneLocal:k=>{INV.st[k]=(INV.st[k]||0)+1;saveInv()},stone:k=>STONES[k],
   tone:(f,d,t,v)=>{audio();tone(f,d,t,v)},evento:(k,n)=>evento(k,n),hint:t=>{$('hint').textContent=t},
   // usados pelos Lendários (js/lendarios.js)

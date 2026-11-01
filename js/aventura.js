@@ -1,6 +1,6 @@
 /* GARRO — Aventura: mapa de fases; cada fase é um mapa 3D visto de cima (floresta): o bichinho anda com o joystick,
    enfrenta os bichinhos selvagens em tempo real (Atacar, Poder, Especial do elemento, Esquivar) e chega ao portal.
-   O mapa de cada fase vem do JSON (data/aventura.json, campo mapa3d).
+   O mapa de cada partida é sorteado por js/mapas.js (o do JSON, data/aventura.json → mapa3d, é a reserva).
    Conteúdo (fases, inimigos, níveis, prêmios, regras da luta e da energia) vem de data/aventura.json (window.GD.aventura).
    Logado: começar gasta energia no servidor, e o servidor confere a vitória antes de pagar (rpc_adv_start / rpc_adv_end).
    Sem login: progresso e energia ficam no aparelho. */
@@ -122,7 +122,9 @@ async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=ener
     S.en[i]={e:r.energy,s:Date.parse(r.since)}}
   else{L.en[i]={e:E.e-1,s:E.e>=EN.max?Date.now():E.s};saveL()}
   const lv=G.lvOf(i);
-  RUN={k,f,i,hero:lutador(i,lv,{heroi:1}),fim:false,quit:0,leaves:0,dif:difDe(k)};
+  // mapa novo a cada partida (js/mapas.js): percurso e quantidade de bichinhos mudam; sem o gerador usa o mapa reserva do JSON
+  let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=GARRO_MAPAS.novo(f.desafio?11:k+1,{inimigos:f.inimigos,chefe:f.chefe},!!f.desafio,D.mapa_variacao)}catch(e){console.warn('mapa',e)}
+  RUN={k,f,i,M:M3,hero:lutador(i,lv,{heroi:1}),fim:false,quit:0,leaves:0,dif:difDe(k)};
   luta()}
 
 // ---------- a fase: mapa 3D visto de cima (joystick, luta em tempo real, habilidades) ----------
@@ -249,7 +251,7 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=D.
   return{itens,portal:PORTAL,vg,obs,blocos}}
 
 // ---- montar a fase ----
-async function iniciar3D(){const R=RUN,f=R.f,M=f.mapa3d,T=G.THREE();if(!T||!M)throw new Error('sem 3d');
+async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||!M)throw new Error('sem 3d');
   const cv=$('advCv'),rd=new T.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));rd.outputEncoding=T.sRGBEncoding;
   const S=new T.Scene();S.background=new T.Color('#2c3a52');S.fog=new T.Fog('#2c3a52',26,52);
   S.add(new T.HemisphereLight(0xfff2e0,0x2f4a32,1.05));const sol=new T.DirectionalLight(0xffe2c4,.95);sol.position.set(6,12,-5);S.add(sol);
@@ -414,7 +416,7 @@ function golpeia(e,mult,como){const R=RUN,r=dano(R.hero,e,mult);let dd=r.d;e.pis
     if(e.esc<=0){aviso('🛡️ Escudo quebrado!',1100);faisca(e.x,1,e.z,'#7ad0ff',14);G.tone(520,.12,'square',.05)}}
   e.hp-=dd;if(como!=='veneno'||dd)num(e.x,1.4*(e.chefe?2:1),e.z,'-'+(dd||ab)+(r.crit?'!':''),dd?(r.crit?'#ffe04a':(r.em>1?'#ffb070':'#ffffff')):'#7ad0ff');
   if(como!=='veneno')G.tone(como==='ataque'?380:300,.06,'square',.05);if(r.em>1&&como!=='veneno'&&!R.avisoEf){R.avisoEf=1;aviso('Super eficaz! 💪',900);setTimeout(()=>{if(RUN===R)R.avisoEf=0},2500)}
-  if(e.hp<=0){e.vivo=false;e.bar.remove();R.mortos=(R.mortos||0)+1;hud();faisca(e.x,.8,e.z,ECOL[e.el]||'#fff',e.chefe?30:14);G.tone(660,.1,'triangle',.07);
+  if(e.hp<=0){e.vivo=false;e.bar.remove();R.mortos=(R.mortos||0)+1;if(e.chefe)R.chefeMorto=1;else R.kills=(R.kills||0)+1;hud();faisca(e.x,.8,e.z,ECOL[e.el]||'#fff',e.chefe?30:14);G.tone(660,.1,'triangle',.07);
     if(e.chefe){aviso('Você derrotou o chefão! O portal abriu ✨',3000);G.fanfare();$('advBoss').hidden=true}}
   if(e.chefe)hud()}
 function machuca(d,dx,dz){const R=RUN,p=R.p;if(p.inv>0||p.morto)return;R.hero.hp-=d;p.inv=AR.invencivel_dano||.6;const n=Math.hypot(dx,dz)||1;mover(p,dx/n*.6,dz/n*.6);
@@ -479,9 +481,13 @@ function minimapa(){const R=RUN,c=$('advMini');if(!c)return;const x=c.getContext
 
 async function terminar(win){const R=RUN;if(!R||R.salvo)return;R.salvo=1;R.fim=true;
   const f=R.f,id=f.id,st=win?Math.min(3,R.leaves):0;
-  let res={first:false,stone:-1,coins:0,diam:0,ovo:-1,xp:win?D.xp.vitoria:D.xp.derrota,erro:''};
-  if(G.online()){const r=await G.sync('adv_end',{stage:id,win,stars:Math.max(1,st)});
-    if(r&&!r.error&&typeof r.coins==='number'){res.coins=r.coins-G.coins();G.setCoins(r.coins);G.xpSet(R.i,r.xp);res.first=!!r.first;res.stone=r.stone;res.diam=r.diamonds_got|0;res.ovo=typeof r.egg_leg==='number'?r.egg_leg:-1;if(window.GARRO_LEND)window.GARRO_LEND.servidor(r);if(win)S.prog[id]=Math.max(S.prog[id]||0,Math.max(1,st));if(r.stone>=0)G.stoneLocal(r.stone)}
+  // XP como no Pokémon (5ª geração): por bichinho derrotado, mais forte quanto maior o nível do inimigo; chefão vale mais. O servidor refaz a conta.
+  const lvMax=Math.max(1,...f.inimigos.map(x=>x[1]),f.chefe?f.chefe[1]:1),xk=(D.xp.por_inimigo||0),kx=Math.floor(xk*lvMax/5*Math.pow((2*lvMax+10)/(lvMax+R.hero.lv+10),2.5)+1);
+  const nk=R.kills||0,xpK=nk*kx+(R.chefeMorto&&win?Math.round((D.xp.chefe||1)*kx):0);
+  const antes=G.stats(R.i),xp0=G.xp(R.i);
+  let res={first:false,stone:-1,coins:0,diam:0,ovo:-1,xp:(win?D.xp.vitoria:D.xp.derrota)+xpK,erro:''};
+  if(G.online()){const r=await G.sync('adv_end',{stage:id,win,stars:Math.max(1,st),kills:nk,bossKill:!!R.chefeMorto});
+    if(r&&!r.error&&typeof r.coins==='number'){res.coins=r.coins-G.coins();G.setCoins(r.coins);res.xp=r.xp-xp0;G.xpSet(R.i,r.xp);res.first=!!r.first;res.stone=r.stone;res.diam=r.diamonds_got|0;res.ovo=typeof r.egg_leg==='number'?r.egg_leg:-1;if(window.GARRO_LEND)window.GARRO_LEND.servidor(r);if(win)S.prog[id]=Math.max(S.prog[id]||0,Math.max(1,st));if(r.stone>=0)G.stoneLocal(r.stone)}
     else{const det=r&&r.detail||'';res.erro=det.includes('nivel_baixo')?'O servidor não aceitou: seu bichinho ainda é fraco demais para esta fase.':'Não deu para salvar o resultado. Tente de novo.';res.xp=0}}
   else{if(win){res.first=!L.prog[id];L.prog[id]=Math.max(L.prog[id]||0,Math.max(1,st));if(res.first&&f.premio){G.addCoinsLocal(f.premio);res.coins=f.premio}
       if(f.chefe&&!f.desafio&&Math.random()<D.chefe_pedra.chance){const p=D.chefe_pedra.pedras;res.stone=p[Math.floor(Math.random()*p.length)];G.stoneLocal(res.stone)}
@@ -493,13 +499,16 @@ async function terminar(win){const R=RUN;if(!R||R.salvo)return;R.salvo=1;R.fim=t
         if(dd||ov>=0)GL.local(dd,ov);res.diam=dd;res.ovo=ov}}
     saveL();G.xpLocal(R.i,res.xp)}
   if(win&&!res.erro)G.evento('adventure',1);
+  res.antes=antes;res.depois=G.stats(R.i);res.nk=nk;res.xpIni=xpK;res.barra=G.xpBar(R.i);res.xp0=xp0;
   resultado(win,st,res)}
 function resultado(win,st,res){const R=RUN,f=R.f,tem=FASES[R.k+1];if(win)G.fanfare();else G.tone(196,.4,'sawtooth',.07);
   let h='<div class="advres '+(win?'win':'lose')+'"><h4>'+(win?'Vitória! 🏆':'Derrota 💔')+'</h4>';
   if(win)h+='<div class="advstars">'+estrelas(st)+'</div><small class="advst">'+st+' de 3 folhas douradas 🍃</small>';
   h+='<ul>';if(res.erro)h+='<li>'+res.erro+'</li>';
   if(res.erro){}else if(win&&res.first&&res.coins>0)h+='<li>+'+res.coins+' 🪙 <small>(1ª vitória nesta fase)</small></li>';else if(win&&!R.f.desafio)h+='<li><small>Fase já vencida antes: sem moedas desta vez</small></li>';
-  if(!res.erro)h+='<li>+'+res.xp+' XP para '+G.name(R.i)+'</li>';
+  if(!res.erro)h+='<li>+'+res.xp+' XP para '+G.name(R.i)+(res.nk||res.xpIni?' <small>('+res.nk+' derrotado'+(res.nk===1?'':'s')+(R.chefeMorto?' + chefão':'')+')</small>':'')+'<div class="advxp"><i style="width:'+res.barra.pct+'%"></i></div><small>'+res.barra.txt+'</small></li>';
+  if(!res.erro&&res.depois&&res.antes&&res.depois.lv>res.antes.lv){const a=res.antes,d=res.depois,r=(n,x,y)=>'<span>'+n+' <s>'+x+'</s> → <b>'+y+'</b></span>';
+    h+='<li class="advup"><big>⬆ Subiu de nível! Nv '+a.lv+' → '+d.lv+'</big><div>'+r('ATAQUE',a.atk,d.atk)+r('DEFESA',a.def,d.def)+r('VIDA',a.hp,d.hp)+'</div></li>'}
   if(res.diam>0)h+='<li class="pedra">💎 +'+res.diam+' diamante'+(res.diam>1?'s':'')+' raro'+(res.diam>1?'s':'')+'! <small>(use no Ninho)</small></li>';
   if(res.ovo>=0&&window.GARRO_LEND){const x=window.GARRO_LEND.lendarios[res.ovo];h+='<li class="pedra"><img src="img/lendarios/ovo_'+x.slug+'.webp" alt=""> Ovo de <b>'+x.nome+'</b>! Foi para o 🥚 Ninho</li>'}
   if(res.stone>=0){const s=G.stone(res.stone);h+='<li class="pedra">'+(s&&s.img?'<img src="'+s.img+'" alt="">':'💎')+' O chefão deixou cair: <b>'+(s?s.name:'pedra')+'</b>!</li>'}
