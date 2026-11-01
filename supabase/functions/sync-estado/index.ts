@@ -124,10 +124,18 @@ async function handle(req: Request): Promise<Response> {
     if (p === null) return json({ error: "bad_plush_id" }, 400);
     return call("rpc_sell_giant", { p_plush: p }, "sell_giant_rejected");
   }
-  if (body.action === "giant_evolve" || body.action === "use_stone") {
+  if (body.action === "giant_evolve") {
     const p = int(body.plushId, 0, 19), st = int(body.stone, 0, 7);
     if (p === null || st === null) return json({ error: "bad_request" }, 400);
-    return call(body.action === "giant_evolve" ? "rpc_giant_evolve" : "rpc_use_stone", { p_plush: p, p_stone: st }, body.action + "_rejected");
+    return call("rpc_giant_evolve", { p_plush: p, p_stone: st }, "giant_evolve_rejected");
+  }
+  if (body.action === "use_stone" || body.action === "rebirth") {
+    const p = int(body.plushId, 0, 52), st = body.action === "rebirth" ? 0 : int(body.stone, 0, 7);
+    if (p === null || st === null) return json({ error: "bad_request" }, 400);
+    const E = (await regras())?.EVOLUCAO;  // regras do jogo vêm de data/regras.json (sem o arquivo, sem pedra)
+    if (!E) return json({ error: "regras_indisponiveis" }, 503);
+    if (body.action === "rebirth") return call("rpc_rebirth", { p_plush: p }, "rebirth_rejected");
+    return call("rpc_use_stone", { p_plush: p, p_stone: st, p_evo_lv: E.nivel, p_per: E.pedras_por_nivel }, "use_stone_rejected");
   }
   if (body.action === "care") {
     const p = int(body.plushId, 0, 52), kind = body.kind;
@@ -262,6 +270,16 @@ type Aventura = {
   desafio?: Desafio;
 };
 const AVENTURA_URL = Deno.env.get("AVENTURA_URL") ?? "https://joaobazanela.github.io/garro-app/data/aventura.json";
+const REGRAS_URL = Deno.env.get("REGRAS_URL") ?? AVENTURA_URL.replace(/aventura\.json$/, "regras.json");
+let cacheRegras: { t: number; d: { EVOLUCAO?: { nivel: number; pedras_por_nivel: number; renascer_nivel: number } } } | null = null;
+async function regras() {
+  if (cacheRegras && Date.now() - cacheRegras.t < 5 * 60 * 1000) return cacheRegras.d;
+  try {
+    const r = await fetch(REGRAS_URL, { headers: { "cache-control": "no-cache" } });
+    if (!r.ok) return cacheRegras?.d ?? null;
+    const d = await r.json(); cacheRegras = { t: Date.now(), d }; return d;
+  } catch (_e) { return cacheRegras?.d ?? null; }
+}
 let cacheAventura: { t: number; d: Aventura } | null = null;
 async function aventura(): Promise<Aventura | null> {
   if (cacheAventura && Date.now() - cacheAventura.t < 5 * 60 * 1000) return cacheAventura.d;

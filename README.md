@@ -209,3 +209,10 @@ Botão 🛒 Loja no topo. Comida custa 5 moedas e Pedra de evolução 400. A com
 - **Botão "Zerar coleção" removido** — era um placeholder desabilitado que nunca chegou a sincronizar com o servidor.
 - **Scripts de CDN (Matter/Three/Supabase) carregam com `defer`**, sem travar o primeiro desenho da tela; o carregamento dos dados do jogo só começa depois que o DOM está pronto, pra garantir a ordem certa.
 - **Relatório de erros:** erros do navegador (`window.onerror`, promises rejeitadas, falhas de sincronização) agora são gravados na tabela `client_errors` do Supabase (só grava, ninguém lê pelo app — é pro time conferir no painel). O jogador vê uma mensagem amigável pedindo pra tentar de novo, nunca o erro técnico.
+
+## Pedra de evolução e renascimento
+- **1ª pedra:** o bichinho evolui na hora e vai para o **Nv 30**. A forma evoluída também aparece sozinha ao chegar no Nv 30 sem pedra.
+- **Depois disso:** a cada **2 pedras, +1 nível** (o botão mostra "pedra 1/2"). Vai até o **Nv 100**.
+- **Renascer (Nv 100):** botão 🔄. O nível volta para 1; forma evoluída, gigantes, moedas e o resto ficam. Cada renascimento dá **+10% de ataque, defesa e vida** (soma: 3 renascimentos = +30%).
+- **Regras = conteúdo** em `data/regras.json` → `EVOLUCAO` (`nivel`, `pedras_por_nivel`, `renascer_nivel`, `bonus_por_renascimento`). O servidor (`sync-estado`) lê esse arquivo; o jogo também.
+- **Estado do jogador** no Supabase (`plush_care`): `xp`, `rebirths` (nº de renascimentos) e `stone_pending` (pedras "pela metade"). Migração `0012_pedras_e_renascer.sql`, teste em `supabase/tests/pedras.sql`.
