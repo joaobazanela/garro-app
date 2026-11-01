@@ -457,3 +457,5 @@ style#btnMis{position:relative}
 .advres li.advup{background:rgba(255,210,90,.12);border:1px solid rgba(255,210,90,.5);border-radius:12px;padding:8px;text-align:center;color:#ffe08a}.advres li.advup big{display:block;font-size:16px;margin-bottom:4px}
 .advres li.advup div{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:13px}.advres li.advup s{opacity:.6}.advres li.advup b{color:#9dff9d}
 .cb.stone#cRebirth{background:linear-gradient(135deg,#e0a020,#f06a2a)}
+
+.advmundo{position:absolute;left:50%;transform:translateX(-50%);z-index:1;background:linear-gradient(90deg,#2a4a7a,#4a7ac0);color:#fff;border-radius:999px;padding:4px 14px;font-size:13px;font-weight:900;letter-spacing:.3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4);pointer-events:none}.advmundo.bloq{background:#3a3040;color:#bba}
