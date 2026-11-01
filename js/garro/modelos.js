@@ -220,7 +220,7 @@ function gloop(now){
   if(st==='tired')Object.assign(X,{hy:.1,hp:.32,hr:.2,wagA:m.wag*.25,wagS:2,roll:Math.PI*.46,crouch:.6,wing:0,wingS:1,bob:0});
   if(st==='shake'&&el>.45)X.shake=1;
   if(st==='run')Object.assign(X,{hy:0,hp:-.12,hr:0,wagA:m.wag*2.6,wagS:16,wing:.55,wingS:13});
-  if(st==='eat'){Object.assign(X,{hy:0,hp:.1+Math.sin(t*16)*.12,wagA:m.wag*2,wagS:9*sp,byaw:0,bob:.5,wing:.25,wingS:7});V.ry+=(-.18-V.ry)*Math.min(1,dt*3)}
+  if(st==='eat'){Object.assign(X,{hy:0,hp:.1+Math.sin(t*16)*.12,wagA:m.wag*2,wagS:9*sp,byaw:0,bob:.5,wing:.25,wingS:7});V.ry+=((isLeg(V.cur)?-.62:-.18)-V.ry)*Math.min(1,dt*3)}
   const k=Math.min(1,dt*6*sp),kr=Math.min(1,dt*(st==='run'?7:2.5*sp)),kf=Math.min(1,dt*9);
   for(const n of['hy','hp','hr','wagA','wagS','crouch','bob','shake','lean','pitch','wing','wingS','byaw'])G[n]=(G[n]||0)+(X[n]-(G[n]||0))*k;
   G.back=(G.back||0)+(X.back-(G.back||0))*kf;G.hop=(G.hop||0)+(X.hop-(G.hop||0))*kf;G.roll+=(X.roll-G.roll)*kr;
@@ -423,12 +423,12 @@ function vloop(now){
   if(st==='belly')Object.assign(T,{lid:.88,ear:-.7,tailX:-.3,wagA:.85,wagS:11,tongue:1,hx:-.25,hy:.35,hz:.2,roll:Math.PI,paddle:1,flap:0});
   if(st==='shake'){Object.assign(T,{lid:.3,ear:0,tailX:.3,wagA:.5,wagS:9,tongue:.5});if(el>.45)T.shake=1}
   if(st==='run')Object.assign(T,{lid:.1,ear:-.5,tailX:.4,wagA:0,wagS:5,tongue:1,hx:-.15,hy:0,hz:0});
-  if(st==='eat'){Object.assign(T,{lid:.3,ear:.15+Math.sin(t*16)*.1,tailX:.2,wagA:.7,wagS:12,tongue:.6+.4*Math.sin(t*15),hx:.1+Math.sin(t*16)*.2,hy:0,hz:0,crouch:.1});V.ry+=(-.18-V.ry)*Math.min(1,dt*3)}
+  if(st==='eat'){Object.assign(T,{lid:.3,ear:.15+Math.sin(t*16)*.1,tailX:.2,wagA:.7,wagS:12,tongue:.6+.4*Math.sin(t*15),hx:.1+Math.sin(t*16)*.2,hy:0,hz:0,crouch:.1});V.ry+=((isLeg(V.cur)?-.62:-.18)-V.ry)*Math.min(1,dt*3)}
   const k=Math.min(1,dt*7),k2=Math.min(1,dt*(st==='belly'||st==='shake'?3.2:7));
   for(const n in S)S[n]+=(T[n]-S[n])*(n==='roll'?k2:k);
   V.wag+=dt*S.wagS;
   // turntable
-  if(st==='pet'||st==='scratch')V.ry+=(-.35-V.ry)*dt*2;
+  if(st==='pet'||st==='scratch')V.ry+=((isLeg(V.cur)?-.62:-.35)-V.ry)*dt*2;
   V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
   // body
   const shakeOsc=S.shake*Math.sin(el*30)*.45*Math.max(0,1-(el-.45)/1);
