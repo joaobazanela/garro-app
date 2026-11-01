@@ -301,6 +301,7 @@ style#btnMis{position:relative}
 .advres{position:absolute;inset:0;z-index:5;background:rgba(6,14,8,.86);display:grid;align-content:center;justify-items:center;gap:8px;padding:14px;text-align:center;animation:advin2 .4s ease-out}
 @keyframes advin2{from{opacity:0;transform:scale(.92)}}
 .advres h4{margin:0;font-family:var(--display);font-weight:400;font-size:30px;color:#ffd25a}.advres.lose h4{color:#ff9a8a}
+.advres.advmundo-ok{background:rgba(10,20,40,.92);z-index:6}.advres.advmundo-ok h4{color:#7adfff}
 .advstars{font-size:34px;color:#ffd25a;letter-spacing:4px;text-shadow:0 0 12px rgba(255,210,90,.6)}
 .advres ul{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-weight:800}.advres ul small{font-weight:600;color:#cfe8c8}
 .advres li.pedra{color:#c9b4ff}.advres li.pedra img{width:34px;height:34px;object-fit:contain;vertical-align:middle}
