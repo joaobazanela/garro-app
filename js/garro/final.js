@@ -223,7 +223,7 @@ window.GARRO={
   hud:()=>hud(),maquina:()=>MACH,
   glb:f=>loadGLB({file:f}).then(g=>g.clone(true))
 };
-window.dispatchEvent(new Event('garro:pronto'));
+window.dispatchEvent(new Event('garro:pronto'));setTimeout(aquecerModelos,6000);
 renderShelf();hud();
 /* ---------- entrada: só depois de todas as partes carregadas (antes ficava na parte 1 e chamava hud() cedo demais) ---------- */
 sb.auth.onAuthStateChange((event,s)=>{

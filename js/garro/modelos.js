@@ -40,12 +40,24 @@ NOEXTRA.add(0);// Terranox: modelo Tripo próprio (dinossauro)
 const GLB={};
 const GLBDATA={};
 // um carregamento que falha (rede ruim no celular) não fica guardado: tenta de novo até 3 vezes antes de desistir
+const cacheNome=()=>'garro-glb-'+ASSETV;
+function cacheOk(){try{return !!(window.caches&&/^https?:/.test(location.protocol)&&!window.GARRO_OFFLINE)}catch(e){return false}}
+// busca o .glb no cache do aparelho; se não tiver, baixa e guarda (versão nova do jogo = cache novo, o velho é apagado)
+async function baixaGLB(url,soGuardar){const c=await caches.open(cacheNome());let r=await c.match(url);
+  if(!r){r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status+' '+url);try{await c.put(url,r.clone())}catch(e){}}
+  return soGuardar?null:r.arrayBuffer()}
+// com a máquina parada e rede boa, deixa guardados no aparelho (sem abrir) os modelos dos bichinhos que estão na máquina
+function aquecerModelos(){try{const cn=navigator.connection||{};if(!cacheOk())return;caches.keys().then(ks=>ks.filter(k=>k.startsWith('garro-glb-')&&k!==cacheNome()).forEach(k=>caches.delete(k)));if(cn.saveData||/(^|-)2g$/.test(cn.effectiveType||''))return;
+  const fila=[...new Set(bodies.map(b=>b.plush&&b.plush.i).filter(i=>MODELS[i]))].map(i=>MODELS[i].file);let k=0;
+  const prox=()=>{if(k>=fila.length)return;const f=fila[k++];baixaGLB(f+'?v='+ASSETV,true).catch(()=>{}).then(()=>setTimeout(prox,600))};prox()}catch(e){}}
 function loadGLB(m,t){t=t|0;if(GLB[m.file])return GLB[m.file];
   const pr=loadGLB1(m);GLB[m.file]=pr;pr.catch(()=>{if(GLB[m.file]===pr)delete GLB[m.file]});
-  return t>=2?pr:pr.catch(e=>new Promise(r=>setTimeout(r,700*(t+1))).then(()=>loadGLB(m,t+1)))}
+  return t>=2?pr.catch(e=>{logErro('modelo3d:'+m.file,e);throw e}):pr.catch(e=>new Promise(r=>setTimeout(r,700*(t+1))).then(()=>loadGLB(m,t+1)))}
 function loadGLB1(m){
   return new Promise((res,rej)=>{if(!THREE.GLTFLoader)return rej('noloader');const b64=GLBDATA[m.file];if(!b64&&(window.GARRO_GLBTXT||(window.GARRO_EVOTXT&&m.evoM))){fetch(m.file+'.txt?v='+ASSETV).then(r=>{if(!r.ok)throw new Error('evo');return r.text()}).then(t=>{const bin=Uint8Array.from(atob(t.trim()),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>res(g.scene),rej)}).catch(rej);return}
-    if(!b64)return new THREE.GLTFLoader().load(((window.GARRO_REMOTE&&m.remote)?window.GARRO_REMOTE:'')+m.file+'?v='+ASSETV,g=>res(g.scene),undefined,rej);
+    if(!b64){const url=((window.GARRO_REMOTE&&m.remote)?window.GARRO_REMOTE:'')+m.file+'?v='+ASSETV,direto=()=>new THREE.GLTFLoader().load(url,g=>res(g.scene),undefined,rej);
+      if(!cacheOk())return direto();// guardado no aparelho: na 2ª vez o modelo abre sem baixar de novo (internet fraca)
+      return baixaGLB(url).then(buf=>new THREE.GLTFLoader().parse(buf,'',g=>res(g.scene),rej)).catch(direto)}
     const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));new THREE.GLTFLoader().parse(bin.buffer,'',g=>res(g.scene),rej)})}
 // pelo fofo nas formas evoluídas (modelos Tripo saem lisos/em placas): mesma textura de pelo dos bichos de pelúcia, por cima da cor do modelo
 function furDet(mat,k){const U={uDet:DETU.uDet,uDS:{value:.22},uFS:{value:k}};
@@ -355,7 +367,7 @@ function openViewer(i){
     const tenta=n=>openGLB(i).then(ok=>{if(V.rq!==rq)return;if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
       $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(gloop)}
       else if(n<8){if(n===0)banner('Carregando '+PLUSH[i].name+'…','um instante');EVOFAIL[i]=0;setTimeout(()=>{if(V.rq===rq)tenta(n+1)},1200+n*500)}
-      else banner('Não carregou','Confira a internet e toque no bichinho de novo')});
+      else{logErro('viewer:'+PLUSH[i].name,'modelo 3D não carregou depois de 8 tentativas');banner('Não carregou','Confira a internet e toque no bichinho de novo')}});
     tenta(0);return}
   openProc(i)}
 function openProc(i){

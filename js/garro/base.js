@@ -28,11 +28,15 @@ function showAuthState(name){
 }
 
 /* ---------- relatório de erros (vai pro Supabase, nunca pro jogador em texto técnico) ---------- */
+// no máximo 25 por visita, e a mesma mensagem só 1 vez por minuto (rede ruim não pode encher a tabela)
+const ERRLOG={n:0,vistos:{}};
 function logErro(context,err){
   try{
     const message=(err&&err.message)||String(err||'erro desconhecido');
-    const stack=(err&&err.stack)||null;
-    sb.from('client_errors').insert({context,message,stack,url:location.href}).then(()=>{},()=>{});
+    const stack=(err&&err.stack)||null,k=context+'|'+message,t=Date.now();
+    if(ERRLOG.n>=25||(ERRLOG.vistos[k]&&t-ERRLOG.vistos[k]<60000))return;
+    ERRLOG.vistos[k]=t;ERRLOG.n++;
+    sb.auth.getSession().then(({data:{session:s}})=>sb.from('client_errors').insert({context,message,stack,url:location.href,user_id:s&&s.user?s.user.id:null})).then(()=>{},()=>{});
   }catch(e){}
 }
 function erroAmigavel(msg){
@@ -50,7 +54,7 @@ async function syncEstado(action,extra){
       headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
       body:JSON.stringify(Object.assign({action},extra||{}))
     });
-    if(!res.ok){logErro('syncEstado:'+action,'HTTP '+res.status);return null}
+    if(!res.ok){let d='';try{const j=await res.clone().json();d=' '+(j.error||'')+(j.detail?' '+String(j.detail).slice(0,120):'')}catch(e){}logErro('syncEstado:'+action,'HTTP '+res.status+d);return null}
     return res.json();
   }catch(e){logErro('syncEstado:'+action,e);return null}
 }

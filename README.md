@@ -226,3 +226,7 @@ Se o modelo 3D de um bichinho demora ou falha ao carregar, o jogo mostra "Carreg
 
 ### Jogo dividido em arquivos
 O antigo `js/garro.js` (2.200 linhas) virou `js/garro/*.js`. Foi só mover blocos, na ordem original, sem mudar comportamento (único ajuste: o código de entrada/login foi para o fim de `final.js`, porque agora precisa esperar todas as partes). Nome novo no escopo global: não use `const`/`let` com nome igual a uma propriedade de `window` que não possa ser redefinida (`top`, `location`...). Para mexer: ache o assunto na lista da tabela acima.
+
+### Carregamento e avisos de erro
+- Os modelos 3D só baixam quando o bichinho abre (a vitrine baixa só a máquina). Agora cada `.glb` fica guardado no aparelho (Cache Storage, por versão do jogo): na 2ª vez abre sem baixar. Com a máquina parada e rede boa (fora de "economia de dados" e 2G), os modelos dos bichinhos que estão na máquina são guardados em segundo plano.
+- Erros vão para a tabela `client_errors` (já existia; só grava). Passou a registrar: modelo 3D que não carregou (`modelo3d:<arquivo>`, `viewer:<nome>`), o motivo da recusa do servidor (`syncEstado:<ação>` com `HTTP 400 nivel_baixo` etc.) e quem foi (`user_id`). No máximo 25 por visita e a mesma mensagem 1 vez por minuto.
