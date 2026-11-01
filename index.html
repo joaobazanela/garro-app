@@ -7,7 +7,7 @@
 <title>Garro</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee+Inline&family=Nunito:wght@600;800;900&display=swap">
-<link rel="stylesheet" href="css/garro.css?v=68 · 28/10 18:27">
+<link rel="stylesheet" href="css/garro.css?v=72 · 29/10 09:36">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js" integrity="sha384-OqQP3UcU7efkEYDRjGmQou2uEvzGFGRtwdYXTjnupeB9cWogSgQ4BOhyklFBYbBR" crossorigin="anonymous"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" integrity="sha384-fljlqkjWlmSFjkESkQvm77heIZpoWmXEOzlCA7kOpGUH+95Zk0yGfQieWM2q136E" crossorigin="anonymous"></script>
@@ -74,7 +74,7 @@
   <h2>Coleção <span id="count">0 de 35</span></h2>
   <div class="grid" id="grid"></div>
   <div class="detail" id="detail" hidden></div>
-  <div class="ver" id="verTag">versão 68 · 28/10 18:27</div>
+  <div class="ver" id="verTag">versão 72 · 29/10 09:36</div>
 <div class="foot"><button id="refill">+1 moeda</button><button id="btnRanking" type="button">Ranking</button></div>
 </section>
 
@@ -128,7 +128,7 @@
 </div>
 <script>
 /* carrega o conteúdo do jogo (data/*.json) e depois a lógica (js/garro.js) */
-window.GD={};(function(){var V='68 · 28/10 18:27',F=["sprites", "fills", "sprites_pedras", "sprites_luta", "pelucias", "modelos", "textos", "regras", "missoes"];
+window.GD={};(function(){var V='72 · 29/10 09:36',F=["sprites", "fills", "sprites_pedras", "sprites_luta", "pelucias", "modelos", "textos", "regras", "missoes"];
   function err(e){var d=document.createElement('p');d.style.cssText='color:#fff;background:#3a1020;padding:16px;margin:0;font:600 14px system-ui';d.textContent='Não foi possível carregar o jogo ('+(e&&e.message||e)+'). Recarregue a página.';document.body.insertBefore(d,document.body.firstChild)}
   function iniciar(){
     Promise.all(F.map(function(f){return fetch('data/'+f+'.json?v='+V).then(function(r){if(!r.ok)throw new Error('data/'+f+'.json');return r.json()}).then(function(j){GD[f]=j})}))
