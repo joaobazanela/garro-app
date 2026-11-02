@@ -168,7 +168,7 @@ async function montaModelo(i,evo){
     const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;mm.roughness=.92;mm.metalness=0;brilhoLeg(mm,m,glow);o.material=mm}});
   if(!m.evoM){try{if(m.HC)attachParts(obj,i,m);else attachExtras(obj,i,m)}catch(e){}}enfeiteLeg(obj,m);
   obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=Math.max(b.max.y-b.min.y,m.desliza?Math.max(b.max.z-b.min.z,b.max.x-b.min.x)*.45:0)||1,g=new THREE.Group();// serpente deitada: escala pelo comprimento, não pela altura
-  obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);return g}
+  obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);g.userData.bol=!!m.bol;return g}
 // tira da cena qualquer modelo que tenha ficado de uma abertura anterior (evita dois bichinhos na tela)
 function tiraModelos(){if(!V.spin)return;for(const c of V.spin.children.slice())if(c.userData.modelo)V.spin.remove(c)}
 async function openGLB(i){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir de novo antes de terminar, só o último vale
@@ -241,9 +241,11 @@ function gloop(now){
   const br=Math.sin(t*2.2*sp)*.015,sy=1+br-G.crouch*.1;
   C.roll.scale.set(1+G.crouch*.05,sy,1+G.crouch*.03);
   C.roll.rotation.z=G.roll+shk+G.lean*(1-G.roll/Math.PI);C.roll.rotation.x=G.pitch;C.roll.rotation.y=G.byaw*(1-G.roll/Math.PI);
+  if(MODELS[V.cur]&&MODELS[V.cur].bol){C.roll.rotation.y=Math.max(-.3,Math.min(.3,C.roll.rotation.y));C.roll.rotation.x=Math.max(-.3,Math.min(.3,C.roll.rotation.x))}// bolinha: feita da arte de frente, não mostra as costas
   const desl=!!(MODELS[V.cur]&&MODELS[V.cur].desliza),hopY=act==='hop'&&!desl?Math.abs(Math.sin(ae*Math.PI*1.6))*.16*G.hop:0;// serpente desliza: sem pulinhos
   C.roll.position.y=C.h/2*sy+(st==='belly'?.04:0)+(desl?0:G.bob*Math.abs(Math.sin(t*7))*.05)+hopY+Math.abs(G.pitch)*C.h*.25+(C.wx?(C.wx/2-C.h/2*sy)*Math.max(0,Math.sin(Math.min(G.roll,Math.PI/2))):0)+(st==='tired'?Math.sin(t*2.4)*.008:0);
-  V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
+  V.ry+=V.vy;V.vy*=.92;if(MODELS[V.cur]&&MODELS[V.cur].bol){const v0=vistaLeg(V.cur),d=V.ry-v0;if(Math.abs(d)>.5){V.ry=v0+Math.sign(d)*.5;V.vy=0}else V.ry-=d*.02}// bolinha: gira só um pouco e volta de frente
+  V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
   if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
   else{C.root.position.x*=.8;C.root.position.z+=(-G.back-C.root.position.z)*.25;C.root.rotation.y*=.8}
   popTick(C);stage(t);
