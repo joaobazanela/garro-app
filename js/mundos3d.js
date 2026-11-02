@@ -167,8 +167,8 @@ function monta(ctx){T=ctx.T;const {S,M,blocos,texPBR}=ctx,TT=M.tema||{},E=TT.cen
   // posição de cada parede e sua direção (vizinho mais próximo)
   const A=M.arvores,dir=A.map(([x,z],i)=>{let b=null,bd=9;for(let j=0;j<A.length;j++){if(j===i)continue;const d=Math.hypot(A[j][0]-x,A[j][1]-z);if(d<bd){bd=d;b=A[j]}}return b?Math.atan2(b[0]-x,b[1]-z):0});
   const dcam=(px,pz)=>{let best=1e9;const P=M.caminho;for(let k=0;k<P.length-1;k++){const[ax,az]=P[k],[bx,bz]=P[k+1],vx=bx-ax,vz=bz-az,l2=vx*vx+vz*vz||1,t=Math.max(0,Math.min(1,((px-ax)*vx+(pz-az)*vz)/l2));best=Math.min(best,Math.hypot(px-(ax+t*vx),pz-(az+t*vz)))}return best};
-  const borda=[];for(const sx of[-1,1])for(let z=-5;z<=L+5;z+=1.5)for(const dx of[1.4,3.1,4.9])borda.push([sx*(W/2+dx+(rnd()-.5)*.6),z+(rnd()-.5)*.8,1.1+rnd()*.6,0,1]);
-  for(let x=-W/2-5;x<=W/2+5;x+=1.5)for(const dz of[1.2,3])borda.push([x+(rnd()-.5)*.6,-3-dz,1.1+rnd()*.5,0,1]);
+  const borda=[];for(const sx of[-1,1])for(let z=-5;z<=L+5;z+=1.5)for(const dx of[2.4,4.1,5.8])borda.push([sx*(W/2+dx+(rnd()-.5)*.6),z+(rnd()-.5)*.8,1.1+rnd()*.6,0,1]);
+  for(let x=-W/2-5;x<=W/2+5;x+=1.5)for(const dz of[2.2,4])borda.push([x+(rnd()-.5)*.6,-3-dz,1.1+rnd()*.5,0,1]);
   const paredes=A.map(([x,z,s],i)=>[x,z,s,dir[i],0]).concat(borda);
   const R3=[0,1,2].map(k=>geoRocha(11+k*7,{musgo:E.musgo,amp:.4,alto:.75})),RA=[0,1,2].map(k=>geoRocha(31+k*5,{det:1,afia:true,amp:.5,alto:.9}));
   const rocha=(x,z,s,ry,alto,cor)=>{const sy=s*(alto||1)*(E.rocha_alto??.75)/.75;LT.add(R3[Math.floor(rnd()*3)],mRocha,mt(x,0,z,0,ry,0,s,sy,s*(.8+rnd()*.4)),cor);return sy*.82};
@@ -186,7 +186,7 @@ function monta(ctx){T=ctx.T;const {S,M,blocos,texPBR}=ctx,TT=M.tema||{},E=TT.cen
       else if(t<.7)LT.add(CB,mCor,mt(x,.05,z,0,rnd()*6,0,s),['#ff7aa8','#c47aff','#ffa04a'][Math.floor(rnd()*3)]);else LT.add(AL[Math.floor(rnd()*2)],mAlga,mt(x,0,z,0,rnd()*6,0,s*(forte?1.4:1.1)),['#4fbf5a','#3aa070','#7ad05a'][Math.floor(rnd()*3)])};
     ladoFn=(x,z)=>{const t=rnd();if(t<.3){rocha(x,z,.45+rnd()*.2,rnd()*6,1.2,'#8aa0b4');enfeite(x+(rnd()-.5)*.3,z+(rnd()-.5)*.3,.7,0);return .45}if(t<.75){enfeite(x,z,.8+rnd()*.4,0);return .3}LT.add(AL[Math.floor(rnd()*2)],mAlga,mt(x,0,z,0,rnd()*6,0,1+rnd()*.4),['#4fbf5a','#3aa070','#7ad05a'][Math.floor(rnd()*3)]);return 0};
     chaoFn=(x,z)=>{const t=rnd();if(t<.35)LT.add(ES,mCor,mt(x,0,z,0,rnd()*6,0,.6+rnd()*.4),['#ff7a3a','#ffb04a','#ff6a8a'][Math.floor(rnd()*3)]);else if(t<.6)rocha(x,z,.2+rnd()*.2,rnd()*6,.8,'#9aaabb');else if(t<.8)LT.add(AL[Math.floor(rnd()*2)],mAlga,mt(x,0,z,0,rnd()*6,0,.6+rnd()*.3),'#5ab05a');else enfeite(x,z,.5,0)};
-    for(const [x,z,s,ry,bd] of paredes){const top=rocha(x,z,(bd?1.4:.8+rnd()*.15)*s,rnd()*6,bd?1.5:1.5,['#7d93a8','#6f86a0','#8a9cb0'][Math.floor(rnd()*3)]);
+    for(const [x,z,s,ry,bd] of paredes){const top=rocha(x,z,(bd?1.15:.68+rnd()*.12)*s,rnd()*6,bd?1.5:1.5,['#7d93a8','#6f86a0','#8a9cb0'][Math.floor(rnd()*3)]);
       LT.elev=top*.8;const n=bd?2:1+(rnd()<.6?1:0);for(let q=0;q<n;q++)enfeite(x+(rnd()-.5)*.4,z+(rnd()-.5)*.4,bd?.8+rnd()*.4:.5+rnd()*.25,bd);LT.elev=0}
     for(const [x,z,s] of M.pedras){const f=dcam(x,z)>3.2;if(f&&rnd()<.35){LT.add(COL,mRuina,mt(x,0,z,0,rnd()*6,(rnd()-.5)*.15,s*.9));continue}rocha(x,z,.5*s,rnd()*6,.9,'#8297aa');enfeite(x+.3,z+.2,.6,0)}
     for(const [x,z,s] of M.cogumelos){const f=dcam(x,z)>3.2,t=rnd();
@@ -219,7 +219,7 @@ function monta(ctx){T=ctx.T;const {S,M,blocos,texPBR}=ctx,TT=M.tema||{},E=TT.cen
     const cogu=(x,z,s)=>{const v=rnd()<.5,ry=rnd()*6,cor=['#5af0ff','#ff7ae0','#b48aff'][Math.floor(rnd()*3)];LT.add(v?CP:CP2,mCor,mt(x,0,z,0,ry,0,s),'#e8dcd0');LT.add(v?CC:CC2,mLuz,mt(x,0,z,0,ry,0,s),cor);brilho(x,.55*s,z,1.6*s,cor)};
     ladoFn=(x,z)=>{const t=rnd();if(t<.35){cristal(x,z,.7+rnd()*.5);return .35}if(t<.65){cogu(x,z,.9+rnd()*.5);return .3}if(t<.85){LT.add(EG[Math.floor(rnd()*2)],mEst,mt(x,0,z,0,rnd()*6,0,.6+rnd()*.5));return .3}rocha(x,z,.4+rnd()*.25,rnd()*6,1.1,'#8a7686');return .4};
     chaoFn=(x,z)=>{const t=rnd();if(t<.5)rocha(x,z,.2+rnd()*.2,rnd()*6,.9,'#8a7686');else if(t<.75)cogu(x,z,.45+rnd()*.25);else LT.add(CR[Math.floor(rnd()*3)],mCr[ks[Math.floor(rnd()*3)]],mt(x,0,z,0,rnd()*6,0,.35+rnd()*.2))};
-    for(const [x,z,s,ry,bd] of paredes){const top=rocha(x,z,(bd?1.5:.82+rnd()*.15)*s,rnd()*6,bd?1.9:1.8,['#b09aa6','#9a8aa8','#b8a0a8'][Math.floor(rnd()*3)]);const t=rnd();LT.elev=top*.75;
+    for(const [x,z,s,ry,bd] of paredes){const top=rocha(x,z,(bd?1.15:.7+rnd()*.12)*s,rnd()*6,bd?1.9:1.8,['#b09aa6','#9a8aa8','#b8a0a8'][Math.floor(rnd()*3)]);const t=rnd();LT.elev=top*.75;
       if(t<.34)cristal(x+(rnd()-.5)*.5,z+(rnd()-.5)*.5,.8+rnd()*.6);else if(t<.52)cogu(x+(rnd()-.5)*.5,z+(rnd()-.5)*.5,.9+rnd()*.5);else if(t<.72)LT.add(EG[Math.floor(rnd()*2)],mEst,mt(x+(rnd()-.5)*.4,0,z+(rnd()-.5)*.4,0,rnd()*6,0,(.6+rnd()*.5)*(bd?1.5:1)));LT.elev=0}
     for(const [x,z,s] of M.pedras){if(rnd()<.5){LT.add(EG[Math.floor(rnd()*2)],mEst,mt(x,0,z,0,rnd()*6,0,.7*s+.3));LT.add(EG[0],mEst,mt(x+.35,0,z+.2,0,1,0,.45*s))}else rocha(x,z,.55*s,rnd()*6,1,'#7a6676')}
     for(const [x,z,s] of M.cogumelos){const f=dcam(x,z)>3.2,t=rnd();if(f&&t<.18){LT.add(BA,mVC,mt(x,0,z,0,rnd()*6,0,.85));brilho(x,.7,z,1.6,'#ffd86a')}else if(t<.55)cristal(x,z,.8*s+.2);else cogu(x,z,1.1*s)}
@@ -241,7 +241,7 @@ function monta(ctx){T=ctx.T;const {S,M,blocos,texPBR}=ctx,TT=M.tema||{},E=TT.cen
     const cristal=(x,z,s)=>{LT.add(CR[Math.floor(rnd()*2)],rnd()<.5?cr1:cr2,mt(x,0,z,(rnd()-.5)*.3,rnd()*6,(rnd()-.5)*.3,s));brilho(x,.4*s,z,2*s,'#b07aff')};
     ladoFn=(x,z)=>{const t=rnd();if(t<.3){cristal(x,z,.6+rnd()*.5);return .3}if(t<.45){LT.add(AS[Math.floor(rnd()*3)],mArv,mt(x,0,z,0,rnd()*6,0,.9+rnd()*.4));return .3}if(t<.75){LT.add(CA,mCap,mt(x,0,z,0,rnd()*6,0,1.1+rnd()*.6));return 0}rocha(x,z,.4+rnd()*.25,rnd()*6,1,'#5e5a6e');return .4};
     chaoFn=(x,z)=>{const t=rnd();if(t<.55)LT.add(CA,mCap,mt(x,0,z,0,rnd()*6,0,.8+rnd()*.5));else rocha(x,z,.2+rnd()*.2,rnd()*6,.9,'#5e5a6e')};
-    paredes.forEach(([x,z,s,ry,bd],i)=>{if(bd){rocha(x,z,1.3*s,rnd()*6,1.5,['#4a4658','#3e3a4c'][Math.floor(rnd()*2)]);if(rnd()<.25)LT.add(AS[Math.floor(rnd()*3)],mArv,mt(x,0,z,0,rnd()*6,0,1.3+rnd()*.5));return}
+    paredes.forEach(([x,z,s,ry,bd],i)=>{if(bd){rocha(x,z,1.1*s,rnd()*6,1.5,['#4a4658','#3e3a4c'][Math.floor(rnd()*2)]);if(rnd()<.25)LT.add(AS[Math.floor(rnd()*3)],mArv,mt(x,0,z,0,rnd()*6,0,1.3+rnd()*.5));return}
       LT.add(MU[Math.floor(rnd()*3)],mMuro,mt(x,0,z,0,ry+Math.PI/2,0,1,.9+rnd()*.5,1),['#6a6678','#5a566a','#76728a'][Math.floor(rnd()*3)]);const t=rnd();
       if(t<.12)LT.add(AS[Math.floor(rnd()*3)],mArv,mt(x,0,z,0,rnd()*6,0,1+rnd()*.4));else if(t<.32)cristal(x+(rnd()-.5)*.5,z+(rnd()-.5)*.5,.7+rnd()*.5);else if(t<.6)LT.add(CA,mCap,mt(x+(rnd()-.5)*.9,0,z+(rnd()-.5)*.9,0,rnd()*6,0,1+rnd()*.6))});
     for(const [x,z,s] of M.pedras){if(dcam(x,z)>3.2&&rnd()<.4){LT.add(AS[Math.floor(rnd()*3)],mArv,mt(x,0,z,0,rnd()*6,0,1+rnd()*.5));continue}rocha(x,z,.5*s,rnd()*6,1,'#4e4a5e');LT.add(CA,mCap,mt(x+.4,0,z,0,rnd()*6,0,1))}
@@ -264,7 +264,7 @@ function monta(ctx){T=ctx.T;const {S,M,blocos,texPBR}=ctx,TT=M.tema||{},E=TT.cen
     const cristal=(x,z,s)=>{LT.add(CR[Math.floor(rnd()*2)],rnd()<.6?crL:crA,mt(x,0,z,(rnd()-.5)*.3,rnd()*6,(rnd()-.5)*.3,s));brilho(x,.5*s,z,2.2*s,'#ff9a3a')};
     ladoFn=(x,z)=>{const t=rnd();if(t<.45){rochaA(x,z,.45+rnd()*.3,1.1+rnd()*.8);return .4}if(t<.8){cristal(x,z,.7+rnd()*.5);return .35}LT.add(chama,mCh,mt(x,.05,z,0,0,0,.7+rnd()*.4));brilho(x,.5,z,1.8,'#ff7a2a');return 0};
     chaoFn=(x,z)=>{if(rnd()<.7)rochaA(x,z,.22+rnd()*.2,.8+rnd()*.5);else LT.add(CR[Math.floor(rnd()*2)],crL,mt(x,0,z,0,rnd()*6,0,.35+rnd()*.2))};
-    for(const [x,z,s,ry,bd] of paredes){const sc=(bd?1.5:.85+rnd()*.15)*s,h=(bd?1.4:1.15)+rnd()*.5;rochaA(x,z,sc,h);const t=rnd();LT.elev=sc*h*.55;if(t<.25)cristal(x+(rnd()-.5)*.4,z+(rnd()-.5)*.4,.7+rnd()*.5);else if(t<.33)LT.add(chama,mCh,mt(x,.2,z,0,0,0,.8+rnd()*.5));LT.elev=0}
+    for(const [x,z,s,ry,bd] of paredes){const sc=(bd?1.2:.75+rnd()*.12)*s,h=(bd?1.4:1.15)+rnd()*.5;rochaA(x,z,sc,h);const t=rnd();LT.elev=sc*h*.55;if(t<.25)cristal(x+(rnd()-.5)*.4,z+(rnd()-.5)*.4,.7+rnd()*.5);else if(t<.33)LT.add(chama,mCh,mt(x,.2,z,0,0,0,.8+rnd()*.5));LT.elev=0}
     for(const [x,z,s] of M.pedras)rochaA(x,z,.55*s,.9+rnd()*.6);
     let nb=0;for(const [x,z,s] of M.cogumelos){if(dcam(x,z)>3.2&&nb<L/12&&rnd()<.5){braseiro(x,z);nb++}else cristal(x,z,.8*s+.2)}
     trechosDe(M).forEach(([x0,z0,x1,z1,d,ux,uz],k)=>{if(k%4!==1)return;const sd=k%8>3?1:-1;braseiro((x0+x1)/2-uz*2.35*sd,(z0+z1)/2+ux*2.35*sd)});
