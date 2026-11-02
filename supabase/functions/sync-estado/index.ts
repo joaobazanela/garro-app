@@ -215,7 +215,8 @@ async function handle(req: Request): Promise<Response> {
     if (body.action === "epic_round_start") return call("rpc_epic_round_start", { p_cost: EM.preco, p_grip: EM.segurar }, "epic_round_rejected");
     // o épico do dia (igual para todos, como o lendário do dia)
     const ep = EPS[Math.floor(Date.parse(hojeBR() + "T00:00:00Z") / 864e5) % EPS.length].id;
-    return call("rpc_epic_capture", { p_birth_lv: L.chocar?.nivel_ao_nascer ?? 30, p_epic: ep }, "epic_capture_rejected");
+    // o épico vem em OVO (migração 0015): vai para o Ninho e choca como o dos lendários
+    return call("rpc_epic_capture", { p_epic: ep, p_min: L.chocar?.dias_min ?? 7, p_max: L.chocar?.dias_max ?? 90 }, "epic_capture_rejected");
   }
 
   if (body.action === "egg_round_start" || body.action === "egg_capture" || body.action === "egg_buy" || body.action === "egg_care") {
