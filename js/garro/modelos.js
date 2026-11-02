@@ -241,11 +241,9 @@ function gloop(now){
   const br=Math.sin(t*2.2*sp)*.015,sy=1+br-G.crouch*.1;
   C.roll.scale.set(1+G.crouch*.05,sy,1+G.crouch*.03);
   C.roll.rotation.z=G.roll+shk+G.lean*(1-G.roll/Math.PI);C.roll.rotation.x=G.pitch;C.roll.rotation.y=G.byaw*(1-G.roll/Math.PI);
-  if(MODELS[V.cur]&&MODELS[V.cur].bol){C.roll.rotation.y=Math.max(-.3,Math.min(.3,C.roll.rotation.y));C.roll.rotation.x=Math.max(-.3,Math.min(.3,C.roll.rotation.x))}// bolinha: feita da arte de frente, não mostra as costas
   const desl=!!(MODELS[V.cur]&&MODELS[V.cur].desliza),hopY=act==='hop'&&!desl?Math.abs(Math.sin(ae*Math.PI*1.6))*.16*G.hop:0;// serpente desliza: sem pulinhos
   C.roll.position.y=C.h/2*sy+(st==='belly'?.04:0)+(desl?0:G.bob*Math.abs(Math.sin(t*7))*.05)+hopY+Math.abs(G.pitch)*C.h*.25+(C.wx?(C.wx/2-C.h/2*sy)*Math.max(0,Math.sin(Math.min(G.roll,Math.PI/2))):0)+(st==='tired'?Math.sin(t*2.4)*.008:0);
-  V.ry+=V.vy;V.vy*=.92;if(MODELS[V.cur]&&MODELS[V.cur].bol){const v0=vistaLeg(V.cur),d=V.ry-v0;if(Math.abs(d)>.5){V.ry=v0+Math.sign(d)*.5;V.vy=0}else V.ry-=d*.02}// bolinha: gira só um pouco e volta de frente
-  V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
+  V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
   if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
   else{C.root.position.x*=.8;C.root.position.z+=(-G.back-C.root.position.z)*.25;C.root.rotation.y*=.8}
   popTick(C);stage(t);

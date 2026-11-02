@@ -70,21 +70,20 @@ def webp_url(img, q=82):
 
 # ---------- 3D: silhueta inflada ----------
 def costas(img):
-    """costas: arte espelhada, com o rosto (olhos, nariz, boca) coberto pela cor do pelo em volta"""
+    """costas: a arte espelhada, mas cada coluna usa só o pelo de cima (acima dos olhos), esticado até perto dos pés;
+    assim não aparece rosto atrás e o padrão do pelo/espinhos continua o mesmo da frente"""
     a = np.asarray(img.transpose(Image.FLIP_LEFT_RIGHT)).astype(float); rgb, al = a[..., :3], a[..., 3]/255
-    H, W = al.shape; yy, xx = np.mgrid[0:H, 0:W]
-    ys = np.where(al.max(1) > .5)[0]; top, bot = ys.min(), ys.max()
-    cy = top+(bot-top)*.62; rosto = (((xx-W/2)/(W*.3))**2+((yy-cy)/((bot-top)*.24))**2) < 1
-    import cv2
-    # o rosto é coberto pelo pelo de cima (a mesma arte deslocada para baixo), e o que sobrar é preenchido (inpaint)
-    dy = int((bot-top)*.42); sh = np.roll(rgb, dy, axis=0); sha = np.roll(al, dy, axis=0)
-    ip = np.where((sha > .5)[..., None], sh, rgb)
-    falta = rosto & (sha <= .5) & (al > .3)
-    ip = cv2.inpaint(ip.clip(0, 255).astype(np.uint8), falta.astype(np.uint8)*255, 9, cv2.INPAINT_TELEA).astype(float)
-    t = ndi.gaussian_filter(rosto.astype(float), 3)[..., None]
-    rgb = rgb*(1-t)+ip*t
-    rgb = rgb*.86                                   # um pouco mais escuro atrás (luz vem da frente)
-    return Image.fromarray(np.dstack([rgb, al*255]).clip(0, 255).astype(np.uint8))
+    H, W = al.shape; m = al > .5
+    yy, xx = np.mgrid[0:H, 0:W].astype(float)
+    tem = m.any(0); ty = np.where(tem, m.argmax(0), 0).astype(float); by = np.where(tem, H-1-m[::-1].argmax(0), H-1).astype(float)
+    ty = ndi.uniform_filter1d(ty, 9); by = ndi.uniform_filter1d(by, 9)
+    alt = np.maximum(by-ty, 1)[None, :]; rel = np.clip((yy-ty[None, :])/alt, 0, 1)
+    src = rel*.42                                         # só a faixa de cima (testa, pelo, espinhos)
+    pe = np.clip((rel-.95)/.05, 0, 1); src = src*(1-pe)+rel*pe   # só a pontinha de baixo (pés) usa a própria arte
+    sy = ty[None, :]+src*alt
+    out = np.dstack([ndi.map_coordinates(rgb[..., k], [sy, xx], order=1, mode='nearest') for k in range(3)])
+    out = out*.9                                          # um pouco mais escuro atrás (luz vem da frente)
+    return Image.fromarray(np.dstack([out, al*255]).clip(0, 255).astype(np.uint8))
 
 def malha(img, prof=.5, passo=7):
     """frente e costas costuradas na borda exata da silhueta (contorno + triangulação de Delaunay)"""
@@ -101,6 +100,11 @@ def malha(img, prof=.5, passo=7):
         c = c-1; L = np.r_[0, np.cumsum(np.linalg.norm(np.diff(c, axis=0), axis=1))]
         if L[-1] < 12: continue
         t = np.arange(0, L[-1], 1.6); pts.append(np.c_[np.interp(t, L, c[:, 1]), np.interp(t, L, c[:, 0]), np.ones(len(t))])
+    for lv in (2., 4.5):                                          # anéis na parede lateral (mais vértices onde a profundidade muda rápido)
+        for c in measure.find_contours(d, lv):
+            L = np.r_[0, np.cumsum(np.linalg.norm(np.diff(c, axis=0), axis=1))]
+            if L[-1] < 20: continue
+            t = np.arange(0, L[-1], 2.4); pts.append(np.c_[np.interp(t, L, c[:, 1]), np.interp(t, L, c[:, 0]), np.zeros(len(t))])
     Q = np.vstack(pts); Q = np.unique(np.round(Q, 2), axis=0); borda = Q[:, 2] > 0; Q = Q[:, :2]
     tri = Delaunay(Q).simplices
     cen = Q[tri].mean(1); ok = m[np.clip(cen[:, 1].round().astype(int), 0, H-1), np.clip(cen[:, 0].round().astype(int), 0, W-1)]
@@ -108,13 +112,19 @@ def malha(img, prof=.5, passo=7):
     e = np.max([np.linalg.norm(Q[tri[:, i]]-Q[tri[:, (i+1) % 3]], axis=1) for i in range(3)], axis=0)
     tri = tri[ok & (e < passo*2.2)]
     used = np.unique(tri); rm = -np.ones(len(Q), int); rm[used] = np.arange(len(used)); Q = Q[used]; borda = borda[used]; tri = rm[tri]
-    zi = ndi.map_coordinates(z, [Q[:, 1], Q[:, 0]], order=1); zi[borda] = 0              # frente e costas se encontram na borda
     s = 1/H
+    zi = ndi.map_coordinates(z, [Q[:, 1], Q[:, 0]], order=1); zi[borda] = 0              # frente e costas se encontram na borda
     vf = np.c_[(Q[:, 0]-W/2)*s, (H-Q[:, 1])*s, zi*s]
-    # cor da borda: puxa a UV 3 px para dentro (a beira da arte tem contorno escuro e antisserrilhado)
-    _, (iy, ix) = ndi.distance_transform_edt(~ndi.binary_erosion(m, iterations=3), return_indices=True)
-    qi = np.clip(Q.round().astype(int), 0, [W-1, H-1]); perto = d[qi[:, 1], qi[:, 0]] < 3
-    Qu = Q.copy(); Qu[perto] = np.c_[ix[qi[perto, 1], qi[perto, 0]], iy[qi[perto, 1], qi[perto, 0]]]
+    # cor da borda e da lateral: perto da borda a UV entra na arte (a lateral mostra o pelo de dentro, não a beira esticada);
+    gy_, gx_ = np.gradient(ndi.gaussian_filter(d, 2)); gn = np.hypot(gx_, gy_)+1e-6
+    qi = np.clip(Q.round().astype(int), 0, [W-1, H-1]); dq = d[qi[:, 1], qi[:, 0]]
+    # na parede a UV "desenrola" para dentro conforme a profundidade (a lateral mostra o pelo, não uma faixa esticada)
+    alvo = np.maximum(dq+3, 3+.35*zi)                               # distância da borda (na arte) que cada vértice mostra
+    off = alvo-dq; dirv = np.c_[gx_[qi[:, 1], qi[:, 0]]/gn[qi[:, 1], qi[:, 0]], gy_[qi[:, 1], qi[:, 0]]/gn[qi[:, 1], qi[:, 0]]]
+    for _ in range(6):                                              # espinho fino: diminui o empurrão até ficar dentro da arte
+        Qu = np.clip(Q+dirv*off[:, None], 0, [W-1, H-1]); qu = Qu.round().astype(int)
+        fora = d[qu[:, 1], qu[:, 0]] < 2; off[fora] *= .5
+    Qu = np.clip(Q+dirv*off[:, None], 0, [W-1, H-1])
     uf = np.c_[Qu[:, 0]/W*.5, Qu[:, 1]/H]
     vb = vf.copy(); vb[:, 2] *= -.85; ub = uf.copy(); ub[:, 0] = 1-uf[:, 0]
     # a frente olha para +z: ordem dos vértices conforme a orientação
