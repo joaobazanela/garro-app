@@ -12,6 +12,7 @@ const LT=D.luta,EN=D.energia,STAT=PD.STAT,ELEM=PD.ELEM,ECOL=PD.ECOL,ELNAME=PD.EL
 const FASES=[];D.mundos.forEach(m=>m.fases.forEach(f=>FASES.push(Object.assign({mundo:m},f))));
 // lendários (js/lendarios.js, ids a partir de G.LEG0): contam como bichinhos grandes
 const LEG0=G.LEG0||43,NLEG=((GD.lendarios||{}).lendarios||[]).length,grande=i=>i<G.CH0||(NLEG>0&&i>=LEG0),redondo=i=>!grande(i);
+const DESLIZA=new Set(((GD.lendarios||{}).lendarios||[]).concat((GD.lendarios||{}).epicos||[]).filter(L=>L.anda==='desliza').map(L=>+L.id)),cobra=i=>DESLIZA.has(i);
 // Desafio Lendário: fase extra depois do chefão do mundo; o chefão é o lendário do dia (troca à meia-noite de Brasília, igual ao servidor)
 function legDoDia(){const h=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);return Math.floor(Date.parse(h+'T00:00:00Z')/864e5)%10}
 if(D.desafio&&D.desafio.mapa3d&&NLEG>=10){const f=Object.assign({mundo:D.mundos[0],desafio:true},D.desafio);Object.defineProperty(f,'chefe',{get:()=>[LEG0+legDoDia(),D.desafio.nivel],enumerable:true});
@@ -201,7 +202,8 @@ function luta(){TELA='luta';msg('');const R=RUN,f=R.f,h=R.hero;$('advTitle').tex
   controles();folhas();iniciar3D().catch(e=>{console.warn('aventura 3d',e);aviso('Não deu para carregar a fase. Volte e tente de novo.',6000)})}
 
 // ---- pernas andando no próprio modelo 3D (passo diagonal, a pata de apoio fica no chão) ----
-function prepAndar(g,mini){const T=G.THREE(),inv=new T.Matrix4(),v=new T.Vector3();g.updateMatrixWorld(true);inv.copy(g.matrixWorld).invert();
+// cobra=true (data/lendarios.json → anda: "desliza", ex.: Astrakai): o corpo todo ondula de lado e desliza, sem passos
+function prepAndar(g,mini,cobra){const T=G.THREE(),inv=new T.Matrix4(),v=new T.Vector3();g.updateMatrixWorld(true);inv.copy(g.matrixWorld).invert();
   const ms=[],mn=new T.Vector3(1e9,1e9,1e9),mx=new T.Vector3(-1e9,-1e9,-1e9),low=[];
   g.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const M=new T.Matrix4().multiplyMatrices(inv,o.matrixWorld),p=o.geometry.attributes.position;
     let lo=1e9;const st=Math.max(1,Math.floor(p.count/3000)),pts=[];for(let k=0;k<p.count;k+=st){v.fromBufferAttribute(p,k).applyMatrix4(M);mn.min(v);mx.max(v);if(v.y<lo)lo=v.y;pts.push(v.x,v.y,v.z)}
@@ -210,6 +212,14 @@ function prepAndar(g,mini){const T=G.THREE(),inv=new T.Matrix4(),v=new T.Vector3
   for(const m of ms)for(let k=0;k<m.pts.length;k+=3)if(m.pts[k+1]<mn.y+H*.12){sx+=m.pts[k];n++;zs.push(m.pts[k+2])}
   zs.sort((a,b)=>a-b);const zm=zs.length?zs[zs.length>>1]:(mn.z+mx.z)/2,av=a=>a.reduce((s,x)=>s+x,0)/Math.max(1,a.length);
   const U={uPh:{value:0},uAmp:{value:0},uHip:{value:hip},uMin:{value:mn.y},uXm:{value:n?sx/n:0},uZm:{value:zm},uDx:{value:(mx.x-mn.x)*.08},uDz:{value:(mx.z-mn.z)*.06},uH:{value:H}};
+  if(cobra){U.uK={value:6.283*1.2/Math.max(.2,mx.z-mn.z,mx.x-mn.x)};
+    for(const m of ms){const mat=m.o.material.clone(),M2=m.M.clone(),G2=m.M.clone().invert();
+      mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U,{uM2G:{value:M2},uG2M:{value:G2}});
+        sh.vertexShader='uniform float uPh,uAmp,uMin,uH,uK;uniform mat4 uM2G,uG2M;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+          {vec3 gp=(uM2G*vec4(transformed,1.)).xyz;float h=clamp((gp.y-uMin)/uH,0.,1.),a=.25+uAmp/.45*.75,w=gp.z*uK-uPh*2.2+h*1.8;
+            gp.x+=sin(w)*uH*.075*a*(.3+.7*h);gp.z+=cos(w)*uH*.012*a;gp.y+=sin(w*.5+uPh)*uH*.01*a*h;transformed=(uG2M*vec4(gp,1.)).xyz;}`)};
+      mat.customProgramCacheKey=()=>'andar3d_cobra';m.o.material=mat}
+    return U}
   for(const m of ms){if(m.lo>mn.y+H*.1)continue;const mat=m.o.material.clone(),M2=m.M.clone(),G2=m.M.clone().invert();
     mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U,{uM2G:{value:M2},uG2M:{value:G2}});
       sh.vertexShader='uniform float uPh,uAmp,uHip,uMin,uXm,uZm,uDx,uDz,uH;uniform mat4 uM2G,uG2M;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
@@ -409,7 +419,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
   const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1);hg.scale.setScalar(Hs);
-  const hU=prepAndar(hg,redondo(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
+  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
   R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);
   R.minMobs=((M.acampamentos[0]&&M.acampamentos[0].inimigos.length)||0)+5;// portal só abre depois de matar pelo menos os bichinhos do acampamento inicial (+5)
@@ -422,7 +432,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
 async function novoInimigo(j,lv,x,z,camp,chefe,tipo){const R=RUN,T=G.THREE(),L_=lutador(j,lv,{chefe}),Tp=(tipo&&TP[tipo])||{};const k=(chefe?(AR.chefe_vida||1.6):(AR.inimigo_vida||.45))*(Tp.vida||1);L_.hp=L_.max=Math.max(10,Math.round(L_.hp*k));
   if(Tp.dano)L_.atk*=Tp.dano;const esc=Tp.escudo?Math.round(L_.max*Tp.escudo):0;
   const g=await G.modelo(j,chefe),s=(chefe?(AR.tam_chefe||3):redondo(j)?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
-  const U=prepAndar(g,redondo(j)),root=new T.Group();root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
+  const U=prepAndar(g,redondo(j),cobra(j)),root=new T.Group();root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
   const bar=document.createElement('div');bar.className='advebar'+(chefe?' chefe':'')+(tipo?' '+tipo:'');bar.innerHTML='<small class="'+corNv(lv,R.hero.lv)+'">'+(Tp.icone?Tp.icone+' ':'')+'Nv '+lv+'</small>'+(esc?'<i class="esc"><b></b></i>':'')+'<i><b></b></i>';bar.hidden=true;$('advFx').appendChild(bar);
   if(tipo==='elite'){const a=new T.Mesh(new T.RingGeometry(.55*s,.68*s,32),new T.MeshBasicMaterial({color:'#7ad0ff',transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide}));a.rotation.x=-Math.PI/2;a.position.y=.04;root.add(a)}
   if(tipo==='curandeiro'){const a=sprEmoji('💚',.45);a.position.y=1.55*s;root.add(a)}
@@ -483,7 +493,7 @@ function fisica(dt){const R=RUN,p=R.p,w=R.w;R.t+=dt;if(!p)return;
   else if(jm>.12&&p.raiz<=0){const sp=(AR.velocidade||4.6)*jm;vx=-jx/jm*sp;vz=-jy/jm*sp}
   p.raiz=Math.max(0,p.raiz-dt);
   if(vx||vz){mover(p,vx*dt,vz*dt);if(p.dash<=0)p.ang=Math.atan2(vx,vz);p.U.uPh.value+=Math.hypot(vx,vz)*dt*2.4;p.U.uAmp.value=Math.min(.45,p.U.uAmp.value+dt*3)}
-  else p.U.uAmp.value=Math.max(0,p.U.uAmp.value-dt*3);
+  else{p.U.uAmp.value=Math.max(0,p.U.uAmp.value-dt*3);if(p.U.uK)p.U.uPh.value+=dt*.7}
   // habilidades
   if(TEC.Ap||(TEC.A&&p.cd.A<=0)){TEC.Ap=false;if(p.cd.A<=0)ataque()}
   if(TEC.Pp){TEC.Pp=false;if(p.cd.P<=0)poder()}
@@ -573,7 +583,7 @@ function iaInimigo(e,dt){const R=RUN,p=R.p,w=R.w;
   else{e.t-=dt;if(e.t<=0){e.t=2+Math.random()*3;e.vag=Math.random()<.5?null:[e.cx+(Math.random()-.5)*3,e.cz+(Math.random()-.5)*3]}
     if(e.vag){const dx=e.vag[0]-e.x,dz=e.vag[1]-e.z,dd=Math.hypot(dx,dz);if(dd>.2){vx=dx/dd*vel*.4;vz=dz/dd*vel*.4;e.ang=Math.atan2(dx,dz)}}}
   if(vx||vz){mover(e,vx*dt,vz*dt);e.U.uPh.value+=Math.hypot(vx,vz)*dt*2.4/(e.chefe?2:1);e.U.uAmp.value=Math.min(.45,e.U.uAmp.value+dt*3);if(e.estado!=='caca')e.ang=Math.atan2(vx,vz)}
-  else e.U.uAmp.value=Math.max(0,e.U.uAmp.value-dt*3)}
+  else{e.U.uAmp.value=Math.max(0,e.U.uAmp.value-dt*3);if(e.U.uK)e.U.uPh.value+=dt*.7}}
 function golpeDele(e){const R=RUN,p=R.p,d=dist(e,p),k=DF('contato',1);
   if(e.pancada){const P=e.pancada;if(d<P.r+p.r&&p.inv<=0)machuca(Math.round(dano(e,R.hero,P.m).d*k),p.x-e.x,p.z-e.z);faisca(e.x,.3,e.z,'#ffb070',e.chefe?16:10);if(R.r3)R.tremor=e.chefe?.35:.2;return}
   e.lunge=.2;if(d<e.r+p.r+.9&&p.inv<=0)machuca(Math.round(dano(e,R.hero,1).d*k),p.x-e.x,p.z-e.z)}

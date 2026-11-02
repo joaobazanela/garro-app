@@ -95,7 +95,7 @@ const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
 // lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
 for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
   MODELS[L.id]={file:L.modelo,skin:null,evoM:1,noDeform:1,wing:null,notail:false,hc:[0,.62,.3],hr:.16,hp:[0,.5,.2],tz:-.3,tp:[0,.3,-.3],spd:.8,wag:.25,
-    glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null,vista:L.vista??-.62};NOEXTRA.add(L.id)}
+    glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null,vista:L.vista??-.62,desliza:L.anda==='desliza'};NOEXTRA.add(L.id)}
 // ângulo em que o lendário aparece no visualizador (data/lendarios.json → vista; os da folha nova olham para outro lado)
 const vistaLeg=i=>(MODELS[i]&&MODELS[i].vista)??-.62;
 const EVT={};
@@ -236,8 +236,8 @@ function gloop(now){
   const br=Math.sin(t*2.2*sp)*.015,sy=1+br-G.crouch*.1;
   C.roll.scale.set(1+G.crouch*.05,sy,1+G.crouch*.03);
   C.roll.rotation.z=G.roll+shk+G.lean*(1-G.roll/Math.PI);C.roll.rotation.x=G.pitch;C.roll.rotation.y=G.byaw*(1-G.roll/Math.PI);
-  const hopY=act==='hop'?Math.abs(Math.sin(ae*Math.PI*1.6))*.16*G.hop:0;
-  C.roll.position.y=C.h/2*sy+(st==='belly'?.04:0)+G.bob*Math.abs(Math.sin(t*7))*.05+hopY+Math.abs(G.pitch)*C.h*.25+(C.wx?(C.wx/2-C.h/2*sy)*Math.max(0,Math.sin(Math.min(G.roll,Math.PI/2))):0)+(st==='tired'?Math.sin(t*2.4)*.008:0);
+  const desl=!!(MODELS[V.cur]&&MODELS[V.cur].desliza),hopY=act==='hop'&&!desl?Math.abs(Math.sin(ae*Math.PI*1.6))*.16*G.hop:0;// serpente desliza: sem pulinhos
+  C.roll.position.y=C.h/2*sy+(st==='belly'?.04:0)+(desl?0:G.bob*Math.abs(Math.sin(t*7))*.05)+hopY+Math.abs(G.pitch)*C.h*.25+(C.wx?(C.wx/2-C.h/2*sy)*Math.max(0,Math.sin(Math.min(G.roll,Math.PI/2))):0)+(st==='tired'?Math.sin(t*2.4)*.008:0);
   V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
   if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
   else{C.root.position.x*=.8;C.root.position.z+=(-G.back-C.root.position.z)*.25;C.root.rotation.y*=.8}

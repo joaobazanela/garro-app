@@ -522,6 +522,7 @@
   {
    "id": 52,
    "slug": "astrakai",
+   "anda": "desliza",
    "nome": "Astrakai",
    "elemento": "stars",
    "stat": [114,106],
