@@ -3094,7 +3094,7 @@
    "elemento": "sand",
    "tema": {
     "decor": "aquatico",
-    "cenario2": {"estilo":"mar","chao_tile":7,"rocha":"#9aaabb","musgo":"#6aa060","causticas":"#a8f2ff","voadores":0,"halo":0.5,"chao_cor":"#93c6c8","_nota":"Peças 3D do js/mundos3d.js inspiradas na referência do Mundo Aquático: rochas com musgo, corais, algas, conchas com pérola, estrelas-do-mar, baús, ruínas, cáusticas, fachos de luz, peixes e águas-vivas."},
+    "cenario2": {"estilo":"mar","chao_tile":7,"rocha":"#9aaabb","musgo":"#6aa060","causticas":"#a8f2ff","voadores":0,"halo":0.5,"chao_cor":"#93c6c8","parede_raio":0.85,"_nota":"Peças 3D do js/mundos3d.js inspiradas na referência do Mundo Aquático: rochas com musgo, corais, algas, conchas com pérola, estrelas-do-mar, baús, ruínas, cáusticas, fachos de luz, peixes e águas-vivas."},
     "luz": {"hemi":["#bdf0ff","#2a5a7a",0.9],"sol":["#d8f8ff",0.85],"neblina":[16,40],"ceu":"#0c5a8a","cor":"#1a7aae"},
      "cenario3d": {"arvores": ["models/cenario/coral_rosa.glb", "models/cenario/coral_roxo.glb"], "arvore_tamanho": 2.3, "cogumelos": "models/cenario/concha.glb", "cogumelo_tamanho": 1.5, "portal": "models/cenario/dio_mar.glb", "portal_tamanho": 12, "portal_centro": [-0.012, 0.265, -0.08], "veu": [0.06, 0.076], "portal_obs": [[0.11, 0, 0.035], [-0.11, 0, 0.035], [0.2, 0, 0.05], [-0.2, 0, 0.05]]},
     "texturas": {"chao":{"map":"img/tex/mar/chao2_cor.jpg","normalMap":"img/tex/mar/chao2_normal.jpg"},"coral":{"map":"img/tex/mar/coral_cor.jpg","normalMap":"img/tex/mar/coral_normal.jpg","roughnessMap":"img/tex/mar/coral_rug.jpg"},"alga":{"map":"img/tex/mar/alga_cor.jpg","normalMap":"img/tex/mar/alga_normal.jpg","roughnessMap":"img/tex/mar/alga_rug.jpg"},"madeira":{"map":"img/tex/mar/madeira_cor.jpg","normalMap":"img/tex/mar/madeira_normal.jpg","roughnessMap":"img/tex/mar/madeira_rug.jpg"}},
@@ -5526,7 +5526,7 @@
    "elemento": "stone",
    "tema": {
     "decor": "caverna",
-    "cenario2": {"estilo":"caverna","chao_tile":9,"chao_brilho":0.7,"rocha":"#a08ea0","musgo":"#7a8a6a","voadores":0,"halo":0.6,"chao_cor":"#a89cb0","_nota":"Referência da Caverna: rochas roxas, estalagmites, cristais roxos/azuis/rosa, cogumelos que brilham, poças de água azul, lanternas e baús."},
+    "cenario2": {"estilo":"caverna","chao_tile":9,"chao_brilho":0.7,"rocha":"#a08ea0","musgo":"#7a8a6a","voadores":0,"halo":0.6,"chao_cor":"#a89cb0","parede_raio":0.85,"_nota":"Referência da Caverna: rochas roxas, estalagmites, cristais roxos/azuis/rosa, cogumelos que brilham, poças de água azul, lanternas e baús."},
     "luz": {"hemi":["#b89aff","#2a1a3a",0.95],"sol":["#d8c0ff",0.6],"neblina":[12,32],"ceu":"#140e22","cor":"#1e1430"},
     "texturas": {"chao":{"map":"img/tex/montanha/chao2_cor.jpg","normalMap":"img/tex/montanha/chao2_normal.jpg","emissiveMap":"img/tex/montanha/chao2_emis.jpg"},"cristal":{"map":"img/tex/montanha/cristal_cor.jpg","normalMap":"img/tex/montanha/cristal_normal.jpg","roughnessMap":"img/tex/montanha/cristal_rug.jpg","emissiveMap":"img/tex/montanha/cristal_emissivo.jpg"},"casca":{"map":"img/tex/montanha/casca_cor.jpg","normalMap":"img/tex/montanha/casca_normal.jpg","roughnessMap":"img/tex/montanha/casca_rug.jpg"}},
     "cenario3d": {"portal": "models/cenario/dio_caverna.glb", "portal_tamanho": 16, "portal_centro": [-0.115, 0.1, -0.135], "veu": [0.05, 0.055], "portal_obs": [[0.08, 0, 0.03], [-0.08, 0, 0.03], [0.16, 0, 0.04], [-0.16, 0, 0.04]], "arvores": ["models/cenario/pedras.glb", "models/cenario/cogumelo_rosa.glb"], "arvore_tamanho": 2.4, "cogumelos": "models/cenario/barril.glb", "cogumelo_tamanho": 1.1, "lanterna": "models/cenario/lanterna.glb"},
@@ -8123,7 +8123,7 @@
    "elemento": "shadow",
    "tema": {
     "decor": "trevas",
-    "cenario2": {"estilo":"trevas","chao_tile":6,"chao_brilho":0.5,"rocha":"#6a6478","chama":"#b46aff","voadores":0,"halo":0.6,"_nota":"Referência das Trevas: muros de pedra em ruínas, árvores secas, cristais roxos, braseiros de fogo roxo, capim roxo e névoa."},
+    "cenario2": {"estilo":"trevas","chao_tile":6,"chao_brilho":0.5,"rocha":"#6a6478","chama":"#b46aff","voadores":0,"halo":0.6,"parede_raio":0.62,"_nota":"Referência das Trevas: muros de pedra em ruínas, árvores secas, cristais roxos, braseiros de fogo roxo, capim roxo e névoa."},
     "luz": {"hemi":["#a898d0","#1a1028",0.8],"sol":["#b8a8e0",0.35],"neblina":[11,30],"ceu":"#120c1e","cor":"#241838"},
     "texturas": {"chao":{"map":"img/tex/trevas/chao2_cor.jpg","normalMap":"img/tex/trevas/chao2_normal.jpg","emissiveMap":"img/tex/trevas/chao2_emis.jpg"},"cristal":{"map":"img/tex/trevas/cristal_cor.jpg","normalMap":"img/tex/trevas/cristal_normal.jpg","roughnessMap":"img/tex/trevas/cristal_rug.jpg","emissiveMap":"img/tex/trevas/cristal_emissivo.jpg"},"casca":{"map":"img/tex/trevas/casca_cor.jpg","normalMap":"img/tex/trevas/casca_normal.jpg","roughnessMap":"img/tex/trevas/casca_rug.jpg"},"pedra":{"map":"img/tex/trevas/pedra_cor.jpg","normalMap":"img/tex/trevas/pedra_normal.jpg","roughnessMap":"img/tex/trevas/pedra_rug.jpg"}},
      "escuro": true,
@@ -10728,7 +10728,7 @@
    "elemento": "embers",
    "tema": {
     "decor": "fogo",
-    "cenario2": {"estilo":"fogo","chao_tile":7,"chao_brilho":0.6,"voadores":0,"halo":0.55,"_nota":"Referência do Fogo: lajes de basalto com lava nas rachaduras, rochas pontudas com veios de lava, cristais laranja, braseiros, poças de lava e brasas subindo."},
+    "cenario2": {"estilo":"fogo","chao_tile":7,"chao_brilho":0.6,"voadores":0,"halo":0.55,"parede_raio":0.85,"_nota":"Referência do Fogo: lajes de basalto com lava nas rachaduras, rochas pontudas com veios de lava, cristais laranja, braseiros, poças de lava e brasas subindo."},
     "luz": {"hemi":["#ffb090","#3a1208",0.75],"sol":["#ffb070",0.7],"neblina":[14,36],"ceu":"#2a0a04","cor":"#4a1408"},
     "texturas": {"chao":{"map":"img/tex/fogo/chao2_cor.jpg","normalMap":"img/tex/fogo/chao2_normal.jpg","emissiveMap":"img/tex/fogo/chao2_emis.jpg"},"magma":{"map":"img/tex/fogo/lava_cor.jpg","normalMap":"img/tex/fogo/lava_normal.jpg","emissiveMap":"img/tex/fogo/lava_emis.jpg"},"cristal":{"map":"img/tex/fogo/cristal_cor.jpg","normalMap":"img/tex/fogo/cristal_normal.jpg","roughnessMap":"img/tex/fogo/cristal_rug.jpg","emissiveMap":"img/tex/fogo/cristal_emissivo.jpg"},"pedra":{"map":"img/tex/fogo/pedra_cor.jpg","normalMap":"img/tex/fogo/pedra_normal.jpg","roughnessMap":"img/tex/fogo/pedra_rug.jpg"}},
      "cenario3d": {"portal": "models/cenario/dio_fogo.glb", "portal_tamanho": 13, "portal_centro": [-0.13, 0.265, -0.37], "veu": [0.065, 0.072], "portal_obs": [[0.11, 0, 0.035], [-0.11, 0, 0.035], [0.2, 0, 0.05], [-0.2, 0, 0.05]], "arvores": ["models/cenario/pedras.glb"], "arvore_tamanho": 2.3},
@@ -13420,7 +13420,7 @@
    "elemento": "gold",
    "tema": {
     "decor": "luz",
-    "cenario2": {"estilo":"luz","chao_tile":7,"chao_brilho":0.2,"chao_rug":0.35,"voadores":0,"halo":0.5,"chao_cor":"#e4ded2","_nota":"Referência da Luz: piso de mármore com rejunte e rosáceas douradas, balaustradas, colunas com capitel dourado, floreiras de lírios, luminárias de cristal, nuvens e fachos de luz."},
+    "cenario2": {"estilo":"luz","chao_tile":7,"chao_brilho":0.2,"chao_rug":0.35,"voadores":0,"halo":0.5,"chao_cor":"#e4ded2","parede_raio":0.55,"_nota":"Referência da Luz: piso de mármore com rejunte e rosáceas douradas, balaustradas, colunas com capitel dourado, floreiras de lírios, luminárias de cristal, nuvens e fachos de luz."},
     "luz": {"hemi":["#ffffff","#d8ccb0",0.78],"sol":["#fff2d0",0.72],"neblina":[20,48],"ceu":"#dce8f6","cor":"#f2efe8"},
      "cenario3d": {"portal": "models/cenario/dio_luz.glb", "portal_tamanho": 11, "portal_centro": [0.17, 0.255, -0.354], "veu": [0.075, 0.085], "portal_obs": [[0.12, 0, 0.04], [-0.12, 0, 0.04], [0.22, 0, 0.05], [-0.22, 0, 0.05]]},
     "texturas": {"chao":{"map":"img/tex/luz/chao2_cor.jpg","normalMap":"img/tex/luz/chao2_normal.jpg","emissiveMap":"img/tex/luz/chao2_emis.jpg"},"marmore":{"map":"img/tex/luz/marmore_cor.jpg","normalMap":"img/tex/luz/marmore_normal.jpg","roughnessMap":"img/tex/luz/marmore_rug.jpg"},"cristal":{"map":"img/tex/luz/cristal_cor.jpg","normalMap":"img/tex/luz/cristal_normal.jpg","roughnessMap":"img/tex/luz/cristal_rug.jpg","emissiveMap":"img/tex/luz/cristal_emissivo.jpg"}},

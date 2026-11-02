@@ -46,7 +46,7 @@ function liberada(k){const f=FASES[k];if(G.dev())return true;// administradores 
   if(f.desafio)return !!box().prog[f.depois_de];let j=k-1;while(j>=0&&FASES[j].desafio)j--;return j<0||!!box().prog[FASES[j].id]}
 // nível do bichinho nesta partida: o real, ou (só admin, para testar) o recomendado da fase ou 100
 let ADMLV=0;const admLv=(i,f)=>G.dev()&&ADMLV?(ADMLV==='rec'?recomendado(f):ADMLV):G.lvOf(i);
-const numDe=k=>FASES.slice(0,k).filter(x=>!x.desafio).length+1;// número da fase (o Desafio não conta)
+const numDe=k=>FASES.slice(0,k).filter(x=>!x.desafio&&x.mundo===FASES[k].mundo).length+1;// número da fase dentro do mundo (o Desafio não conta)
 const temaDe=f=>(f&&f.mundo&&f.mundo.tema)||null;
 function energia(i){if(G.dev())return{e:EN.max,s:Date.now(),falta:0};const r=box().en[i];if(!r)return{e:EN.max,s:Date.now(),falta:0};let e=r.e,s=r.s;const step=EN.recarga_min*6e4;
   if(e<EN.max){const n=Math.floor((Date.now()-s)/step);if(n>0){e=Math.min(EN.max,e+n);s=e>=EN.max?Date.now():s+n*step}}
@@ -75,26 +75,41 @@ $('mach3').addEventListener('click',abrir);
 $('advBack').addEventListener('click',()=>{if(TELA==='mapa')fechar();else if(TELA==='escolha')mapa();else desistir()});
 
 function estrelas(n){return '★'.repeat(n)+'☆'.repeat(3-n)}
-// mapa: caminho de baixo (fase 1) para cima (chefe)
-const XS=[50,74,30,66,26,70,34,72,30,50];
+// mapa: um MAPA-MÚNDI no alto (ilhas dos mundos) e, embaixo, uma JANELA por mundo que passa para o lado
+// (cada janela tem o nome do mundo e as fases dele). Visual de cada mundo: data/aventura.json → mundos[].tema.mapa
+const MAPA0={floresta:{ic:'🌳',c:['#1f5a2c','#0e2a16'],x:16,y:62},mar:{ic:'🌊',c:['#1a6a9a','#0a2a4a'],x:38,y:78},montanha:{ic:'💎',c:['#5a3a7a','#1c1028'],x:50,y:36},
+  trevas:{ic:'🌑',c:['#3a2a5a','#120a1e'],x:84,y:26},fogo:{ic:'🌋',c:['#9a3a12','#2a0a04'],x:80,y:72},luz:{ic:'☀️',c:['#e8d8a0','#8a7a50'],x:24,y:30}};
+let JAN=-1;
+const vMundo=m=>Object.assign({ic:'⭐',c:['#2a4a3a','#0e1a14'],x:50,y:50},MAPA0[m.id]||{},(m.tema&&m.tema.mapa)||{});
+// posições das fases dentro da janela: "cobrinha" de 3 colunas, de cima para baixo
+const PJ=k=>{const r=Math.floor(k/3),c=k%3;return{x:[18,50,82][r%2?2-c:c],y:62+r*112}};
 function mapa(){limpa3D();TELA='mapa';RUN=null;moedas();$('advTitle').textContent='Aventura';
-  const n=FASES.length,H=n*104+150,pos=FASES.map((f,k)=>({x:XS[k%XS.length],y:H-80-k*104}));
-  let d='M'+pos[0].x+' '+pos[0].y;for(let k=1;k<n;k++){const a=pos[k-1],b=pos[k],my=(a.y+b.y)/2;d+=' C'+a.x+' '+my+' '+b.x+' '+my+' '+b.x+' '+b.y}
-  let h='<div class="advmap" style="height:'+H+'px"><svg viewBox="0 0 100 '+H+'" preserveAspectRatio="none"><path d="'+d+'" class="trilha"/><path d="'+d+'" class="trilha2"/></svg>';
-  // enfeites do mapa: cada mundo tem os seus (data/aventura.json → mundos[].tema.deco)
-  const deco0=['🌲','🌳','🍄','🌿','🌸','🌲','🌳','🪨'];
-  for(let k=0;k<26+n;k++){const x=(k*37+11)%92+2,y=(k*131+40)%(H-40),kk=Math.max(0,Math.min(n-1,Math.round((H-80-y)/104))),dc=(temaDe(FASES[kk])||{}).deco||deco0;h+='<span class="advdeco" style="left:'+x+'%;top:'+y+'px">'+dc[k%dc.length]+'</span>'}
-  // faixa com o nome de cada mundo, na 1ª fase dele
-  D.mundos.forEach(m=>{const k=FASES.findIndex(f=>f.mundo===m&&!f.desafio);if(k<0)return;const ok=liberada(k);h+='<div class="advmundo'+(ok?'':' bloq')+'" style="top:'+(pos[k].y+50)+'px"'+(m.tema?'':'')+'>'+(ok?'':'🔒 ')+m.nome+'</div>'});
-  let cur=FASES.findIndex((f,k)=>liberada(k)&&!box().prog[f.id]);if(cur<0)cur=n;
-  FASES.forEach((f,k)=>{const ok=liberada(k),st=box().prog[f.id]||0,cls=st?'feita':ok?'atual':'bloq';
-    h+='<button type="button" class="advnode '+cls+(f.chefe?' chefe':'')+(f.desafio?' lenda':'')+'" data-k="'+k+'" style="left:'+pos[k].x+'%;top:'+pos[k].y+'px"'+(ok?'':' disabled')+'>'+
-      (f.chefe?'<img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt="">':'<b>'+numDe(k)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(f.desafio?'':st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>';
-    if(k===cur||f.desafio)h+='<div class="advlabel'+(f.desafio?' lenda':'')+'" style="left:'+pos[k].x+'%;top:'+(pos[k].y+(f.desafio?-84:40))+'px">'+(f.desafio?'👑 ':'')+f.nome+'</div>'});
-  h+='</div>'+(G.dev()?'<p class="advnote">🛠 Modo teste (admin): todas as fases liberadas, sem cansaço e sem nível mínimo.</p>':'')+'<p class="advnote">Jogar não custa nada. Cada fase cansa um pouco o bichinho (⚡). Vencer pela 1ª vez dá moedas.</p>';
-  $('advBody').innerHTML=h;
-  const alvo=$('advBody').querySelector('.advnode.atual')||$('advBody').querySelector('.advnode.feita:last-of-type');
-  if(alvo)setTimeout(()=>alvo.scrollIntoView({block:'center'}),30)}
+  const pr=box().prog;let cur=FASES.findIndex((f,k)=>liberada(k)&&!pr[f.id]);if(cur<0)cur=FASES.length-1;
+  const MS=D.mundos.map((m,mi)=>{const ks=FASES.map((f,k)=>k).filter(k=>FASES[k].mundo===m),pri=ks.find(k=>!FASES[k].desafio),ok=pri!==undefined&&liberada(pri),
+    est=ks.reduce((a,k)=>a+(FASES[k].desafio?0:pr[FASES[k].id]||0),0),tot=ks.filter(k=>!FASES[k].desafio).length*3;return{m,mi,ks,ok,est,tot,v:vMundo(m)}});
+  if(JAN<0||JAN>=MS.length){JAN=Math.max(0,MS.findIndex(o=>o.ks.includes(cur)))}
+  // mapa-múndi
+  let h='<div class="advmundi" role="tablist" aria-label="Mapa-múndi">';
+  MS.forEach(o=>{h+='<button type="button" class="advilha'+(o.ok?'':' bloq')+(o.mi===JAN?' on':'')+'" data-m="'+o.mi+'" style="left:'+o.v.x+'%;top:'+o.v.y+'%;--c1:'+o.v.c[0]+';--c2:'+o.v.c[1]+'" aria-label="'+o.m.nome+'">'+
+    '<span>'+(o.ok?o.v.ic:'🔒')+'</span><b>'+o.m.nome+'</b>'+(o.ok?'<i>★ '+o.est+'/'+o.tot+'</i>':'')+'</button>'});
+  h+='</div><div class="advjnav"><button type="button" data-nav="-1" aria-label="Mundo anterior">‹</button><div class="advdots">'+MS.map(o=>'<i data-m="'+o.mi+'"'+(o.mi===JAN?' class="on"':'')+'></i>').join('')+'</div><button type="button" data-nav="1" aria-label="Próximo mundo">›</button></div>';
+  // janelas
+  h+='<div class="advjanelas" id="advJan">';
+  MS.forEach(o=>{const n=o.ks.length,H=PJ(n-1).y+90,dc=(o.m.tema&&o.m.tema.deco)||['🌲','🌳','🍄','🌿','🌸','🪨'];
+    h+='<section class="advjan'+(o.ok?'':' bloq')+'" data-m="'+o.mi+'" style="--c1:'+o.v.c[0]+';--c2:'+o.v.c[1]+'"><header><small>Mundo '+(o.mi+1)+'</small><h4>'+(o.ok?o.v.ic+' ':'🔒 ')+o.m.nome+'</h4><span>★ '+o.est+'/'+o.tot+'</span></header>';
+    let pts='';o.ks.forEach((k,q)=>{const P=PJ(q);pts+=(q?' L':'M')+P.x+' '+P.y});
+    h+='<div class="advjmap" style="height:'+H+'px"><svg viewBox="0 0 100 '+H+'" preserveAspectRatio="none"><path d="'+pts+'" class="trilha"/><path d="'+pts+'" class="trilha2"/></svg>';
+    for(let q=0;q<10;q++)h+='<span class="advdeco" style="left:'+((q*37+9)%90+5)+'%;top:'+((q*71+30)%(H-30))+'px">'+dc[q%dc.length]+'</span>';
+    o.ks.forEach((k,q)=>{const f=FASES[k],P=PJ(q),ok=liberada(k),st=pr[f.id]||0,cls=st?'feita':ok?'atual':'bloq';
+      h+='<button type="button" class="advnode '+cls+(f.chefe?' chefe':'')+(f.desafio?' lenda':'')+'" data-k="'+k+'" style="left:'+P.x+'%;top:'+P.y+'px"'+(ok?'':' disabled')+'>'+
+        (f.chefe?'<img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt="">':'<b>'+numDe(k)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(f.desafio?'👑 '+f.nome:st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>'});
+    h+='</div>'+(o.ok?'':'<p class="advjbloq">Vença o chefão do mundo anterior para abrir.</p>')+'</section>'});
+  h+='</div>'+(G.dev()?'<p class="advnote">🛠 Modo teste (admin): todas as fases liberadas, sem cansaço e sem nível mínimo.</p>':'')+'<p class="advnote">Arraste para o lado ou toque numa ilha do mapa para trocar de mundo. Cada fase cansa um pouco o bichinho (⚡).</p>';
+  $('advBody').innerHTML=h;$('advBody').scrollTop=0;
+  const J=$('advJan');J.scrollLeft=JAN*J.clientWidth;
+  let tq=0;J.addEventListener('scroll',()=>{clearTimeout(tq);tq=setTimeout(()=>{const k=Math.round(J.scrollLeft/Math.max(1,J.clientWidth));if(k!==JAN){JAN=k;marcaJan()}},60)},{passive:true})}
+function marcaJan(){document.querySelectorAll('.advilha').forEach(b=>b.classList.toggle('on',+b.dataset.m===JAN));document.querySelectorAll('.advdots i').forEach(b=>b.classList.toggle('on',+b.dataset.m===JAN))}
+function irJan(k){const J=$('advJan');if(!J)return;JAN=Math.max(0,Math.min(D.mundos.length-1,k));J.scrollLeft=JAN*J.clientWidth;marcaJan()}
 
 // escolher o bichinho
 function pips(e){let s='';for(let k=0;k<EN.max;k++)s+='<i class="'+(k<e?'on':'')+'"></i>';return '<span class="advpips">'+s+'</span>'}
@@ -116,6 +131,8 @@ function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('a
   const rs=$('advRest');if(rs)rs.addEventListener('click',()=>descansar(SEL))}
 $('advBody').addEventListener('click',e=>{
   const n=e.target.closest('.advnode');if(n&&TELA==='mapa'){G.click(700);msg('');escolha(+n.dataset.k);return}
+  const il=e.target.closest('.advilha,.advdots i');if(il&&TELA==='mapa'){G.click(680);irJan(+il.dataset.m);return}
+  const nv=e.target.closest('[data-nav]');if(nv&&TELA==='mapa'){G.click(680);irJan(JAN+(+nv.dataset.nav));return}
   const dv=e.target.closest('.advdev button');if(dv&&TELA==='escolha'){ADMLV=dv.dataset.lv==='0'?0:dv.dataset.lv==='rec'?'rec':+dv.dataset.lv;G.click(700);escolha(FK);return}
   const p=e.target.closest('.advpet');if(p&&TELA==='escolha'){G.click(760);SEL=+p.dataset.i;msg('');escolha(FK);return}
   const r=e.target.closest('[data-r]');if(r){const v=r.dataset.r;if(v==='mapa')mapa();else if(v==='prox')escolha(FK+1);else escolha(FK)}
@@ -375,7 +392,7 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   // vagalumes (no mar: peixinhos e bolhas; na caverna: esporos brilhando)
   const VG=TT.voadores||['✨'],vg=[];for(let k=0;k<(E2?(E2.voadores??0):40);k++){const s=sprEmoji(VG[k%VG.length],TT.voadores?.45:.25);s.position.set((rnd()-.5)*M.largura,1+rnd()*2.5,rnd()*M.comprimento);S.add(s);vg.push({s,y:s.position.y,f:rnd()*6})}
   // obstáculos para colisão
-  const obs=obsP.slice().concat(mec.obs3d||[]);for(const [x,z,s] of M.arvores)obs.push([x,z,(C3?.45:.38)*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
+  const obs=obsP.slice().concat(mec.obs3d||[]);const rP=E2?(E2.parede_raio??.85):C3?.45:.38;for(const [x,z,s] of M.arvores)obs.push([x,z,rP*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
   // área secreta: baú escondido no canto do mapa (cura tudo) e o bichinho raro que o guarda (acampamento secreto do mapa)
   if(M.secreto){const [sx,sz]=M.secreto,b=new T.Group(),mad=new T.MeshLambertMaterial({color:'#7a4a22'}),our=new T.MeshStandardMaterial({color:'#ffd04a',emissive:'#a07000',emissiveIntensity:.6});
     const c1=new T.Mesh(new T.BoxGeometry(.9,.55,.6),mad);c1.position.y=.28;const t1=new T.Mesh(new T.BoxGeometry(.95,.18,.65),our);t1.position.y=.62;b.add(c1,t1);b.position.set(sx,0,sz);S.add(b);
