@@ -122,7 +122,7 @@ function won(b){
   syncEstado('capture',{plushId:p.i}).then(r=>{if(r&&r.transformed&&r.plushId!==p.i){coll[p.i]=Math.max(0,(coll[p.i]||0)-1);coll[r.plushId]=Math.max((coll[r.plushId]||0)+1,r.count||1);saveX();transformou(p.i,r.plushId)}});
   roundWin=true;losses=0;
   if(tr)transformou(p.i,id);
-  else{banner(p.name+'!',dup?(evo?'Repetida! +20 XP pra evoluir':'Repetida! 2 iguais = 1 moeda'):p.rare<=2?'Pelúcia rara!':'Caiu no prêmio',true);fanfare()}
+  else{banner(p.name+'!',dup?(evo?'Repetida! +20 XP pra evoluir':Math.min(coll[id],BOL_N)+'/'+BOL_N+' para o '+evName(id-CH0,1)):p.rare<=2?'Pelúcia rara!':'Caiu no prêmio',true);fanfare()}
   renderShelf(id);hud();
 }
 function transformou(de,para){setTimeout(()=>{banner('✨ Transformou!',PLUSH[de].name+' virou '+PLUSH[para].name+'!',true);fanfare();setTimeout(fanfare,500);shakeWin(6);
@@ -260,7 +260,7 @@ function detail(i){
 }
 function renderShelf(focus){
   const g=$('grid');g.innerHTML='';let got=0;
-  PLUSH.forEach(p=>{if(p.leg)return;const n=coll[p.i]||0;if(n)got++;
+  let tot=0;PLUSH.forEach(p=>{if(p.leg||p.fora)return;tot++;const n=coll[p.i]||0;if(n)got++;
     const s=document.createElement('button');s.className='slot'+(n?'':' lock');s.setAttribute('aria-label',n?p.name:'Pelúcia não capturada');
     const stg=n&&p.i<CH0?careStage(p.i):0;if(stg)s.className+=' was';s.innerHTML=(GCOLL[p.i]?'<i class="gbadge">🏆'+(GCOLL[p.i]>1?GCOLL[p.i]:'')+'</i>':'')+'<img src="'+p.img+'" alt=""><span>'+(n?evName(p.i,0):'???')+'</span>'+(n>1?'<b>×'+n+'</b>':'')+(n?'<u>'+(stg?'evoluiu ↓':'NV '+lvOf(p.i))+'</u>':'');
     s.addEventListener('click',()=>{if(n){$('detail').hidden=true;openViewer(p.i)}else detail(p.i)});g.appendChild(s)});
@@ -270,7 +270,7 @@ function renderShelf(focus){
     evs.forEach(p=>{const s=document.createElement('button');s.className='slot evo';s.setAttribute('aria-label',evName(p.i,1));
       s.innerHTML=(GCOLL[p.i]?'<i class="gbadge">🏆'+(GEVO[p.i]?'★':'')+'</i>':'')+'<img src="'+(EVOSPR[p.i]?EVOSPR[p.i].img:p.img)+'" alt=""><span>'+evName(p.i,1)+'</span><u>★ NV '+lvOf(p.i)+'</u>';
       s.addEventListener('click',()=>{$('detail').hidden=true;openViewer(p.i)});g.appendChild(s)})}
-  $('count').textContent=got+' de '+NPL;
+  $('count').textContent=got+' de '+tot;
   if(focus!==undefined&&!isLeg(focus))detail(focus);
   try{window.dispatchEvent(new Event('garro:estante'))}catch(e){}
 }

@@ -31,7 +31,7 @@ function addPlush(p,x,y){
 }
 const PILE=30;// pilha baixa: nada pode passar da linha do topo da divisória (DIVTOP)
 function pickPlush(cnt){
-  const round=MQR.so_redondos!==false||Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
+  const round=MQR.so_redondos!==false||Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg&&!p.fora);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
   let t=0;pool.forEach(p=>t+=p.rare);let r=Math.random()*t;for(const p of pool){r-=p.rare;if(r<0)return p}return pool[0];
 }
 // onde a pilha está mais baixa (sorteia alguns pontos e fica com o mais vazio): assim preenche toda a área, inclusive junto da divisória
@@ -92,10 +92,10 @@ function giantOf(i,K){K=K||GK;const p=PLUSH[i],G=Object.create(p);G.giant=1;G.dw
   if(p.image&&p.image.complete&&p.image.naturalWidth){const pad=16,c=document.createElement('canvas');c.width=Math.ceil((G.dw+pad*2)*dpr);c.height=Math.ceil((G.dh+pad*2)*dpr);const x=c.getContext('2d');x.scale(dpr,dpr);x.imageSmoothingQuality='high';x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=14;x.shadowOffsetY=7;x.drawImage(p.image,pad,pad,G.dw,G.dh);G.baked=c;G.pad=pad}
   else Object.defineProperty(G,'pad',{get:()=>(p.pad||10)*K});return G}
 function placeGiant(){const i=Math.floor(Math.random()*CH0),G=giantOf(i);G.landed=false;const gb=addPlush(G,(DIV+W)/2+12+(Math.random()-.5)*30,-G.dh*.6);Body.setAngle(gb,0);gb.frictionAir=.02;
-  const rs=[];while(rs.length<3){const r=CH0+Math.floor(Math.random()*(NPL-CH0));if(!rs.includes(r))rs.push(r)}DECOR=[{i:rs[0],x:DIV+24},{i:rs[1],x:W-58},{i:rs[2],x:W-28}];
+  const rs=[];while(rs.length<3){const r=CH0+Math.floor(Math.random()*(LEG0-CH0));if(!rs.includes(r)&&!PLUSH[r].fora)rs.push(r)}DECOR=[{i:rs[0],x:DIV+24},{i:rs[1],x:W-58},{i:rs[2],x:W-28}];
   $('who').innerHTML='Gigante da vez: <b>'+G.name+'</b> <em>· '+G.cm+' cm</em>'}
 // travas: gigante só com todos os normais; ovos com normais + gigantes; épico com normais + gigantes + lendários (o servidor confere igual)
-function faltas(){let n=0,g=0,l=0;for(let i=0;i<LEG0;i++)if(!(coll[i]>0))n++;for(let i=0;i<CH0;i++)if(!(GCOLL[i]>0))g++;for(const L of LEGS)if(!(coll[L.id]>0))l++;return{n,g,l}}
+function faltas(){let n=0,g=0,l=0;for(let i=0;i<LEG0;i++)if(!PLUSH[i].fora&&!(coll[i]>0))n++;for(let i=0;i<CH0;i++)if(!(GCOLL[i]>0))g++;for(const L of LEGS)if(!(coll[L.id]>0))l++;return{n,g,l}}
 function travaMaq(m){if(DEV)return '';const f=faltas();
   if(m===2&&f.n)return 'Pegue todos os bichinhos normais primeiro (faltam '+f.n+')';
   if(m===3&&(f.n||f.g))return 'Pegue todos os normais e todos os gigantes (faltam '+(f.n+f.g)+')';

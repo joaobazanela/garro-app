@@ -51,20 +51,31 @@ function renderCare(){
   if(!V.open||V.cur===undefined)return;const i=V.cur;renderSell(i);renderPow(i);
   const c=careOf(i),lv=lvOf(i),cap=capOf(i),st=careStage(i),m=(c.f+c.l+c.p)/3;
   if(isLeg(i)){$('cStage').textContent=(isEpic(i)?'🔥 Épico · ':'✦ Lendário · ')+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(isEpic(i)?' · o mais forte de todos':' · mais forte que as pelúcias grandes')+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
-  else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+' · 2 repetidas = 1 moeda'+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
+  else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(ehBolinha(i)?' · '+Math.min(coll[i]||0,BOL_N)+'/'+BOL_N+' para evoluir':' · 2 repetidas = 1 moeda')+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
   else{$('cStage').textContent=st?'★ '+evName(i,1):PLUSH[i].name;
     $('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(st?' · forma evoluída!':' · evolui no Nv '+EVO_LV+' com '+PEDRAS+' pedras')+' · cuidar hoje '+xpHoje(i)+'/'+XPDIA+' XP'+(rbOf(i)?' · 🔄 '+rbOf(i)+'× (+'+Math.round(REB_B*rbOf(i)*100)+'% força)':'');
     $('cXpBar').style.width=xpPct(i)+'%'}
   for(const [k,id,b] of [['f','mF','cFeed'],['l','mL','cPet'],['p','mP','cPlay']]){$(id).style.width=Math.round(c[k])+'%';$(b).classList.toggle('low',c[k]<25)}
   updFood();const sb=$('cStone'),rbb=$('cRebirth');
   if(rbb){const topo=lv>=cap;rbb.hidden=!topo;if(rbb.dataset.armedFor!=String(i)){rbb.dataset.armed='';rbb.dataset.armedFor=String(i);rbb.innerHTML='🔄 Renascer <small>· volta ao Nv 1 · +'+Math.round(REB_B*100)+'% de força</small>'}}
+  if(sb&&ehBolinha(i)){const g=i-CH0,sk=STONE_OF(g),n=INV.st[sk]||0,b=coll[i]||0,ok=b>=BOL_N&&n>=PEDRAS;sb.hidden=false;sb.classList.toggle('buy',!ok);
+    sb.innerHTML=ok?'✨ Virar '+evName(g,1)+' <small>(usa '+BOL_N+' bolinhas e '+PEDRAS+' '+STONES[sk].name+')</small>'
+      :'✨ '+evName(g,1)+': '+Math.min(b,BOL_N)+'/'+BOL_N+' bolinhas · '+Math.min(n,PEDRAS)+'/'+PEDRAS+' '+STONES[sk].name+(b>=BOL_N?' <small>· '+PRICE.stone+' 🪙 cada pedra</small>':'');return}
   if(sb){const sk=STONE_OF(i),n=INV.st[sk]||0,pode=lv>=EVO_LV;sb.hidden=!(i<CH0&&!c.ev);sb.classList.toggle('buy',!pode||n<PEDRAS);
     sb.innerHTML=!pode?'💎 Evolui no Nv '+EVO_LV+' <small>· usa '+PEDRAS+' '+STONES[sk].name+' · você tem '+n+'</small>'
       :n>=PEDRAS?'💎 Evoluir agora <small>(usa '+PEDRAS+' '+STONES[sk].name+' · você tem '+n+')</small>'
       :'💎 Evoluir: faltam '+(PEDRAS-n)+' '+STONES[sk].name+' <small>· '+PRICE.stone+' 🪙 cada</small>'}
 }
 function updFood(){const s=$('cFeed')&&$('cFeed').querySelector('span');if(s)s.textContent='🍓 Comida ×'+INV.food}
-function useStone(){const i=V.cur;if(i===undefined||i>=CH0)return;const k=STONE_OF(i),lv=lvOf(i),c=careOf(i);if(c.ev)return;
+// bolinha: BOL_N iguais + PEDRAS pedras do grupo = o grande evoluído (novo entra no Nv 1; se já tinha o grande, ele evolui e mantém o nível)
+function bolinhaEvolve(i){const g=i-CH0,k=STONE_OF(g),b=coll[i]||0,n=INV.st[k]||0;
+  if(b<BOL_N){banner('Faltam bolinhas','Junte '+BOL_N+' '+PLUSH[i].name+' (tem '+b+')');return}
+  if(n<PEDRAS){audio();renderShop();$('shMsg').textContent='Precisa de '+PEDRAS+' '+STONES[k].name+' (você tem '+n+')';$('shop').hidden=false;return}
+  const novo=!(coll[g]>0);coll[i]=b-BOL_N;INV.st[k]=n-PEDRAS;coll[g]=(coll[g]||0)+1;const c=careOf(g);if(novo){c.xp=0;c.rb=0}c.ev=true;c.sp=0;saveX();saveInv();saveCare();evento('stone',PEDRAS);evento('capture');
+  srv('bolinha_evolve',{plushId:i},r=>{coll[i]=r.balls;INV.st[k]=r.stones;coll[g]=r.count;const cc=careOf(g);cc.ev=true;cc.xp=r.xp;saveX();saveInv();saveCare();renderShelf()});
+  audio();fanfare();for(let q=0;q<8;q++)setTimeout(()=>float('✨','love'),q*90);banner('✨ '+evName(g,1)+'!',(novo?'Novo na coleção · Nv 1':'O seu '+PLUSH[g].name+' evoluiu'),true);
+  renderShelf(g);setTimeout(()=>openViewer(g),700)}
+function useStone(){const i=V.cur;if(i===undefined)return;if(ehBolinha(i)){bolinhaEvolve(i);return}if(i>=CH0)return;const k=STONE_OF(i),lv=lvOf(i),c=careOf(i);if(c.ev)return;
   if(lv<EVO_LV){banner('Ainda não dá','Evolui no Nv '+EVO_LV+' com '+PEDRAS+' '+STONES[k].name);return}
   if((INV.st[k]||0)<PEDRAS){audio();renderShop();$('shMsg').textContent='Para evoluir precisa de '+PEDRAS+' '+STONES[k].name+' (você tem '+(INV.st[k]||0)+')';$('shop').hidden=false;return}
   INV.st[k]-=PEDRAS;c.ev=true;c.sp=0;saveInv();saveCare();evento('stone',PEDRAS);

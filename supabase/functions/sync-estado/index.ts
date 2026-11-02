@@ -67,9 +67,9 @@ async function handle(req: Request): Promise<Response> {
   }
 
   if (body.action === "capture") {
-    // na máquina só há redondos (20 a 42); o servidor sorteia se ele vira um grande do mesmo grupo de pedra (data/regras.json → MAQUINA)
+    // na máquina só há as bolinhas (20 a 39); o servidor sorteia se ele vira um grande do mesmo grupo de pedra (data/regras.json → MAQUINA)
     const plushId = Number(body.plushId);
-    if (!Number.isInteger(plushId) || plushId < 20 || plushId >= 43) {
+    if (!Number.isInteger(plushId) || plushId < 20 || plushId >= 40) {
       return json({ error: "bad_plush_id" }, 400);
     }
     const chance = Number((await regras())?.MAQUINA?.transformar_chance ?? 0);
@@ -138,6 +138,14 @@ async function handle(req: Request): Promise<Response> {
     const E = (await regras())?.EVOLUCAO;  // regras do jogo vêm de data/regras.json (sem o arquivo, sem pedra)
     if (!E) return json({ error: "regras_indisponiveis" }, 503);
     return call("rpc_use_stone", { p_plush: p, p_stone: st, p_lv: E.nivel, p_need: E.pedras ?? 5 }, "use_stone_rejected");  // evolui no Nv 100 com 5 pedras
+  }
+  // bolinha (20..39): N iguais + as pedras da evolução viram o grande evoluído (data/regras.json → EVOLUCAO.bolinhas e .pedras)
+  if (body.action === "bolinha_evolve") {
+    const p = int(body.plushId, 20, 39);
+    if (p === null) return json({ error: "bad_plush_id" }, 400);
+    const E = (await regras())?.EVOLUCAO as { bolinhas?: number; pedras?: number } | undefined;
+    if (!E) return json({ error: "regras_indisponiveis" }, 503);
+    return call("rpc_bolinha_evolve", { p_plush: p, p_balls: E.bolinhas ?? 10, p_stones: E.pedras ?? 5 }, "bolinha_evolve_rejected");
   }
   if (body.action === "care") {
     const p = int(body.plushId, 0, 56), kind = body.kind;
