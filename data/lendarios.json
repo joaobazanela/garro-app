@@ -126,6 +126,7 @@
   {
    "id": 43,
    "slug": "obsidragon",
+   "vista": 0.75,
    "nome": "Obsidragon",
    "elemento": "lava",
    "stat": [118,98],
@@ -134,7 +135,7 @@
    "desc": "Dragão de escamas negras com veias de ouro. Guarda tesouros dentro dos vulcões.",
    "cor": "#ffb83a",
    "tamanho": 1.15,
-   "sprite": {"w": 132, "h": 200, "hull": [[0.424, 0.02], [0.826, 0.195], [0.97, 0.41], [0.977, 0.46], [0.674, 0.885], [0.485, 0.97], [0.061, 0.985], [0.015, 0.975], [0.038, 0.14], [0.098, 0.025]], "img": "img/lendarios/obsidragon.webp"},
+   "sprite": {"w": 137, "h": 200, "hull": [[0.416, 0.01], [0.686, 0.025], [0.803, 0.135], [0.92, 0.315], [0.978, 0.905], [0.774, 0.985], [0.686, 0.985], [0.285, 0.91], [0.117, 0.71], [0.015, 0.465], [0.015, 0.415], [0.109, 0.205]], "img": "img/lendarios/obsidragon.webp"},
    "modelo": "models/lendarios/obsidragon.glb",
    "ovo3d": "models/lendarios/ovo_obsidragon.glb",
    "ovo": {
@@ -163,6 +164,7 @@
   {
    "id": 44,
    "slug": "lunaria",
+   "vista": 0.75,
    "nome": "Lunária",
    "elemento": "ice",
    "stat": [104,108],
@@ -171,7 +173,7 @@
    "desc": "Raposa de cristal da lua cheia. Onde ela pisa, nasce neve brilhante.",
    "cor": "#7fd0ff",
    "tamanho": 1.15,
-   "sprite": {"w": 130, "h": 200, "hull": [[0.908, 0.01], [0.977, 0.28], [0.938, 0.745], [0.831, 0.89], [0.354, 0.985], [0.023, 0.955], [0.054, 0.22], [0.085, 0.15], [0.477, 0.025]], "img": "img/lendarios/lunaria.webp"},
+   "sprite": {"w": 100, "h": 200, "hull": [[0.16, 0.01], [0.74, 0.02], [0.84, 0.07], [0.97, 0.195], [0.96, 0.89], [0.93, 0.9], [0.47, 0.915], [0.17, 0.8], [0.03, 0.42], [0.02, 0.26], [0.04, 0.17]], "img": "img/lendarios/lunaria.webp"},
    "modelo": "models/lendarios/lunaria.glb",
    "ovo3d": "models/lendarios/ovo_lunaria.glb",
    "ovo": {
@@ -294,6 +296,7 @@
   {
    "id": 47,
    "slug": "noctalis",
+   "vista": 0.75,
    "nome": "Noctalis",
    "elemento": "shadow",
    "stat": [116,96],
@@ -302,7 +305,7 @@
    "desc": "Lobo das sombras de chamas roxas. Só aparece em noites sem lua.",
    "cor": "#a050ff",
    "tamanho": 1.15,
-   "sprite": {"w": 97, "h": 200, "hull": [[0.598, 0.01], [0.773, 0.15], [0.845, 0.26], [0.959, 0.565], [0.948, 0.67], [0.804, 0.895], [0.608, 0.98], [0.093, 0.98], [0.021, 0.96], [0.041, 0.165], [0.237, 0.035]], "img": "img/lendarios/noctalis.webp"},
+   "sprite": {"w": 118, "h": 200, "hull": [[0.356, 0.01], [0.669, 0.035], [0.898, 0.165], [0.975, 0.925], [0.754, 0.98], [0.644, 0.985], [0.246, 0.92], [0.068, 0.805], [0.017, 0.64], [0.025, 0.58], [0.161, 0.275]], "img": "img/lendarios/noctalis.webp"},
    "modelo": "models/lendarios/noctalis.glb",
    "ovo3d": "models/lendarios/ovo_noctalis.glb",
    "ovo": {
@@ -434,6 +437,7 @@
   {
    "id": 50,
    "slug": "solaris",
+   "vista": 0.75,
    "nome": "Solaris",
    "elemento": "gold",
    "stat": [112,112],
@@ -442,7 +446,7 @@
    "desc": "Guardião do sol com auréola de ouro. Sua luz cura quem está por perto.",
    "cor": "#ffd86a",
    "tamanho": 1.15,
-   "sprite": {"w": 143, "h": 200, "hull": [[0.965, 0.01], [0.979, 0.095], [0.909, 0.735], [0.881, 0.775], [0.713, 0.91], [0.392, 0.985], [0.287, 0.985], [0.028, 0.94], [0.014, 0.905], [0.063, 0.3], [0.119, 0.055]], "img": "img/lendarios/solaris.webp"},
+   "sprite": {"w": 140, "h": 200, "hull": [[0.014, 0.015], [0.871, 0.035], [0.971, 0.945], [0.593, 0.985], [0.5, 0.98], [0.314, 0.89], [0.229, 0.725], [0.014, 0.085]], "img": "img/lendarios/solaris.webp"},
    "modelo": "models/lendarios/solaris.glb",
    "ovo3d": "models/lendarios/ovo_solaris.glb",
    "ovo": {
