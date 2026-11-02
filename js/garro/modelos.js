@@ -95,7 +95,7 @@ const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
 // lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
 for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
   MODELS[L.id]={file:L.modelo,skin:null,evoM:1,noDeform:1,wing:null,notail:false,hc:[0,.62,.3],hr:.16,hp:[0,.5,.2],tz:-.3,tp:[0,.3,-.3],spd:.8,wag:.25,
-    glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null,vista:L.vista??-.62,desliza:L.anda==='desliza'};NOEXTRA.add(L.id)}
+    glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null,vista:L.vista??-.62,desliza:L.anda==='desliza',fileAnda:L.modelo_anda||null};NOEXTRA.add(L.id)}
 // ângulo em que o lendário aparece no visualizador (data/lendarios.json → vista; os da folha nova olham para outro lado)
 const vistaLeg=i=>(MODELS[i]&&MODELS[i].vista)??-.62;
 const EVT={};
@@ -155,7 +155,8 @@ function attachParts(obj,i,m){const sp0=SPEC[i],sp=Object.assign({},sp0,{x:sp0.x
 async function montaModelo(i,evo){
   if(i>=CH0&&!isLeg(i)){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
     const b=new THREE.Box3().setFromObject(C.root),h=b.max.y-b.min.y||1;C.root.scale.setScalar(1/h);C.root.position.y=-b.min.y/h;return g}
-  const m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
+  let m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
+  if(m0.fileAnda)m0=Object.assign({},m0,{file:m0.fileAnda,key:m0.key+'A'});// Aventura: pose de andar (ex.: serpente deitada); a coleção usa o modelo normal
   let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;
   let src;try{src=await loadGLB(m)}catch(e){if(m===m0)throw e;m=m0;src=await loadGLB(m)}
   const obj=src.clone(true),skin=m.skin?await loadSkin(m.skin):null,glow=m.glow?await loadSkin(m.glow):null;
