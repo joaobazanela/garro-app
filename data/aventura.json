@@ -3094,6 +3094,7 @@
    "elemento": "sand",
    "tema": {
     "decor": "aquatico",
+    "texturas": {"chao":{"map":"img/tex/mar/chao_cor.jpg","normalMap":"img/tex/mar/chao_normal.jpg","roughnessMap":"img/tex/mar/chao_rug.jpg"},"coral":{"map":"img/tex/mar/coral_cor.jpg","normalMap":"img/tex/mar/coral_normal.jpg","roughnessMap":"img/tex/mar/coral_rug.jpg"},"alga":{"map":"img/tex/mar/alga_cor.jpg","normalMap":"img/tex/mar/alga_normal.jpg","roughnessMap":"img/tex/mar/alga_rug.jpg"},"madeira":{"map":"img/tex/mar/madeira_cor.jpg","normalMap":"img/tex/mar/madeira_normal.jpg","roughnessMap":"img/tex/mar/madeira_rug.jpg"}},
     "corais": ["#ff8a4a", "#ff6aa8", "#b06aff", "#ffd04a"],
     "alga": "#3fa56a",
     "voadores": ["🐟", "🫧", "🐠", "🫧", "🐡"],
@@ -5522,6 +5523,7 @@
    "elemento": "stone",
    "tema": {
     "decor": "caverna",
+    "texturas": {"chao":{"map":"img/tex/montanha/chao_cor.jpg","normalMap":"img/tex/montanha/chao_normal.jpg","roughnessMap":"img/tex/montanha/chao_rug.jpg"},"cristal":{"map":"img/tex/montanha/cristal_cor.jpg","normalMap":"img/tex/montanha/cristal_normal.jpg","roughnessMap":"img/tex/montanha/cristal_rug.jpg","emissiveMap":"img/tex/montanha/cristal_emissivo.jpg"},"casca":{"map":"img/tex/montanha/casca_cor.jpg","normalMap":"img/tex/montanha/casca_normal.jpg","roughnessMap":"img/tex/montanha/casca_rug.jpg"}},
     "cenario3d": {"arvores": ["models/cenario/pedras.glb", "models/cenario/barril.glb"], "arvore_tamanho": 2.4, "cogumelos": "models/cenario/cogumelo_cav.glb", "cogumelo_tamanho": 1.1, "lanterna": "models/cenario/lanterna.glb"},
     "cristais": ["#ff7ad9", "#6ef0ff", "#b48aff"],
     "lanterna_cor": "#ffb35a",
@@ -8116,6 +8118,7 @@
    "elemento": "shadow",
    "tema": {
     "decor": "trevas",
+    "texturas": {"chao":{"map":"img/tex/trevas/chao_cor.jpg","normalMap":"img/tex/trevas/chao_normal.jpg","roughnessMap":"img/tex/trevas/chao_rug.jpg"},"cristal":{"map":"img/tex/trevas/cristal_cor.jpg","normalMap":"img/tex/trevas/cristal_normal.jpg","roughnessMap":"img/tex/trevas/cristal_rug.jpg","emissiveMap":"img/tex/trevas/cristal_emissivo.jpg"},"casca":{"map":"img/tex/trevas/casca_cor.jpg","normalMap":"img/tex/trevas/casca_normal.jpg","roughnessMap":"img/tex/trevas/casca_rug.jpg"},"pedra":{"map":"img/tex/trevas/pedra_cor.jpg","normalMap":"img/tex/trevas/pedra_normal.jpg","roughnessMap":"img/tex/trevas/pedra_rug.jpg"}},
      "escuro": true,
      "cenario3d": {"arvores": ["models/cenario/pedras.glb"], "arvore_tamanho": 2.3},
     "ceu": "#120c1c",
@@ -10718,6 +10721,7 @@
    "elemento": "embers",
    "tema": {
     "decor": "fogo",
+    "texturas": {"chao":{"map":"img/tex/fogo/chao_cor.jpg","normalMap":"img/tex/fogo/chao_normal.jpg","roughnessMap":"img/tex/fogo/chao_rug.jpg"},"magma":{"map":"img/tex/fogo/magma_cor.jpg","normalMap":"img/tex/fogo/magma_normal.jpg","roughnessMap":"img/tex/fogo/magma_rug.jpg","emissiveMap":"img/tex/fogo/magma_emissivo.jpg"},"cristal":{"map":"img/tex/fogo/cristal_cor.jpg","normalMap":"img/tex/fogo/cristal_normal.jpg","roughnessMap":"img/tex/fogo/cristal_rug.jpg","emissiveMap":"img/tex/fogo/cristal_emissivo.jpg"},"pedra":{"map":"img/tex/fogo/pedra_cor.jpg","normalMap":"img/tex/fogo/pedra_normal.jpg","roughnessMap":"img/tex/fogo/pedra_rug.jpg"}},
      "cenario3d": {"arvores": ["models/cenario/pedras.glb"], "arvore_tamanho": 2.3},
     "ceu": "#2a0e08",
     "neblina": "#4a1a0c",
@@ -13407,6 +13411,7 @@
    "elemento": "gold",
    "tema": {
     "decor": "luz",
+    "texturas": {"chao":{"map":"img/tex/luz/chao_cor.jpg","normalMap":"img/tex/luz/chao_normal.jpg","roughnessMap":"img/tex/luz/chao_rug.jpg"},"marmore":{"map":"img/tex/luz/marmore_cor.jpg","normalMap":"img/tex/luz/marmore_normal.jpg","roughnessMap":"img/tex/luz/marmore_rug.jpg"},"cristal":{"map":"img/tex/luz/cristal_cor.jpg","normalMap":"img/tex/luz/cristal_normal.jpg","roughnessMap":"img/tex/luz/cristal_rug.jpg","emissiveMap":"img/tex/luz/cristal_emissivo.jpg"}},
     "ceu": "#cfd8e6",
     "neblina": "#e8eef6",
     "chao": "#d8d4c4",
