@@ -210,7 +210,7 @@ function openFox(i,pop){
 window.GARRO={
   online:()=>ONL&&!DEV,sb:()=>sb,sync:(a,x)=>syncEstado(a,x),
   coins:()=>coins,setCoins:n=>{coins=n;hud()},addCoinsLocal:n=>{coins+=n;bonus+=n;saveBonus();hud()},
-  coll:()=>coll,lvOf:i=>lvOf(i),CH0,banner:(t,s,w)=>banner(t,s,w),fanfare:()=>fanfare(),click:f=>{audio();click(f||600)},
+  ac:()=>{audio();return ac},coll:()=>coll,lvOf:i=>lvOf(i),CH0,banner:(t,s,w)=>banner(t,s,w),fanfare:()=>fanfare(),click:f=>{audio();click(f||600)},
   // usados pela Aventura (js/aventura.js)
   modelo:(i,evo)=>montaModelo(i,evo),THREE:()=>window.THREE,
   name:i=>PLUSH[i].name,evName:i=>evName(i,1),sprite:(i,lv,giant,rb)=>bSrc({i,lv,rb:rb|0,giant:giant?1:0}),EVO_LV,

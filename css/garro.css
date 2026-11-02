@@ -498,3 +498,8 @@ style#btnMis{position:relative}
 .epgrid .legslot.lock img[src*="ovo_"]{filter:none;opacity:.9}
 .ninhovos .ovo.epico{border-color:#ff8a3a;box-shadow:0 0 0 1px rgba(255,138,58,.5),0 0 18px rgba(255,120,40,.35)}
 .nasceu.epico .ncarta img{object-fit:contain;background:radial-gradient(circle,#5a2410,#1a0804)}
+
+/* botão de som (batalha e pausa da Aventura) */
+.somb{border:1px solid rgba(255,226,138,.45);background:rgba(0,0,0,.35);color:#ffe9a8;border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+#battle h3 .somb{float:right;margin-top:-2px;font-size:11px;padding:4px 10px}
+#advSomP{margin-top:10px;display:flex;justify-content:center}

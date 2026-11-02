@@ -204,7 +204,7 @@ setProngs();requestAnimationFrame(loop);
 /* ---------- sound ---------- */
 let ac=null,motor=null;
 function audio(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.state==='suspended')ac.resume()}
-function tone(f,d,type,vol){if(!ac)return;try{const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;
+function tone(f,d,type,vol){if(!ac||(window.GARRO_SOM&&GARRO_SOM.mudoEfeitos()))return;try{const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;
   g.gain.setValueAtTime(vol||.1,ac.currentTime);g.gain.exponentialRampToValueAtTime(.0008,ac.currentTime+d);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 function click(f){tone(f,.06,'square',.06)}
 function thud(){tone(90,.25,'sine',.25);tone(60,.3,'triangle',.15)}

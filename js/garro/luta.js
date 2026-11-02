@@ -37,6 +37,7 @@ function bFx(from,to,el,crit){const F=BFX[el]||BFX.earth,fld=$('bFx');if(!fld)re
   const fl=document.createElement('div');fl.className='flash';fl.style.setProperty('--c',col);fl.style.left=bx+'px';fl.style.top=by+'px';fld.appendChild(fl);
   fl.animate([{opacity:0,transform:'scale(.4)'},{opacity:.95,transform:'scale(1.2)',offset:.3},{opacity:0,transform:'scale(1.6)'}],{duration:520,delay:360+(n-1)*(F.m==='bolt'?90:F.m==='jet'?55:F.m==='spray'?50:140)*.6}).onfinish=()=>fl.remove();
   // tom do ataque
+  const SM=window.GARRO_SOM;if(SM&&SM.poder){SM.poder(el,crit);return}
   const t=F.f;if(t[0]>=1000)[1400,900,1500,700].forEach((q,i)=>setTimeout(()=>tone(q,.05,'sawtooth',.06),i*60));else tone(t[0]+Math.random()*30,.18,F.m==='jet'?'sine':'square',.07)}
 
 /* ---------- movimento na luta ---------- */
@@ -65,25 +66,25 @@ function bWin(sd){const im=bImg(sd);im.getAnimations().forEach(a=>a.cancel());co
   bConf(sd,['⭐','💖','✨','🎉'],10);return name}
 function bIdle2(sd){const im=bImg(sd);bA(sd,[{transform:'translateY(0)'},{transform:'translateY(-6px) scale(.99,1.03)'},{transform:'translateY(0)'}],{duration:1100,iterations:Infinity,easing:'ease-in-out'})}
 function bSad(sd){const im=bImg(sd);bA(sd,[{transform:'translateY(0) rotate(0)'},{transform:'translateY(10px) rotate(-6deg) scale(1,.94)'}],{duration:900,fill:'forwards',easing:'ease-out'});bConf(sd,['💧','💔'],4)}
-function fightBattle(){if(!BT||BT.busy)return;if(BT.fought){BT.fought=0;BT.op=pickOpp(BT.me.i);bFill('Me',BT.me);bFill('Op',BT.op)}bIdle();BT.busy=true;$('bGo').disabled=$('bOther').disabled=$('bClose').disabled=true;const me=BT.me,op=BT.op,R=simBattle(me,op);$('bRes').textContent='Lutando...';
+function fightBattle(){if(!BT||BT.busy)return;if(BT.fought){BT.fought=0;BT.op=pickOpp(BT.me.i);bFill('Me',BT.me);bFill('Op',BT.op)}bIdle();BT.busy=true;$('bGo').disabled=$('bOther').disabled=$('bClose').disabled=true;const me=BT.me,op=BT.op,R=simBattle(me,op);$('bRes').textContent='Lutando...';if(window.GARRO_SOM)GARRO_SOM.musica('batalha');
   R.log.forEach((e,k)=>setTimeout(()=>{
     const A=$(e.t?'bOp':'bMe'),D=$(e.t?'bMe':'bOp');bLunge(e.t,e.crit);
     bFx(A,D,ELEM[(e.t?op:me).i],e.crit);
     setTimeout(()=>{bHit(e.t?0:1,e.crit);
     $('bMeHp').style.width=Math.round(e.ha/me.hp*100)+'%';$('bOpHp').style.width=Math.round(e.hb/op.hp*100)+'%';
     const f=document.createElement('span');f.className='bdmg';f.textContent=(e.crit?'💥 ':'')+'-'+e.d;f.style.left=(e.t?'18%':'68%');D.appendChild(f);setTimeout(()=>f.remove(),850);
-    tone(e.crit?220:150+Math.random()*50,.09,'square',.07)},430)},k*850));
+    if(window.GARRO_SOM)GARRO_SOM.golpe(e.crit);else tone(e.crit?220:150+Math.random()*50,.09,'square',.07)},430)},k*850));
   setTimeout(()=>{
     const my=me.i;let line;
-    if(R.win){const dn=bWin(0);bKO(1);const paid=battlePay();line='<big>Vitória! 🏆</big><span>'+dn+' · +10 XP'+(paid?' · +1 moeda 🪙':' · limite de moedas por hora')+'</span>';[523,659,784,1046,1318].forEach((f,k)=>setTimeout(()=>tone(f,.18,'triangle',.1),k*110));gainXp(my,10);evento('battle_win');srv('battle',{plushId:my,win:true},r=>{coins=r.coins;careOf(my).xp=r.xp;saveCare();hud()})}
-    else{bKO(0);const dn=bWin(1);line='<big>Derrota 💔</big><span>+4 XP pela luta</span>';tone(196,.4,'sawtooth',.08);gainXp(my,4);srv('battle',{plushId:my,win:false},r=>{coins=r.coins;careOf(my).xp=r.xp;saveCare();hud()})}
+    if(R.win){const dn=bWin(0);bKO(1);const paid=battlePay();line='<big>Vitória! 🏆</big><span>'+dn+' · +10 XP'+(paid?' · +1 moeda 🪙':' · limite de moedas por hora')+'</span>';if(window.GARRO_SOM){GARRO_SOM.parar();GARRO_SOM.vitoria()}else [523,659,784,1046,1318].forEach((f,k)=>setTimeout(()=>tone(f,.18,'triangle',.1),k*110));gainXp(my,10);evento('battle_win');srv('battle',{plushId:my,win:true},r=>{coins=r.coins;careOf(my).xp=r.xp;saveCare();hud()})}
+    else{bKO(0);const dn=bWin(1);line='<big>Derrota 💔</big><span>+4 XP pela luta</span>';if(window.GARRO_SOM){GARRO_SOM.parar();GARRO_SOM.derrota()}else tone(196,.4,'sawtooth',.08);gainXp(my,4);srv('battle',{plushId:my,win:false},r=>{coins=r.coins;careOf(my).xp=r.xp;saveCare();hud()})}
     $('bRes').innerHTML=line;$('bGo').textContent='⚔️ Lutar de novo';$('bGo').disabled=$('bOther').disabled=$('bClose').disabled=false;BT.busy=false;
     // depois de ganhar XP o nível pode ter mudado: atualiza o meu lado e sorteia outro adversário
     BT.me=bStats({i:my,lv:lvOf(my),giant:BT.me.giant});$('bMeSt').textContent=(ELNAME[ELEM[my]]||'')+' · Nv '+BT.me.lv+' · ⚔️ '+BT.me.atk+' · 🛡️ '+BT.me.def+' · ❤️ '+BT.me.hp;BT.fought=1},R.log.length*850+700)}
 $('cBat').addEventListener('click',openBattle);
 $('bGo').addEventListener('click',fightBattle);
 $('bOther').addEventListener('click',()=>{if(!BT||BT.busy)return;BT.op=pickOpp(BT.me.i);BT.fought=0;bFill('Me',BT.me);bFill('Op',BT.op);bIdle();$('bRes').textContent='Novo adversário!';click(700)});
-$('bClose').addEventListener('click',()=>{if(BT&&BT.busy)return;$('battle').hidden=true;if(V.open&&V.cur!==undefined){renderCare();refreshVStats(V.cur)}});
+$('bClose').addEventListener('click',()=>{if(BT&&BT.busy)return;$('battle').hidden=true;if(window.GARRO_SOM)GARRO_SOM.parar();if(V.open&&V.cur!==undefined){renderCare();refreshVStats(V.cur)}});
 function levelUp(i,lv){float('⬆ Nível '+lv,'xp');[659,880,1175].forEach((f,k)=>setTimeout(()=>tone(f,.1,'triangle',.07),k*70))}
 function gainXp(i,n){const lv0=lvOf(i),st0=careStage(i),c=careOf(i);c.xp+=n;saveCare();const lv1=lvOf(i),st1=careStage(i);
   if(V.open&&V.cur===i){if(lv1>lv0)levelUp(i,lv1);renderCare();refreshVStats(i)}
