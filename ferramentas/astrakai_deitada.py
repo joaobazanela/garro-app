@@ -4,7 +4,7 @@ Então: a CABEÇA do modelo original (com a textura do Tripo) é mantida e o COR
 deitado em onda (como na imagem de referência): escamas azuis com contorno dourado e estrelinhas, barriga de
 placas claras, espinhos dourados no dorso, argolas douradas e espinhos roxos na ponta do rabo.
 O tubo tem a coordenada "s" (0 = pescoço, 1 = ponta do rabo) na UV, e o jogo faz a onda de cobra no shader.
-Uso: python3 ferramentas/astrakai_deitada.py astrakai_enrolada.glb models/lendarios/astrakai.glb"""
+Uso: python3 ferramentas/astrakai_deitada.py astrakai_original.glb models/lendarios/astrakai_deitada.glb"""
 import sys, io, json, struct, numpy as np
 from PIL import Image
 from scipy.spatial import cKDTree
@@ -52,23 +52,23 @@ rng = np.random.default_rng(52)
 def ss(e0, e1, x): t = np.clip((x-e0)/(e1-e0), 0, 1); return t*t*(3-2*t)
 def cor(h): return np.array([int(h[i:i+2], 16) for i in (1, 3, 5)], float)/255
 
-def textura_corpo(W=2048, H=1024):
+def textura_corpo(W=2048, H=1024, kx=1., dens=1.):
     """x = ao longo do corpo (pescoço → rabo), y = em volta (0 = dorso, 0,5 = barriga)"""
     yy, xx = np.mgrid[0:H, 0:W].astype(float)
     a = yy/H; s = xx/W
     # escamas: Voronoi periódico em volta do corpo, células alongadas (~26 px)
-    pts = np.c_[rng.random(1100)*W, rng.random(1100)*H]
-    t = cKDTree(pts, boxsize=[W*4, H]); d, i = t.query(np.c_[xx.ravel(), yy.ravel()], k=2)
+    nP = int(1100*kx*dens); ec = 1/np.sqrt(dens); pts = np.c_[rng.random(nP)*W*kx, rng.random(nP)*H]   # kx > 1: corpo mais comprido, escamas mais estreitas na textura
+    t = cKDTree(pts, boxsize=[W*4, H]); d, i = t.query(np.c_[xx.ravel()*kx, yy.ravel()], k=2)
     f1 = d[:, 0].reshape(H, W); f2 = d[:, 1].reshape(H, W); idx = i[:, 0].reshape(H, W)
     borda = f2-f1; var = (np.sin(idx*12.9898)*43758.5453) % 1
     azuis = np.array([cor('#2a46d0'), cor('#3460ea'), cor('#2238b8'), cor('#3c74f0'), cor('#3a90f4'), cor('#3a4ad8')])
     base = azuis[(var*len(azuis)).astype(int) % len(azuis)]
-    brilho = (1-np.clip(f1/34, 0, 1))[..., None]*.45            # centro da escama mais claro
+    brilho = (1-np.clip(f1/(34*ec), 0, 1))[..., None]*.45            # centro da escama mais claro
     base = base*(.75+brilho)
-    cx = pts[idx, 0]; sombra = np.clip((xx-cx)/26, 0, 1)[..., None]*.35   # lado de trás da escama mais escuro (parece sobreposta)
+    cx = pts[idx, 0]; sombra = np.clip((xx*kx-cx)/(26*ec), 0, 1)[..., None]*.35   # lado de trás da escama mais escuro (parece sobreposta)
     base = base*(1-sombra)
     roxo = ss(.7, 1, s)[..., None]; base = base*(1-roxo*.5)+cor('#7a3ae0')*roxo*.5   # rabo puxando para o roxo
-    ouro = (1-ss(1.5, 4.0, borda))[..., None]
+    ouro = (1-ss(1.5*ec**.5, 4.0*ec**.5, borda))[..., None]
     c = base*(1-ouro*.85)+cor('#e0b048')*ouro*.85
     # estrelinhas
     est = (rng.random((H, W)) > .9988)
@@ -77,7 +77,7 @@ def textura_corpo(W=2048, H=1024):
     c = c*(1-e)+e
     # barriga: placas claras em faixas
     barr = (1-ss(.11, .145, np.abs(a-.5)))[..., None]
-    faixa = (xx % 44)/44; placa = 1-ss(.82, .98, faixa)*.35-(1-ss(0, .1, faixa))*.2
+    faixa = ((xx*kx) % 44)/44; placa = 1-ss(.82, .98, faixa)*.35-(1-ss(0, .1, faixa))*.2
     bc = (cor('#e8d3a0')*(1-np.abs(a-.5)[..., None]*5)+cor('#c4a670')*(np.abs(a-.5)[..., None]*5)).clip(0,1)*placa[..., None]
     c = c*(1-barr)+bc*barr
     return Image.fromarray((c.clip(0, 1)*255).astype(np.uint8))
