@@ -95,7 +95,9 @@ const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
 // lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
 for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
   MODELS[L.id]={file:L.modelo,skin:null,evoM:1,noDeform:1,wing:null,notail:false,hc:[0,.62,.3],hr:.16,hp:[0,.5,.2],tz:-.3,tp:[0,.3,-.3],spd:.8,wag:.25,
-    glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null};NOEXTRA.add(L.id)}
+    glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null,vista:L.vista??-.62,desliza:L.anda==='desliza',fileAnda:L.modelo_anda||null};NOEXTRA.add(L.id)}
+// ângulo em que o lendário aparece no visualizador (data/lendarios.json → vista; os da folha nova olham para outro lado)
+const vistaLeg=i=>(MODELS[i]&&MODELS[i].vista)??-.62;
 const EVT={};
 function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img.width)return map;
   const S=Math.min(1024,img.width),cv=document.createElement('canvas');cv.width=cv.height=S;const x=cv.getContext('2d');x.drawImage(img,0,0,S,S);
@@ -153,14 +155,15 @@ function attachParts(obj,i,m){const sp0=SPEC[i],sp=Object.assign({},sp0,{x:sp0.x
 async function montaModelo(i,evo){
   if(i>=CH0&&!isLeg(i)){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
     const b=new THREE.Box3().setFromObject(C.root),h=b.max.y-b.min.y||1;C.root.scale.setScalar(1/h);C.root.position.y=-b.min.y/h;return g}
-  const m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
+  let m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
+  if(m0.fileAnda)m0=Object.assign({},m0,{file:m0.fileAnda,key:m0.key+'A'});// Aventura: pose de andar (ex.: serpente deitada); a coleção usa o modelo normal
   let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;
   let src;try{src=await loadGLB(m)}catch(e){if(m===m0)throw e;m=m0;src=await loadGLB(m)}
   const obj=src.clone(true),skin=m.skin?await loadSkin(m.skin):null,glow=m.glow?await loadSkin(m.glow):null;
   obj.traverse(o=>{if(o.isMesh){if(m.notail)o.geometry=dropTail(o.geometry,m);if(!o.geometry.attributes.normal)weldNormals(o.geometry);
     const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;mm.roughness=.92;mm.metalness=0;brilhoLeg(mm,m,glow);o.material=mm}});
   if(!m.evoM){try{if(m.HC)attachParts(obj,i,m);else attachExtras(obj,i,m)}catch(e){}}enfeiteLeg(obj,m);
-  obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=b.max.y-b.min.y||1,g=new THREE.Group();
+  obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=Math.max(b.max.y-b.min.y,m.desliza?Math.max(b.max.z-b.min.z,b.max.x-b.min.x)*.45:0)||1,g=new THREE.Group();// serpente deitada: escala pelo comprimento, não pela altura
   obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);return g}
 // tira da cena qualquer modelo que tenha ficado de uma abertura anterior (evita dois bichinhos na tela)
 function tiraModelos(){if(!V.spin)return;for(const c of V.spin.children.slice())if(c.userData.modelo)V.spin.remove(c)}
@@ -184,7 +187,7 @@ async function openGLB(i){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir d
   V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts};V.mode='glb';V.chibi=false;V.sp={};
   {const st=careStage(i);V.C.gs=m.leg?GROW[1].gs*(m.escala||1):GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
   V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(careStage(i)||m.leg)makeAura(i);
-  Object.assign(V,{ry:-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
+  Object.assign(V,{ry:isLeg(i)?vistaLeg(i):-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
     G:{hy:0,hp:0,hr:0,tail:0,wagA:.2,wagS:4,roll:0,crouch:0,bob:0,shake:0,lift:0}});
   return true;
 }
@@ -220,7 +223,7 @@ function gloop(now){
   if(st==='tired')Object.assign(X,{hy:.1,hp:.32,hr:.2,wagA:m.wag*.25,wagS:2,roll:Math.PI*.46,crouch:.6,wing:0,wingS:1,bob:0});
   if(st==='shake'&&el>.45)X.shake=1;
   if(st==='run')Object.assign(X,{hy:0,hp:-.12,hr:0,wagA:m.wag*2.6,wagS:16,wing:.55,wingS:13});
-  if(st==='eat'){Object.assign(X,{hy:0,hp:.1+Math.sin(t*16)*.12,wagA:m.wag*2,wagS:9*sp,byaw:0,bob:.5,wing:.25,wingS:7});V.ry+=((isLeg(V.cur)?-.62:-.18)-V.ry)*Math.min(1,dt*3)}
+  if(st==='eat'){Object.assign(X,{hy:0,hp:.1+Math.sin(t*16)*.12,wagA:m.wag*2,wagS:9*sp,byaw:0,bob:.5,wing:.25,wingS:7});V.ry+=((isLeg(V.cur)?vistaLeg(V.cur):-.18)-V.ry)*Math.min(1,dt*3)}
   const k=Math.min(1,dt*6*sp),kr=Math.min(1,dt*(st==='run'?7:2.5*sp)),kf=Math.min(1,dt*9);
   for(const n of['hy','hp','hr','wagA','wagS','crouch','bob','shake','lean','pitch','wing','wingS','byaw'])G[n]=(G[n]||0)+(X[n]-(G[n]||0))*k;
   G.back=(G.back||0)+(X.back-(G.back||0))*kf;G.hop=(G.hop||0)+(X.hop-(G.hop||0))*kf;G.roll+=(X.roll-G.roll)*kr;
@@ -234,8 +237,8 @@ function gloop(now){
   const br=Math.sin(t*2.2*sp)*.015,sy=1+br-G.crouch*.1;
   C.roll.scale.set(1+G.crouch*.05,sy,1+G.crouch*.03);
   C.roll.rotation.z=G.roll+shk+G.lean*(1-G.roll/Math.PI);C.roll.rotation.x=G.pitch;C.roll.rotation.y=G.byaw*(1-G.roll/Math.PI);
-  const hopY=act==='hop'?Math.abs(Math.sin(ae*Math.PI*1.6))*.16*G.hop:0;
-  C.roll.position.y=C.h/2*sy+(st==='belly'?.04:0)+G.bob*Math.abs(Math.sin(t*7))*.05+hopY+Math.abs(G.pitch)*C.h*.25+(C.wx?(C.wx/2-C.h/2*sy)*Math.max(0,Math.sin(Math.min(G.roll,Math.PI/2))):0)+(st==='tired'?Math.sin(t*2.4)*.008:0);
+  const desl=!!(MODELS[V.cur]&&MODELS[V.cur].desliza),hopY=act==='hop'&&!desl?Math.abs(Math.sin(ae*Math.PI*1.6))*.16*G.hop:0;// serpente desliza: sem pulinhos
+  C.roll.position.y=C.h/2*sy+(st==='belly'?.04:0)+(desl?0:G.bob*Math.abs(Math.sin(t*7))*.05)+hopY+Math.abs(G.pitch)*C.h*.25+(C.wx?(C.wx/2-C.h/2*sy)*Math.max(0,Math.sin(Math.min(G.roll,Math.PI/2))):0)+(st==='tired'?Math.sin(t*2.4)*.008:0);
   V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
   if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
   else{C.root.position.x*=.8;C.root.position.z+=(-G.back-C.root.position.z)*.25;C.root.rotation.y*=.8}
@@ -423,12 +426,12 @@ function vloop(now){
   if(st==='belly')Object.assign(T,{lid:.88,ear:-.7,tailX:-.3,wagA:.85,wagS:11,tongue:1,hx:-.25,hy:.35,hz:.2,roll:Math.PI,paddle:1,flap:0});
   if(st==='shake'){Object.assign(T,{lid:.3,ear:0,tailX:.3,wagA:.5,wagS:9,tongue:.5});if(el>.45)T.shake=1}
   if(st==='run')Object.assign(T,{lid:.1,ear:-.5,tailX:.4,wagA:0,wagS:5,tongue:1,hx:-.15,hy:0,hz:0});
-  if(st==='eat'){Object.assign(T,{lid:.3,ear:.15+Math.sin(t*16)*.1,tailX:.2,wagA:.7,wagS:12,tongue:.6+.4*Math.sin(t*15),hx:.1+Math.sin(t*16)*.2,hy:0,hz:0,crouch:.1});V.ry+=((isLeg(V.cur)?-.62:-.18)-V.ry)*Math.min(1,dt*3)}
+  if(st==='eat'){Object.assign(T,{lid:.3,ear:.15+Math.sin(t*16)*.1,tailX:.2,wagA:.7,wagS:12,tongue:.6+.4*Math.sin(t*15),hx:.1+Math.sin(t*16)*.2,hy:0,hz:0,crouch:.1});V.ry+=((isLeg(V.cur)?vistaLeg(V.cur):-.18)-V.ry)*Math.min(1,dt*3)}
   const k=Math.min(1,dt*7),k2=Math.min(1,dt*(st==='belly'||st==='shake'?3.2:7));
   for(const n in S)S[n]+=(T[n]-S[n])*(n==='roll'?k2:k);
   V.wag+=dt*S.wagS;
   // turntable
-  if(st==='pet'||st==='scratch')V.ry+=((isLeg(V.cur)?-.62:-.35)-V.ry)*dt*2;
+  if(st==='pet'||st==='scratch')V.ry+=((isLeg(V.cur)?vistaLeg(V.cur):-.35)-V.ry)*dt*2;
   V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
   // body
   const shakeOsc=S.shake*Math.sin(el*30)*.45*Math.max(0,1-(el-.45)/1);

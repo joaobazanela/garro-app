@@ -8,7 +8,8 @@ if(!G||!D||!D.lendarios)return;
 const $=id=>document.getElementById(id);
 const LS=D.lendarios,CH=D.chocar,MQ=D.maquina,LJ=D.loja,DM=D.diamantes||{};
 const KEY='garro-lendarios';
-const leg=k=>LS[k],porId=i=>LS[i-G.LEG0];
+const EPI=D.epicos||[],TODOS=LS.concat(EPI);// ovos 10..13 = épicos (vêm da máquina do épico)
+const leg=k=>TODOS[k],porId=i=>TODOS[i-G.LEG0],ehEpico=k=>k>=LS.length;
 const hoje=()=>new Date(Date.now()-3*3600e3).toISOString().slice(0,10);// dia de Brasília (igual ao servidor)
 // lendário do dia (Desafio Lendário na Aventura): igual à sync-estado
 function legDoDia(){return Math.floor(Date.parse(hoje()+'T00:00:00Z')/864e5)%LS.length}
@@ -44,7 +45,7 @@ function estante(){if(!sec)return;const coll=G.coll(),ovos=box().ovos.filter(o=>
     h+='<button type="button" class="legslot'+(n?'':' lock')+'" data-i="'+x.id+'"><img src="'+(n?G.plush(x.id).img:'img/lendarios/ovo_'+x.slug+'.webp')+'" alt=""><span>'+(n?x.nome:'???')+'</span>'+(n?'<u>NV '+G.lvOf(x.id)+'</u>':'')+'</button>'}
   // épicos (data/lendarios.json → epicos): aparecem trancados até pegar; a máquina do épico abre com tudo completo
   const EP=D.epicos||[];if(EP.length){h+='</div><div class="leghead"><h3>🔥 Épicos <small>'+EP.filter(x=>coll[x.id]>0).length+' de '+EP.length+'</small></h3></div><div class="leggrid epgrid">';
-    for(const x of EP){const n=coll[x.id]||0;h+='<button type="button" class="legslot'+(n?'':' lock')+'" data-i="'+x.id+'"><img src="'+x.sprite.img+'" alt=""><span>'+(n?x.nome:'???')+'</span>'+(n?'<u>NV '+G.lvOf(x.id)+'</u>':'')+'</button>'}}
+    for(const x of EP){const n=coll[x.id]||0;h+='<button type="button" class="legslot'+(n?'':' lock')+'" data-i="'+x.id+'"><img src="'+(n||!x.ovo?x.sprite.img:x.ovo.img)+'" alt=""><span>'+(n?x.nome:'???')+'</span>'+(n?'<u>NV '+G.lvOf(x.id)+'</u>':'')+'</button>'}}
   sec.innerHTML=h+'</div>';
   $('legNinho').addEventListener('click',()=>abrirNinho());
   sec.querySelectorAll('.legslot').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;if(G.coll()[i]>0)G.abrir(i);else if(i>=G.LEG0+LS.length)G.banner&&G.banner('🔥 Épico','Pegue todos os normais, gigantes e lendários para abrir a máquina do épico');else abrirNinho('loja')}))}
@@ -62,9 +63,9 @@ function dica(o){return (CH.dicas||[])[Math.max(0,Math.min(3,o.hint|0))]||''}
 function ninho(){const B=box(),d=diam();$('nDiam').textContent=d===Infinity?'∞':d;
   const ovos=B.ovos.filter(o=>!o.nasceu),hj=hoje();
   let h='<div class="shsec">Seus ovos <small>· dê carinho 1 vez por dia; cada ovo tem um tempo secreto para chocar</small></div>';
-  if(!ovos.length)h+='<p class="shnote">Você ainda não tem ovos. Tente a 🥚 Máquina de Ovos, o 👑 Desafio Lendário da Aventura ou compre na loja abaixo.</p>';
+  if(!ovos.length)h+='<p class="shnote">Você ainda não tem ovos. Tente a 🥚 Máquina de Ovos, o 👑 Desafio Lendário da Aventura, a 🔥 Máquina do Épico ou compre na loja abaixo.</p>';
   h+='<div class="ninhovos">'+ovos.map(o=>{const x=leg(o.leg),feito=o.last===hj;
-    return '<div class="ovo h'+(o.hint|0)+'"><button type="button" class="ver3d" data-ver="'+o.id+'" aria-label="Ver o ovo em 3D"><img src="img/lendarios/ovo_'+x.slug+'.webp" alt=""><i>👆 3D</i></button><b>Ovo de '+x.nome+'</b><small>'+o.days+' dia'+(o.days===1?'':'s')+' de carinho</small><small class="dica">'+dica(o)+'</small>'+
+    return '<div class="ovo h'+(o.hint|0)+(ehEpico(o.leg)?' epico':'')+'"><button type="button" class="ver3d" data-ver="'+o.id+'" aria-label="Ver o ovo em 3D"><img src="img/lendarios/ovo_'+x.slug+'.webp" alt=""><i>👆 3D</i></button><b>Ovo de '+x.nome+'</b><small>'+o.days+' dia'+(o.days===1?'':'s')+' de carinho</small><small class="dica">'+dica(o)+'</small>'+
       '<button type="button" data-ovo="'+o.id+'"'+(feito?' disabled':'')+'>'+(feito?'✓ Carinho de hoje feito':'🤍 Dar carinho')+'</button>'+(dev()&&!G.online()?'<button type="button" class="dev" data-pula="'+o.id+'">⏩ dev: pular 1 dia</button>':'')+'</div>'}).join('')+'</div>';
   h+='<div class="shsec" id="nLoja">Loja de ovos <small>· '+LJ.preco_ovo_diamantes+' 💎 cada</small></div><div class="lojaovos">'+LS.map((x,k)=>'<button type="button" class="lovo" data-compra="'+k+'"'+(d<LJ.preco_ovo_diamantes?' disabled':'')+'><img src="img/lendarios/ovo_'+x.slug+'.webp" alt=""><b>'+x.nome+'</b><i>'+LJ.preco_ovo_diamantes+' 💎</i></button>').join('')+'</div>';
   h+='<p class="shnote"><b>Como ganhar 💎 (raros):</b> '+DM.chefe_do_mundo+' 💎 na 1ª vitória contra o chefão de cada mundo da Aventura · '+DM.mundo_3_estrelas+' 💎 com 3 estrelas em todas as fases de um mundo · 1% de chance a cada pelúcia gigante pega.</p>';
@@ -103,11 +104,13 @@ function ver3d(id){const o=box().ovos.find(x=>x.id===id);if(!o)return;const x=le
   const raiz=new T.Group();S.add(raiz);
   OV={id,o,d,R:R_,S,cam,raiz,anel,t0:performance.now(),pulo:0,racha:0,dica:d.querySelector('.o3dica'),raf:0};OV.dica.textContent=dica(o);
   const tam=()=>{const r=cv.parentNode.getBoundingClientRect();R_.setSize(r.width,r.height,false);cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix()};tam();OV.tam=tam;window.addEventListener('resize',tam);
-  G.glb(x.ovo3d).then(g=>{if(!OV||OV.id!==id)return;const b=new T.Box3().setFromObject(g),h=b.max.y-b.min.y||1;g.scale.setScalar(1.7/h);g.position.set(-(b.min.x+b.max.x)/2*1.7/h,-b.min.y*1.7/h,-(b.min.z+b.max.z)/2*1.7/h);
+  if(!x.ovo3d){new T.TextureLoader().load('img/lendarios/ovo_'+x.slug+'.webp',t=>{if(!OV||OV.id!==id)return;t.encoding=T.sRGBEncoding;const a=t.image.width/t.image.height,pl=new T.Mesh(new T.PlaneGeometry(1.55*a,1.55),new T.MeshBasicMaterial({map:t,transparent:true,side:T.DoubleSide,depthWrite:false}));
+    pl.position.y=.82;OV.placa=pl;raiz.add(pl);d.querySelector('.o3load').hidden=true},undefined,()=>{d.querySelector('.o3load').textContent='Não deu para carregar o ovo.'})}
+  else G.glb(x.ovo3d).then(g=>{if(!OV||OV.id!==id)return;const b=new T.Box3().setFromObject(g),h=b.max.y-b.min.y||1;g.scale.setScalar(1.7/h);g.position.set(-(b.min.x+b.max.x)/2*1.7/h,-b.min.y*1.7/h,-(b.min.z+b.max.z)/2*1.7/h);
     g.traverse(m=>{if(m.isMesh&&m.material){m.material.roughness=.8;m.material.metalness=0;if(m.material.map)m.material.map.encoding=T.sRGBEncoding}});raiz.add(g);d.querySelector('.o3load').hidden=true}).catch(()=>{d.querySelector('.o3load').textContent='Não deu para carregar o ovo 3D.'});
   const loop=now=>{if(!OV||OV.d!==d)return;OV.raf=requestAnimationFrame(loop);const t=(now-OV.t0)/1000,h=OV.o.hint|0;
     let bal=[.0,.03,.08,.16][h],vel=[1,1.4,2.4,4][h];if(OV.racha){OV.racha+=1/60;bal=.35;vel=22}
-    raiz.rotation.y=t*.45;raiz.rotation.z=Math.sin(t*vel)*bal*(h>=2||OV.racha?1:0)+Math.sin(t*1.3)*.02;
+    raiz.rotation.y=OV.placa?Math.sin(t*.8)*.25:t*.45;raiz.rotation.z=Math.sin(t*vel)*bal*(h>=2||OV.racha?1:0)+Math.sin(t*1.3)*.02;
     if(OV.pulo){OV.pulo=Math.max(0,OV.pulo-1/40);raiz.position.y=Math.sin((1-OV.pulo)*Math.PI)*.35}else raiz.position.y=0;
     anel.material.opacity=.3+.25*Math.sin(t*2)+h*.08;anel.scale.setScalar(1+Math.sin(t*2)*.05+h*.06);R_.render(S,cam)};OV.raf=requestAnimationFrame(loop);
   d.querySelector('.o3x').addEventListener('click',fecha3d);
@@ -120,9 +123,9 @@ function chocar(o){if(OV&&OV.id===o.id){OV.racha=.001;G.tone(220,.3,'triangle',.
   else nascer(o.leg)}
 
 // ---------- nasceu! (a arte da carta do lendário) ----------
-function nascer(k){const x=leg(k),i=G.LEG0+k;G.fanfare();setTimeout(()=>G.fanfare(),700);
-  const d=document.createElement('div');d.className='nasceu';
-  d.innerHTML='<div class="ncarta"><img src="img/lendarios/carta_'+x.slug+'.webp" alt=""><div class="nbrilho"></div></div><h4>Nasceu!</h4><b>✦ '+x.nome+'</b><small>'+x.desc+'</small><small>Nv '+CH.nivel_ao_nascer+' · já está na sua coleção</small><div><button type="button" data-v="3d">Ver em 3D ✨</button><button type="button" class="sec" data-v="ok">Fechar</button></div>';
+function nascer(k){const x=leg(k),i=G.LEG0+k,ep=ehEpico(k);G.fanfare();setTimeout(()=>G.fanfare(),700);
+  const d=document.createElement('div');d.className='nasceu'+(ep?' epico':'');
+  d.innerHTML='<div class="ncarta"><img src="img/lendarios/'+(ep?'':'carta_')+x.slug+'.webp" alt=""><div class="nbrilho"></div></div><h4>Nasceu!</h4><b>'+(ep?'🔥 ':'✦ ')+x.nome+'</b><small>'+x.desc+'</small><small>Nv '+CH.nivel_ao_nascer+' · já está na sua coleção</small><div><button type="button" data-v="3d">Ver em 3D ✨</button><button type="button" class="sec" data-v="ok">Fechar</button></div>';
   document.body.appendChild(d);d.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;d.remove();if(b.dataset.v==='3d'){pan.hidden=true;document.body.style.overflow='';G.abrir(i)}});
   G.estante()}
 
@@ -135,6 +138,11 @@ window.addEventListener('garro:ovo',async e=>{const k=e.detail.leg,comum=!(k>=0)
   if(real){G.banner('🥚 OVO LENDÁRIO!','Ovo de '+x.nome+' foi para o Ninho!',true);G.fanfare();setTimeout(()=>G.fanfare(),600);setTimeout(()=>abrirNinho(),1400)}
   else{G.banner('Ovo comum 🥚','+'+MQ.ovo_falso_moedas+' 🪙 · o lendário é o ovo do meio');G.tone(520,.12,'triangle',.05)}
   tudo()});
+
+// ---------- máquina do épico: o ovo do épico vai para o Ninho ----------
+window.addEventListener('garro:ovoepico',async e=>{const r=e.detail||{},k=(r.epic|0)-G.LEG0;if(!(k>=LS.length&&k<TODOS.length))return;
+  if(r.local)ovoLocal(k,'epico');else await carregar();
+  setTimeout(()=>abrirNinho(),1500);tudo()});
 
 // ---------- 💎 raro na máquina gigante ----------
 window.addEventListener('garro:gigante',e=>{const r=e.detail||{};

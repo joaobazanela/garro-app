@@ -57,7 +57,8 @@
  "epico_maquina": {
   "preco": 500,
   "segurar": 0.05,
-  "_nota": "Épicos (4 versões: Fogo, Água, Ar, Terra), modelos do Tripo (elemental_dragon) recortados por ferramentas/quadrantes.py. Nomes ainda provisórios. A máquina do épico só abre com todos os normais, gigantes e lendários; mostra o épico do dia e só fica firme na garra com chance segurar (sorteio no servidor)."
+  "ovo_cm": 46,
+  "_nota": "Épicos (4 versões: Fogo, Água, Ar, Terra), modelos do Tripo (elemental_dragon). A máquina do épico só abre com todos os normais, gigantes e lendários; tem o OVO do épico do dia (artes enviadas: ovos de Fogo, Água, Ar e Terra) e só fica firme na garra com chance segurar (sorteio no servidor). O ovo vai para o Ninho e choca como o dos lendários (chocar.dias_min a dias_max dias de carinho; nasce no Nv chocar.nivel_ao_nascer). ovo_cm = tamanho do ovo na máquina."
  },
  "epicos": [
   {
@@ -72,6 +73,7 @@
    "cor": "#ff6a1a",
    "desc": "Fera de lava e chamas, com juba de fogo e garras de obsidiana.",
    "modelo": "models/lendarios/infernyx.glb",
+   "ovo": {"w": 246, "h": 256, "hull": [[0.508, 0.0], [0.772, 0.113], [0.959, 0.375], [0.984, 0.453], [0.972, 0.68], [0.874, 0.855], [0.752, 0.965], [0.516, 0.996], [0.276, 0.973], [0.146, 0.891], [0.122, 0.863], [0.008, 0.609], [0.02, 0.508], [0.159, 0.18], [0.427, 0.016]], "img": "img/lendarios/ovo_infernyx.webp"},
    "sprite": {"w": 154, "h": 200, "hull": [[0.825, 0.095], [0.883, 0.215], [0.981, 0.815], [0.688, 0.98], [0.539, 0.985], [0.039, 0.95], [0.013, 0.915], [0.097, 0.42], [0.214, 0.09], [0.325, 0.01], [0.442, 0.01]], "img": "img/lendarios/infernyx.webp"}
   },
   {
@@ -86,6 +88,7 @@
    "cor": "#2a8cff",
    "desc": "Fera das profundezas, de escamas azuis que brilham como o mar à noite.",
    "modelo": "models/lendarios/abyssor.glb",
+   "ovo": {"w": 245, "h": 256, "hull": [[0.51, 0.004], [0.78, 0.137], [0.91, 0.289], [0.988, 0.586], [0.988, 0.668], [0.841, 0.91], [0.706, 0.973], [0.498, 0.996], [0.265, 0.965], [0.127, 0.871], [0.02, 0.523], [0.131, 0.219], [0.2, 0.148], [0.42, 0.016]], "img": "img/lendarios/ovo_abyssor.webp"},
    "sprite": {"w": 154, "h": 200, "hull": [[0.864, 0.085], [0.929, 0.21], [0.981, 0.82], [0.734, 0.975], [0.662, 0.985], [0.104, 0.95], [0.013, 0.93], [0.117, 0.415], [0.24, 0.08], [0.338, 0.01], [0.474, 0.01]], "img": "img/lendarios/abyssor.webp"}
   },
   {
@@ -100,6 +103,7 @@
    "cor": "#dfe8ff",
    "desc": "Fera do vento, de juba branca que vira tempestade quando corre.",
    "modelo": "models/lendarios/zephyrax.glb",
+   "ovo": {"w": 269, "h": 256, "hull": [[0.509, 0.0], [0.639, 0.086], [0.963, 0.344], [0.981, 0.465], [0.81, 0.84], [0.695, 0.961], [0.587, 0.984], [0.446, 0.988], [0.305, 0.965], [0.149, 0.879], [0.108, 0.844], [0.037, 0.699], [0.019, 0.445], [0.03, 0.391], [0.164, 0.094], [0.424, 0.008]], "img": "img/lendarios/ovo_zephyrax.webp"},
    "sprite": {"w": 161, "h": 200, "hull": [[0.652, 0.04], [0.789, 0.155], [0.981, 0.82], [0.733, 0.975], [0.658, 0.985], [0.037, 0.94], [0.012, 0.905], [0.242, 0.085], [0.342, 0.015], [0.491, 0.01]], "img": "img/lendarios/zephyrax.webp"}
   },
   {
@@ -114,6 +118,7 @@
    "cor": "#7fc23a",
    "desc": "Fera da terra e da floresta, coberta de pedra e musgo vivo.",
    "modelo": "models/lendarios/terravyn.glb",
+   "ovo": {"w": 261, "h": 256, "hull": [[0.506, 0.0], [0.789, 0.113], [0.954, 0.418], [0.992, 0.625], [0.697, 0.965], [0.552, 0.988], [0.333, 0.977], [0.126, 0.879], [0.008, 0.539], [0.015, 0.352], [0.149, 0.145], [0.249, 0.074], [0.421, 0.008]], "img": "img/lendarios/ovo_terravyn.webp"},
    "sprite": {"w": 156, "h": 200, "hull": [[0.34, 0.01], [0.628, 0.035], [0.814, 0.15], [0.981, 0.83], [0.724, 0.98], [0.564, 0.985], [0.013, 0.935], [0.115, 0.435], [0.231, 0.085]], "img": "img/lendarios/terravyn.webp"}
   }
  ],
@@ -121,6 +126,7 @@
   {
    "id": 43,
    "slug": "obsidragon",
+   "vista": 0.75,
    "nome": "Obsidragon",
    "elemento": "lava",
    "stat": [118,98],
@@ -129,7 +135,7 @@
    "desc": "Dragão de escamas negras com veias de ouro. Guarda tesouros dentro dos vulcões.",
    "cor": "#ffb83a",
    "tamanho": 1.15,
-   "sprite": {"w": 132, "h": 200, "hull": [[0.424, 0.02], [0.826, 0.195], [0.97, 0.41], [0.977, 0.46], [0.674, 0.885], [0.485, 0.97], [0.061, 0.985], [0.015, 0.975], [0.038, 0.14], [0.098, 0.025]], "img": "img/lendarios/obsidragon.webp"},
+   "sprite": {"w": 137, "h": 200, "hull": [[0.416, 0.01], [0.686, 0.025], [0.803, 0.135], [0.92, 0.315], [0.978, 0.905], [0.774, 0.985], [0.686, 0.985], [0.285, 0.91], [0.117, 0.71], [0.015, 0.465], [0.015, 0.415], [0.109, 0.205]], "img": "img/lendarios/obsidragon.webp"},
    "modelo": "models/lendarios/obsidragon.glb",
    "ovo3d": "models/lendarios/ovo_obsidragon.glb",
    "ovo": {
@@ -158,6 +164,7 @@
   {
    "id": 44,
    "slug": "lunaria",
+   "vista": 0.75,
    "nome": "Lunária",
    "elemento": "ice",
    "stat": [104,108],
@@ -166,7 +173,7 @@
    "desc": "Raposa de cristal da lua cheia. Onde ela pisa, nasce neve brilhante.",
    "cor": "#7fd0ff",
    "tamanho": 1.15,
-   "sprite": {"w": 130, "h": 200, "hull": [[0.908, 0.01], [0.977, 0.28], [0.938, 0.745], [0.831, 0.89], [0.354, 0.985], [0.023, 0.955], [0.054, 0.22], [0.085, 0.15], [0.477, 0.025]], "img": "img/lendarios/lunaria.webp"},
+   "sprite": {"w": 100, "h": 200, "hull": [[0.16, 0.01], [0.74, 0.02], [0.84, 0.07], [0.97, 0.195], [0.96, 0.89], [0.93, 0.9], [0.47, 0.915], [0.17, 0.8], [0.03, 0.42], [0.02, 0.26], [0.04, 0.17]], "img": "img/lendarios/lunaria.webp"},
    "modelo": "models/lendarios/lunaria.glb",
    "ovo3d": "models/lendarios/ovo_lunaria.glb",
    "ovo": {
@@ -289,6 +296,7 @@
   {
    "id": 47,
    "slug": "noctalis",
+   "vista": 0.75,
    "nome": "Noctalis",
    "elemento": "shadow",
    "stat": [116,96],
@@ -297,7 +305,7 @@
    "desc": "Lobo das sombras de chamas roxas. Só aparece em noites sem lua.",
    "cor": "#a050ff",
    "tamanho": 1.15,
-   "sprite": {"w": 97, "h": 200, "hull": [[0.598, 0.01], [0.773, 0.15], [0.845, 0.26], [0.959, 0.565], [0.948, 0.67], [0.804, 0.895], [0.608, 0.98], [0.093, 0.98], [0.021, 0.96], [0.041, 0.165], [0.237, 0.035]], "img": "img/lendarios/noctalis.webp"},
+   "sprite": {"w": 118, "h": 200, "hull": [[0.356, 0.01], [0.669, 0.035], [0.898, 0.165], [0.975, 0.925], [0.754, 0.98], [0.644, 0.985], [0.246, 0.92], [0.068, 0.805], [0.017, 0.64], [0.025, 0.58], [0.161, 0.275]], "img": "img/lendarios/noctalis.webp"},
    "modelo": "models/lendarios/noctalis.glb",
    "ovo3d": "models/lendarios/ovo_noctalis.glb",
    "ovo": {
@@ -429,6 +437,7 @@
   {
    "id": 50,
    "slug": "solaris",
+   "vista": 0.75,
    "nome": "Solaris",
    "elemento": "gold",
    "stat": [112,112],
@@ -437,7 +446,7 @@
    "desc": "Guardião do sol com auréola de ouro. Sua luz cura quem está por perto.",
    "cor": "#ffd86a",
    "tamanho": 1.15,
-   "sprite": {"w": 143, "h": 200, "hull": [[0.965, 0.01], [0.979, 0.095], [0.909, 0.735], [0.881, 0.775], [0.713, 0.91], [0.392, 0.985], [0.287, 0.985], [0.028, 0.94], [0.014, 0.905], [0.063, 0.3], [0.119, 0.055]], "img": "img/lendarios/solaris.webp"},
+   "sprite": {"w": 140, "h": 200, "hull": [[0.014, 0.015], [0.871, 0.035], [0.971, 0.945], [0.593, 0.985], [0.5, 0.98], [0.314, 0.89], [0.229, 0.725], [0.014, 0.085]], "img": "img/lendarios/solaris.webp"},
    "modelo": "models/lendarios/solaris.glb",
    "ovo3d": "models/lendarios/ovo_solaris.glb",
    "ovo": {
@@ -513,6 +522,8 @@
   {
    "id": 52,
    "slug": "astrakai",
+   "anda": "desliza",
+   "vista": -0.9,
    "nome": "Astrakai",
    "elemento": "stars",
    "stat": [114,106],
@@ -522,24 +533,24 @@
    "cor": "#ffe9a0",
    "tamanho": 1.15,
    "sprite": {
-    "w": 109,
+    "w": 166,
     "h": 200,
     "hull": [
-     [0.569,0.015],
-     [0.743,0.11],
-     [0.963,0.72],
-     [0.881,0.8],
-     [0.716,0.87],
-     [0.183,0.985],
-     [0.11,0.965],
-     [0.018,0.87],
-     [0.193,0.11],
-     [0.303,0.04],
-     [0.431,0.01]
+     [0.548,0.015],
+     [0.675,0.07],
+     [0.765,0.18],
+     [0.982,0.825],
+     [0.934,0.895],
+     [0.651,0.97],
+     [0.247,0.97],
+     [0.084,0.915],
+     [0.012,0.78],
+     [0.253,0.27]
     ],
     "img": "img/lendarios/astrakai.webp"
    },
    "modelo": "models/lendarios/astrakai.glb",
+   "modelo_anda": "models/lendarios/astrakai_deitada.glb",
    "ovo3d": "models/lendarios/ovo_astrakai.glb",
    "ovo": {
     "w": 181,

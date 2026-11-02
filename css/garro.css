@@ -493,3 +493,13 @@ style#btnMis{position:relative}
 .advjmap .trilha2{fill:none;stroke:rgba(255,233,168,.6);stroke-width:3;stroke-dasharray:5 9;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .advjan.bloq .advjmap{filter:grayscale(.7) brightness(.6)}
 .advjbloq{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.7);padding:10px 14px;border-radius:12px;font-weight:800;font-size:13px;text-align:center;width:70%}
+
+/* ovos dos épicos (máquina do épico → Ninho) */
+.epgrid .legslot.lock img[src*="ovo_"]{filter:none;opacity:.9}
+.ninhovos .ovo.epico{border-color:#ff8a3a;box-shadow:0 0 0 1px rgba(255,138,58,.5),0 0 18px rgba(255,120,40,.35)}
+.nasceu.epico .ncarta img{object-fit:contain;background:radial-gradient(circle,#5a2410,#1a0804)}
+
+/* botão de som (batalha e pausa da Aventura) */
+.somb{border:1px solid rgba(255,226,138,.45);background:rgba(0,0,0,.35);color:#ffe9a8;border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+#battle h3 .somb{float:right;margin-top:-2px;font-size:11px;padding:4px 10px}
+#advSomP{margin-top:10px;display:flex;justify-content:center}

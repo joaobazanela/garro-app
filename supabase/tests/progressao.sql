@@ -22,7 +22,7 @@ insert into collection select :u, g, 1 from generate_series(43,52) g on conflict
 update player_state set last_action_at = now() - interval '2 seconds' where user_id = :u;
 select 'épico abre com tudo (firme forçado no teste)' t, coins from rpc_epic_round_start(:u,500,0.2);
 update player_state set epic_firm = true, last_action_at = now() - interval '2 seconds' where user_id = :u;
-select 'pegou o épico do dia (Abyssor, 54) no Nv 30' t, epic, count, g_lv_xp(54,xp) nv from rpc_epic_capture(:u,30,54);
+select 'pegou o OVO do épico do dia (Abyssor, 54; migração 0015)' t, epic, egg is not null tem_ovo from rpc_epic_capture(:u,54,7,90);
 -- evolução: Nv 100 + 5 pedras do grupo
 insert into inventory(user_id,item,qty) values (:u,'stone_1',5) on conflict (user_id,item) do update set qty=5;
 do $$ begin perform rpc_use_stone('66666666-6666-6666-6666-666666666666',3,1,100,5); exception when others then raise notice 'OK abaixo do Nv 100 não evolui: %',sqlerrm; end $$;

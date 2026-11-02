@@ -20,7 +20,9 @@ REGRAS={ # (faixa de matiz que fica, matiz nova, saturação mínima p/ trocar, 
  'zephyrax':(lambda h:(h>=165)&(h<=255),205,.16,.55),
  'terravyn':(lambda h:~((h>=150)&(h<=265)),80,.2,1.0),
  'abyssor':(lambda h:~((h<45)|(h>325)),210,.3,1.0),
- 'infernyx':(lambda h:~((h>=165)&(h<=260)),18,.22,1.0)}
+ 'infernyx':(lambda h:~((h>=165)&(h<=260)),18,.22,1.0),
+ 'solaris':(lambda h:~((h>=245)&(h<=325)),42,.2,1.0),     # chifre e pintas roxas → dourado
+ 'lunaria':(lambda h:~((h>=12)&(h<=62)),205,.3,.8)}       # mancha dourada/marrom na pata → azul
 def recolore(f,nome):
   j,b=le(f);views={}
   for im in j['images']:

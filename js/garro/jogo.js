@@ -105,6 +105,10 @@ function won(b){
     try{window.dispatchEvent(new CustomEvent('garro:ovo',{detail:{leg:p.egg}}))}catch(e){}hud();return}if(p.stone!==undefined){INV.st[p.stone]++;saveInv();roundWin=true;losses=0;banner(p.name+'!','Pedra rara! Use no bicho do mesmo elemento',true);fanfare();hud();return}
   // épico: só conta se a garra estava firme (sorteio no servidor no começo da jogada)
   if(p.epic){if(claw.epicFirm!==true){placeEpic();banner('Quase!','O épico escapou e voltou para o lugar');return}
+    if(p.epicEgg){const e=p.ei;evento('capture');shakeWin(12);boom();fanfare();setTimeout(fanfare,600);puff(50,FLOOR-40,22,['#ffd23c','#ff7a2a','#ffffff'],true);
+      const ev=d=>{try{window.dispatchEvent(new CustomEvent('garro:ovoepico',{detail:d}))}catch(_){}};
+      if(ONL&&!DEV)srv('epic_capture',{},r=>{if(typeof r.coins==='number'){coins=r.coins;hud()}ev({epic:r.epic,egg:r.egg})});else ev({epic:e,local:1});
+      roundWin=true;losses=0;banner('🔥 OVO ÉPICO!','Ovo de '+PLUSH[e].name+' foi para o Ninho',true);hud();return}
     const e=p.i;evento('capture');coll[e]=(coll[e]||0)+1;saveX();const c0=careOf(e);c0.xp=Math.max(c0.xp,xpTotal(e,30));saveCare();shakeWin(12);boom();fanfare();setTimeout(fanfare,600);
     if(ONL&&!DEV)srv('epic_capture',{},r=>{coll[r.epic]=r.count;careOf(r.epic).xp=r.xp;saveX();saveCare();renderShelf()});
     roundWin=true;losses=0;banner('🔥 ÉPICO! '+p.name,'O bichinho mais forte que existe',true);renderShelf(e);hud();return}
@@ -200,7 +204,7 @@ setProngs();requestAnimationFrame(loop);
 /* ---------- sound ---------- */
 let ac=null,motor=null;
 function audio(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.state==='suspended')ac.resume()}
-function tone(f,d,type,vol){if(!ac)return;try{const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;
+function tone(f,d,type,vol){if(!ac||(window.GARRO_SOM&&GARRO_SOM.mudoEfeitos()))return;try{const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;
   g.gain.setValueAtTime(vol||.1,ac.currentTime);g.gain.exponentialRampToValueAtTime(.0008,ac.currentTime+d);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 function click(f){tone(f,.06,'square',.06)}
 function thud(){tone(90,.25,'sine',.25);tone(60,.3,'triangle',.15)}

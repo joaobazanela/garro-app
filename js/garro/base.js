@@ -124,6 +124,10 @@ STONES.forEach(bakeP);
 const EGGS=LEGS.map((L,k)=>{const o=L.ovo||{w:160,h:256,hull:[[.5,0],[1,.5],[.5,1],[0,.5]]};
   return{i:200+k,egg:k,name:'Ovo de '+L.nome,cm:21,g:200,tex:1,rare:1,desc:'',w:o.w,h:o.h,hull:o.hull,img:'img/lendarios/ovo_'+L.slug+'.webp'}});
 EGGS.forEach(bakeP);
+// máquina do épico: o OVO do épico do dia (data/lendarios.json → epicos[].ovo); vai para o Ninho e choca como o dos lendários
+const EPEGGS=EPS.map((E,k)=>{const o=E.ovo||{w:160,h:256,hull:[[.5,0],[1,.5],[.5,1],[0,.5]]};
+  return{i:220+k,epic:1,epicEgg:1,ei:E.id,name:'Ovo de '+E.nome,cm:EPM.ovo_cm||46,g:1500,tex:1,rare:1,desc:'',w:o.w,h:o.h,hull:o.hull,img:o.img||'img/lendarios/ovo_'+E.slug+'.webp'}});
+EPEGGS.forEach(bakeP);
 // máquina comum (data/regras.json → MAQUINA): só redondos, chance de virar grande, força da garra; travas das outras máquinas
 const MQR=Object.assign({so_redondos:true,transformar_chance:.05,garra:{min:380,var:400,derrotas_ajuda:8},gigante:{min:500,var:450,derrotas_ajuda:5}},GD.regras.MAQUINA||{});
 const MQ=LEGD.maquina||{},OC=MQ.ovo_comum||{w:156,h:211,hull:[[.5,0],[1,.5],[.5,1],[0,.5]],img:'img/lendarios/ovo_comum.webp'};

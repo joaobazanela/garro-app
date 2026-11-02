@@ -103,9 +103,9 @@ function travaMaq(m){if(DEV)return '';const f=faltas();
 function tabsMaq(){const t=[[2,'mach2','🦖 Gigante · '+GCOST+' 🪙'],[3,'mach4','🥚 Ovos · '+ECOST+' 🪙'],[4,'mach5','🔥 Épico · '+EPM.preco+' 🪙']];
   for(const [m,id,txt] of t){const b=$(id);if(!b)continue;const tv=travaMaq(m);b.classList.toggle('lock',!!tv);b.title=tv;b.textContent=(tv?'🔒 ':'')+txt}}
 // máquina do épico: o épico do dia, grande como um gigante, liso: só fica firme na garra quando o servidor sorteou "firme"
-function epicOf(i){const G=giantOf(i,72/PLUSH[i].cm);G.epic=1;G.g=1500;G.name=PLUSH[i].name;return G}
+function epicOf(i){const e=EPEGGS[i-EPIC0];if(e&&e.verts)return e;const G=giantOf(i,72/PLUSH[i].cm);G.epic=1;G.g=1500;G.name=PLUSH[i].name;return G}
 function placeEpic(){for(const b of bodies)Composite.remove(world,b);bodies.length=0;const i=epicDia();if(i<0)return;const G=epicOf(i);G.landed=false;const gb=addPlush(G,(DIV+W)/2+12,-G.dh*.6);Body.setAngle(gb,0);gb.frictionAir=.02;DECOR=[];
-  $('who').innerHTML='Épico do dia: <b>'+G.name+'</b> <em>· muito liso, quase nunca fica firme na garra</em>'}
+  $('who').innerHTML=(G.epicEgg?'Ovo épico do dia: <b>'+PLUSH[i].name+'</b> <em>· choca no Ninho · muito liso, quase nunca fica firme na garra</em>':'Épico do dia: <b>'+G.name+'</b> <em>· muito liso, quase nunca fica firme na garra</em>')}
 function setMachine(m){if(m===MACH)return;if(claw.state!=='ready'){banner('Espere a garra voltar');return}
   {const tv=travaMaq(m);if(tv){banner('🔒 Máquina trancada',tv);audio();tone(220,.15,'sine',.06);return}}
   MACH=m;const gg=m===2||m===4,k=(gg?1.7:1)/CS;CS=gg?1.7:1;Body.scale(prongL,k,k);Body.scale(prongR,k,k);
