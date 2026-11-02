@@ -5,6 +5,8 @@ let CARE={};try{CARE=JSON.parse(localStorage.getItem(CARE_KEY)||'{}')||{}}catch(
 function saveCare(){try{localStorage.setItem(CARE_KEY,JSON.stringify(CARE))}catch(e){}}
 const DECAY=GD.regras.DECAY;// pontos por minuto
 const XPG=GD.regras.XPG;
+// cuidar dá no máximo CUIDAR_XP_DIA de XP por bichinho por dia (data/regras.json); o dia é o de Brasília
+const XPDIA=GD.regras.CUIDAR_XP_DIA||30,diaHoje=()=>new Date(Date.now()-3*3600e3).toISOString().slice(0,10),xpHoje=i=>{const c=careOf(i);return c.xd===diaHoje()?(c.xh|0):0};
 // the first 20 plushes keep their painted look: they only grow a bit; the 15 round ones also change shape and color
 const GROW=GD.regras.GROW;
 // regras da pedra de evolução (data/regras.json → EVOLUCAO): forma evoluída no Nv 30; 2 pedras = +1 nível; no Nv 100 renasce (volta ao 1, ganha força)
@@ -13,7 +15,7 @@ const EVO_LV=EVO.nivel,PEDRAS_NV=EVO.pedras_por_nivel,REB_B=EVO.bonus_por_renasc
 // ataque e defesa no nível 1: os grandes são bem mais fortes que os redondos (cada um tem seu jeito)
 const STAT=GD.pelucias.STAT;
 // curva de níveis (data/regras.json → NIVEL): XP total para o nível N = linear×(N−1) + cubo×(N−1)³ (como as curvas cúbicas do Pokémon)
-const NV=GD.regras.NIVEL||{grande:{max:100,linear:4,cubo:.012},redondo:{max:30,linear:5,cubo:.012}},nvP=i=>grande(i)?NV.grande:NV.redondo;
+const NV=GD.regras.NIVEL||{grande:{max:100,linear:10,cubo:.03},redondo:{max:30,linear:12,cubo:.03}},nvP=i=>grande(i)?NV.grande:NV.redondo;
 const capOf=i=>nvP(i).max;
 function xpTotal(i,L){const p=nvP(i),n=Math.max(0,Math.min(L,capOf(i))-1);return p.linear*n+Math.round(Math.round(p.cubo*1000)*n*n*n/1000)}
 function lvFromXp(i,xp){const cap=capOf(i);let L=1;while(L<cap&&xpTotal(i,L+1)<=xp)L++;return L}
@@ -46,7 +48,7 @@ function renderCare(){
   if(isLeg(i)){$('cStage').textContent='✦ Lendário · '+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+' · mais forte que as pelúcias grandes';$('cXpBar').style.width=xpPct(i)+'%'}
   else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+' · 2 repetidas = 1 moeda';$('cXpBar').style.width=xpPct(i)+'%'}
   else{$('cStage').textContent=st?'★ '+evName(i,1):PLUSH[i].name;
-    $('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(st?' · forma evoluída!':' · evolui no Nv '+EVO_LV)+(rbOf(i)?' · 🔄 '+rbOf(i)+'× (+'+Math.round(REB_B*rbOf(i)*100)+'% força)':'');
+    $('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(st?' · forma evoluída!':' · evolui no Nv '+EVO_LV)+' · cuidar hoje '+xpHoje(i)+'/'+XPDIA+' XP'+(rbOf(i)?' · 🔄 '+rbOf(i)+'× (+'+Math.round(REB_B*rbOf(i)*100)+'% força)':'');
     $('cXpBar').style.width=xpPct(i)+'%'}
   for(const [k,id,b] of [['f','mF','cFeed'],['l','mL','cPet'],['p','mP','cPlay']]){$(id).style.width=Math.round(c[k])+'%';$(b).classList.toggle('low',c[k]<25)}
   updFood();const sb=$('cStone'),rbb=$('cRebirth');
