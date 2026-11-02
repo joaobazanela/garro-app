@@ -204,6 +204,7 @@ function luta(){TELA='luta';msg('');const R=RUN,f=R.f,h=R.hero;$('advTitle').tex
 // ---- pernas andando no próprio modelo 3D (passo diagonal, a pata de apoio fica no chão) ----
 // cobra=true (data/lendarios.json → anda: "desliza", ex.: Astrakai): o corpo todo ondula de lado e desliza, sem passos
 // bolinha (3D feito da arte de frente): fica virada para a câmera, inclinando só um pouco para onde anda
+const BOL_INCL=.7;// a câmera olha de cima: a bolinha deita um pouco para trás para mostrar a arte de frente
 const virar=(m,a)=>m&&m.userData.bol?Math.PI+Math.max(-.45,Math.min(.45,Math.atan2(Math.sin(a-Math.PI),Math.cos(a-Math.PI))*.35)):a;
 function prepAndar(g,mini,cobra){const T=G.THREE(),inv=new T.Matrix4(),v=new T.Vector3();g.updateMatrixWorld(true);inv.copy(g.matrixWorld).invert();
   const ms=[],mn=new T.Vector3(1e9,1e9,1e9),mx=new T.Vector3(-1e9,-1e9,-1e9),low=[];
@@ -421,7 +422,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
   const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1);hg.scale.setScalar(Hs);
-  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
+  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));if(hg.userData.bol)hg.rotation.x=-BOL_INCL;const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
   R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);
   R.minMobs=((M.acampamentos[0]&&M.acampamentos[0].inimigos.length)||0)+5;// portal só abre depois de matar pelo menos os bichinhos do acampamento inicial (+5)
@@ -434,7 +435,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
 async function novoInimigo(j,lv,x,z,camp,chefe,tipo){const R=RUN,T=G.THREE(),L_=lutador(j,lv,{chefe}),Tp=(tipo&&TP[tipo])||{};const k=(chefe?(AR.chefe_vida||1.6):(AR.inimigo_vida||.45))*(Tp.vida||1);L_.hp=L_.max=Math.max(10,Math.round(L_.hp*k));
   if(Tp.dano)L_.atk*=Tp.dano;const esc=Tp.escudo?Math.round(L_.max*Tp.escudo):0;
   const g=await G.modelo(j,chefe),s=(chefe?(AR.tam_chefe||3):redondo(j)?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
-  const U=prepAndar(g,redondo(j),cobra(j)),root=new T.Group();root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
+  const U=prepAndar(g,redondo(j),cobra(j)),root=new T.Group();if(g.userData.bol)g.rotation.x=-BOL_INCL;root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
   const bar=document.createElement('div');bar.className='advebar'+(chefe?' chefe':'')+(tipo?' '+tipo:'');bar.innerHTML='<small class="'+corNv(lv,R.hero.lv)+'">'+(Tp.icone?Tp.icone+' ':'')+'Nv '+lv+'</small>'+(esc?'<i class="esc"><b></b></i>':'')+'<i><b></b></i>';bar.hidden=true;$('advFx').appendChild(bar);
   if(tipo==='elite'){const a=new T.Mesh(new T.RingGeometry(.55*s,.68*s,32),new T.MeshBasicMaterial({color:'#7ad0ff',transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide}));a.rotation.x=-Math.PI/2;a.position.y=.04;root.add(a)}
   if(tipo==='curandeiro'){const a=sprEmoji('💚',.45);a.position.y=1.55*s;root.add(a)}
