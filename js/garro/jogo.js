@@ -28,6 +28,7 @@ let bannerT=0;
 function banner(t,sub,win){const b=$('banner');b.innerHTML=t+(sub?'<small>'+sub+'</small>':'');b.className='banner show'+(win?' win':'');clearTimeout(bannerT);bannerT=setTimeout(()=>b.className='banner',2200)}
 function hud(){
   $('coins').textContent=DEV?'∞':coins;$('wins').textContent=totalWins();
+  if(typeof tabsMaq==='function')tabsMaq();
   $('time').textContent=claw.state==='move'?Math.ceil(roundTime/60):'--';
   $('drop').disabled=claw.state!=='move';
 }
@@ -45,15 +46,21 @@ function start(){
     if(ONL&&!DEV){coins-=ECOST;hud();syncEstado('egg_round_start').then(r=>{if(r&&typeof r.coins==='number'){coins=r.coins;hud()}claw.eggFirm=!!(r&&r.firm)})}
     else{spend(ECOST);claw.eggFirm=Math.random()<(MQ.segurar_lendario??.33)}claw.force=losses>=4?1100+Math.random()*150:600+Math.random()*500;
     $('hint').textContent='Escolha um ovo e aperte PEGAR';click(500);hud();return true}
+  if(MACH===4){const EC=EPM.preco;if(!canPay(EC)){$('hint').textContent='A máquina do épico custa '+EC+' moedas por jogada.';banner('Moedas insuficientes','Épico: '+EC+' 🪙 por jogada');return false}
+    claw.state='move';roundTime=ROUND;roundWin=false;evento('epic_play');claw.epicFirm=null;
+    // o servidor sorteia no começo da jogada se a garra vai segurar firme o épico (sem login: sorteio aqui)
+    if(ONL&&!DEV){coins-=EC;hud();syncEstado('epic_round_start').then(r=>{if(r&&typeof r.coins==='number'){coins=r.coins;hud()}else{coins+=EC;hud()}claw.epicFirm=!!(r&&r.firm)})}
+    else{spend(EC);claw.epicFirm=Math.random()<(EPM.segurar??.05)}claw.force=900+Math.random()*400;
+    $('hint').textContent='Mire no meio do épico e aperte PEGAR';click(500);hud();return true}
   if(MACH===2){if(!canPay(GCOST)){$('hint').textContent='A máquina gigante custa '+GCOST+' moedas por jogada.';banner('Moedas insuficientes','Gigante: '+GCOST+' 🪙 por jogada');return false}
-    claw.state='move';roundTime=ROUND;roundWin=false;pay(GCOST,'giant_round_start');evento('giant_play');claw.force=losses>=3?1250+Math.random()*150:700+Math.random()*600;
+    claw.state='move';roundTime=ROUND;roundWin=false;pay(GCOST,'giant_round_start');evento('giant_play');claw.force=losses>=MQR.gigante.derrotas_ajuda?1250+Math.random()*150:MQR.gigante.min+Math.random()*MQR.gigante.var;
     $('hint').textContent='Mire no meio do gigante e aperte PEGAR';click(500);hud();return true}
   if(!DEV&&coins<=0){$('hint').textContent='Sem moedas. Toque em +1 moeda abaixo.';banner('Sem moedas');return false}
   claw.state='move';roundTime=ROUND;roundWin=false;
   if(!DEV){const useBonus=bonus>0&&coins-bonus<=0;coins--;
     if(useBonus){bonus--;saveBonus()}else syncEstado('round_start').then(r=>{if(r)coins=r.coins+bonus;else{coins++;erroAmigavel('Não deu pra confirmar a jogada — a próxima pode não valer')}});}
   // real machines vary the claw voltage each play; after a losing streak they pay out
-  claw.force=losses>=6?1150+Math.random()*150:520+Math.random()*560;
+  claw.force=losses>=MQR.garra.derrotas_ajuda?1150+Math.random()*150:MQR.garra.min+Math.random()*MQR.garra.var;
   $('hint').textContent='Posicione e aperte PEGAR';click(500);hud();return true;
 }
 function drop(){if(claw.state!=='move')return;claw.state='down';claw.press=0;dir=0;hum(true);$('bar').style.width='0';hud()}
@@ -70,6 +77,7 @@ function attach(b,hits,mult,closed){mult=mult||1;
   b.collisionFilter.mask=p.giant?0:CAT_PLUSH|CAT_WALL;b.frictionAir=.03;// gigante na garra atravessa vidro e divisória
   claw.slipAt=grip<p.g?claw.y-10-Math.random()*40:-1;claw.firme=false;
   // ovos são lisos: escorregam logo depois de subir, a não ser que a garra esteja firme
+  if(p.epic){if(claw.epicFirm===true){claw.hold=grip=Math.max(grip,p.g*3);claw.slipAt=-1;claw.firme=true}else{claw.firme=false;claw.slipAt=claw.y-10-Math.random()*30}}
   if(p.egg!==undefined){const firme=p.egg>=0?claw.eggFirm===true:Math.random()>=(MQ.escorregar_comum??.4);
     if(firme){claw.hold=grip=Math.max(grip,p.g*3);claw.slipAt=-1;claw.firme=true}else claw.slipAt=claw.y-14-Math.random()*46}
   showGrab(p,grip,closed);
@@ -95,13 +103,26 @@ function won(b){
   if(p.egg>=0&&claw.eggFirm!==true){addLegEgg(-80);banner('Quase!','O ovo lendário voltou para o meio');return}
   if(p.egg!==undefined){roundWin=true;losses=0;evento('capture');shakeWin(4);puff(50,FLOOR-40,18,['#ffd23c','#ffffff','#c9b4ff'],true);
     try{window.dispatchEvent(new CustomEvent('garro:ovo',{detail:{leg:p.egg}}))}catch(e){}hud();return}if(p.stone!==undefined){INV.st[p.stone]++;saveInv();roundWin=true;losses=0;banner(p.name+'!','Pedra rara! Use no bicho do mesmo elemento',true);fanfare();hud();return}
+  // épico: só conta se a garra estava firme (sorteio no servidor no começo da jogada)
+  if(p.epic){if(claw.epicFirm!==true){placeEpic();banner('Quase!','O épico escapou e voltou para o lugar');return}
+    const e=p.i;evento('capture');coll[e]=(coll[e]||0)+1;saveX();const c0=careOf(e);c0.xp=Math.max(c0.xp,xpTotal(e,30));saveCare();shakeWin(12);boom();fanfare();setTimeout(fanfare,600);
+    if(ONL&&!DEV)srv('epic_capture',{},r=>{coll[r.epic]=r.count;careOf(r.epic).xp=r.xp;saveX();saveCare();renderShelf()});
+    roundWin=true;losses=0;banner('🔥 ÉPICO! '+p.name,'O bichinho mais forte que existe',true);renderShelf(e);hud();return}
   if(p.giant){evento('capture');evento('giant_capture');coll[p.i]=(coll[p.i]||0)+1;saveX();GCOLL[p.i]=(GCOLL[p.i]||0)+1;saveG();shakeWin(10);boom();for(let k=0;k<3;k++)setTimeout(()=>puff(40+Math.random()*60,FLOOR-40,26,['#ffd23c','#ff5a8a','#5ad1ff','#8aff6a','#ffffff'],true),k*300);const c0=careOf(p.i);c0.xp+=60;saveCare();if(ONL&&!DEV)srv('giant_capture',{plushId:p.i},r=>{coll[p.i]=r.count;GCOLL[p.i]=r.giants;careOf(p.i).xp=r.xp;saveX();saveG();saveCare();renderShelf();try{window.dispatchEvent(new CustomEvent('garro:gigante',{detail:r}))}catch(e){}});
     else try{window.dispatchEvent(new CustomEvent('garro:gigante',{detail:{local:1}}))}catch(e){}
     roundWin=true;losses=0;banner('🏆 GIGANTE! '+p.name,'+60 XP · selo de gigante na coleção',true);fanfare();setTimeout(fanfare,700);renderShelf(p.i);hud();return}
-  evento('capture');coll[p.i]=(coll[p.i]||0)+1;saveX();const dup=coll[p.i]>1,evo=p.i<CH0;if(dup){const c0=careOf(p.i);c0.xp+=evo?20:5;saveCare()}
-  syncEstado('capture',{plushId:p.i});
-  roundWin=true;losses=0;banner(p.name+'!',dup?(evo?'Repetida! +20 XP pra evoluir':'Repetida! 2 iguais = 1 moeda'):p.rare<=2?'Pelúcia rara!':'Caiu no prêmio',true);fanfare();renderShelf(p.i);hud();
+  // redondo pego pode virar um grande do mesmo grupo de pedra (logado: o servidor sorteia; sem login/dev: sorteio aqui)
+  let id=p.i,tr=false;
+  if((!ONL||DEV)&&id>=CH0&&Math.random()<(MQR.transformar_chance||0)){const g=[];for(let j=0;j<CH0;j++)if(STONE_OF(j)===STONE_OF(id))g.push(j);if(g.length){id=g[Math.random()*g.length|0];tr=true}}
+  evento('capture');coll[id]=(coll[id]||0)+1;saveX();const dup=coll[id]>1,evo=id<CH0;if(dup){const c0=careOf(id);c0.xp+=evo?20:5;saveCare()}
+  syncEstado('capture',{plushId:p.i}).then(r=>{if(r&&r.transformed&&r.plushId!==p.i){coll[p.i]=Math.max(0,(coll[p.i]||0)-1);coll[r.plushId]=Math.max((coll[r.plushId]||0)+1,r.count||1);saveX();transformou(p.i,r.plushId)}});
+  roundWin=true;losses=0;
+  if(tr)transformou(p.i,id);
+  else{banner(p.name+'!',dup?(evo?'Repetida! +20 XP pra evoluir':'Repetida! 2 iguais = 1 moeda'):p.rare<=2?'Pelúcia rara!':'Caiu no prêmio',true);fanfare()}
+  renderShelf(id);hud();
 }
+function transformou(de,para){setTimeout(()=>{banner('✨ Transformou!',PLUSH[de].name+' virou '+PLUSH[para].name+'!',true);fanfare();setTimeout(fanfare,500);shakeWin(6);
+  puff(50,FLOOR-40,22,['#ffd23c','#ffffff','#9ad8ff','#ff9ad8'],true);renderShelf(para)},350)}
 
 function step(){
   const c=claw;

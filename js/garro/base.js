@@ -10,6 +10,11 @@ const isLeg=i=>i>=LEG0,grande=i=>i<CH0||i>=LEG0;
 for(const L of LEGS){const sp=L.sprite||{w:200,h:200,hull:[[.15,.1],[.85,.1],[.95,.9],[.05,.9]],img:'img/lendarios/'+L.slug+'.webp'};
   PLUSH[L.id]={i:L.id,leg:1,slug:L.slug,name:L.nome,cm:L.cm,g:L.g,tex:.9,rare:0,desc:L.desc,...sp};
   GD.pelucias.STAT[L.id]=L.stat;GD.pelucias.ELEM[L.id]=L.elemento}
+// épicos (data/lendarios.json → epicos, ids 53 a 56): os mais fortes; usam o visualizador 3D dos lendários
+const EPS=LEGD.epicos||[],EPM=LEGD.epico_maquina||{preco:500,segurar:.05},EPIC0=EPS.length?EPS[0].id:999,isEpic=i=>i>=EPIC0&&i<EPIC0+EPS.length;
+for(const E of EPS){const sp=Object.assign({w:200,h:200,hull:[[.12,.08],[.88,.08],[.96,.92],[.04,.92]]},E.sprite||{});
+  PLUSH[E.id]={i:E.id,leg:1,epic:1,slug:E.slug,name:E.nome,cm:E.cm,g:E.g,tex:.9,rare:0,desc:E.desc,...sp};GD.pelucias.STAT[E.id]=E.stat;GD.pelucias.ELEM[E.id]=E.elemento}
+function epicDia(){const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return EPS.length?EPS[Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%EPS.length].id:-1}
 
 const {Engine,Bodies,Body,Composite,Constraint,Query,Vertices}=Matter;
 const W=360,H=500,FLOOR=470,DIV=96,DIVTOP=290,REST=64,HOME=48,PXCM=3.0;
@@ -78,8 +83,8 @@ async function carregarEstadoExtra(){
       await syncEstado('import_local',{data:d});const {data:c2}=await sb.from('collection').select('plush_id,count');if(c2){coll={};c2.forEach(r=>{coll[r.plush_id]=r.count})}}
     const {data:inv,error:e1}=await sb.from('inventory').select('item,qty');
     if(inv&&!e1){INV.food=0;INV.st=INV.st.map(()=>0);inv.forEach(r=>{if(r.item==='food')INV.food=r.qty;else{const k=+r.item.split('_')[1];if(k>=0&&k<INV.st.length)INV.st[k]=r.qty}});saveInv()}
-    const {data:pc,error:e2}=await sb.from('plush_care').select('plush_id,xp,f,l,p,rebirths,stone_pending,updated_at');
-    if(pc&&!e2){CARE={};pc.forEach(r=>{CARE[r.plush_id]={xp:r.xp,f:r.f,l:r.l,p:r.p,rb:r.rebirths|0,sp:r.stone_pending|0,t:Date.parse(r.updated_at)||Date.now()}});saveCare()}
+    const {data:pc,error:e2}=await sb.from('plush_care').select('plush_id,xp,f,l,p,rebirths,stone_pending,evolved,updated_at');
+    if(pc&&!e2){CARE={};pc.forEach(r=>{CARE[r.plush_id]={xp:r.xp,f:r.f,l:r.l,p:r.p,rb:r.rebirths|0,sp:r.stone_pending|0,ev:!!r.evolved,t:Date.parse(r.updated_at)||Date.now()}});saveCare()}
     const {data:gs,error:e3}=await sb.from('giants').select('plush_id,count,evolved');
     if(gs&&!e3){GCOLL={};GEVO={};gs.forEach(r=>{if(r.count>0){GCOLL[r.plush_id]=r.count;if(r.evolved)GEVO[r.plush_id]=1}});saveG()}
   }catch(e){console.warn('estado extra',e)}
@@ -119,6 +124,8 @@ STONES.forEach(bakeP);
 const EGGS=LEGS.map((L,k)=>{const o=L.ovo||{w:160,h:256,hull:[[.5,0],[1,.5],[.5,1],[0,.5]]};
   return{i:200+k,egg:k,name:'Ovo de '+L.nome,cm:21,g:200,tex:1,rare:1,desc:'',w:o.w,h:o.h,hull:o.hull,img:'img/lendarios/ovo_'+L.slug+'.webp'}});
 EGGS.forEach(bakeP);
+// máquina comum (data/regras.json → MAQUINA): só redondos, chance de virar grande, força da garra; travas das outras máquinas
+const MQR=Object.assign({so_redondos:true,transformar_chance:.05,garra:{min:380,var:400,derrotas_ajuda:8},gigante:{min:500,var:450,derrotas_ajuda:5}},GD.regras.MAQUINA||{});
 const MQ=LEGD.maquina||{},OC=MQ.ovo_comum||{w:156,h:211,hull:[[.5,0],[1,.5],[.5,1],[0,.5]],img:'img/lendarios/ovo_comum.webp'};
 const EGG_C={i:210,egg:-1,comum:1,name:OC.nome||'Ovo comum',cm:14,g:150,tex:1,desc:'',w:OC.w,h:OC.h,hull:OC.hull,img:OC.img};bakeP(EGG_C);
 function legDia(){if(window.GARRO_LEND)return GARRO_LEND.legDoDia();const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%(LEGS.length||10)}

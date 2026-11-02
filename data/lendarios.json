@@ -12,7 +12,7 @@
   "ovo_falso_moedas": 1,
   "ovos_comuns": 11,
   "lendarios_na_maquina": 1,
-  "segurar_lendario": 0.33,
+  "segurar_lendario": 0.15,
   "escorregar_comum": 0.4,
   "ovo_comum": {
    "nome": "Ovo comum",
@@ -54,6 +54,69 @@
    "Dá para ouvir batidinhas lá dentro... falta pouco!"
   ]
  },
+ "epico_maquina": {
+  "preco": 500,
+  "segurar": 0.05,
+  "_nota": "Épicos (4 versões: Fogo, Água, Ar, Terra). Provisórios: modelos feitos a partir da Noctalis recolorida até chegarem os próprios. A máquina do épico só abre com todos os normais, gigantes e lendários; mostra o épico do dia e só fica firme na garra com chance segurar (sorteio no servidor)."
+ },
+ "epicos": [
+  {
+   "id": 53,
+   "slug": "infernyx",
+   "nome": "Infernyx",
+   "elemento": "lava",
+   "stat": [420, 380],
+   "cm": 60,
+   "g": 2200,
+   "tamanho": 1.3,
+   "cor": "#ff6a1a",
+   "desc": "Fera de lava e chamas, com juba de fogo e garras de obsidiana.",
+   "modelo": "models/lendarios/infernyx.glb",
+   "sprite": {"w": 200, "h": 172, "hull": [[0.28, 0.186], [0.71, 0.006], [0.725, 0.006], [0.76, 0.041], [0.81, 0.105], [0.99, 0.39], [0.99, 0.395], [0.835, 0.959], [0.82, 0.977], [0.795, 0.988], [0.78, 0.988], [0.39, 0.971], [0.365, 0.965], [0.345, 0.959], [0.105, 0.878], [0.09, 0.872], [0.05, 0.826], [0.045, 0.814], [0.005, 0.651], [0.005, 0.645], [0.085, 0.483]], "img": "img/lendarios/infernyx.webp"}
+  },
+  {
+   "id": 54,
+   "slug": "abyssor",
+   "nome": "Abyssor",
+   "elemento": "water",
+   "stat": [420, 380],
+   "cm": 60,
+   "g": 2200,
+   "tamanho": 1.3,
+   "cor": "#2a8cff",
+   "desc": "Fera das profundezas, de escamas azuis que brilham como o mar à noite.",
+   "modelo": "models/lendarios/abyssor.glb",
+   "sprite": {"w": 200, "h": 172, "hull": [[0.28, 0.186], [0.71, 0.006], [0.725, 0.006], [0.76, 0.041], [0.81, 0.105], [0.99, 0.39], [0.99, 0.395], [0.835, 0.959], [0.82, 0.977], [0.795, 0.988], [0.78, 0.988], [0.39, 0.971], [0.365, 0.965], [0.345, 0.959], [0.105, 0.878], [0.09, 0.872], [0.05, 0.826], [0.045, 0.814], [0.005, 0.651], [0.005, 0.645], [0.085, 0.483]], "img": "img/lendarios/abyssor.webp"}
+  },
+  {
+   "id": 55,
+   "slug": "zephyrax",
+   "nome": "Zephyrax",
+   "elemento": "cloud",
+   "stat": [420, 380],
+   "cm": 60,
+   "g": 2200,
+   "tamanho": 1.3,
+   "cor": "#dfe8ff",
+   "desc": "Fera do vento, de juba branca que vira tempestade quando corre.",
+   "modelo": "models/lendarios/zephyrax.glb",
+   "sprite": {"w": 200, "h": 172, "hull": [[0.28, 0.186], [0.71, 0.006], [0.725, 0.006], [0.76, 0.041], [0.81, 0.105], [0.99, 0.39], [0.99, 0.395], [0.835, 0.959], [0.82, 0.977], [0.795, 0.988], [0.78, 0.988], [0.39, 0.971], [0.365, 0.965], [0.345, 0.959], [0.105, 0.878], [0.09, 0.872], [0.05, 0.826], [0.045, 0.814], [0.005, 0.651], [0.005, 0.645], [0.085, 0.483]], "img": "img/lendarios/zephyrax.webp"}
+  },
+  {
+   "id": 56,
+   "slug": "terravyn",
+   "nome": "Terravyn",
+   "elemento": "leaves",
+   "stat": [420, 380],
+   "cm": 60,
+   "g": 2200,
+   "tamanho": 1.3,
+   "cor": "#7fc23a",
+   "desc": "Fera da terra e da floresta, coberta de pedra e musgo vivo.",
+   "modelo": "models/lendarios/terravyn.glb",
+   "sprite": {"w": 200, "h": 172, "hull": [[0.28, 0.186], [0.71, 0.006], [0.725, 0.006], [0.76, 0.041], [0.81, 0.105], [0.99, 0.39], [0.99, 0.395], [0.835, 0.959], [0.82, 0.977], [0.795, 0.988], [0.78, 0.988], [0.39, 0.971], [0.365, 0.965], [0.345, 0.959], [0.105, 0.878], [0.09, 0.872], [0.05, 0.826], [0.045, 0.814], [0.005, 0.651], [0.005, 0.645], [0.085, 0.483]], "img": "img/lendarios/terravyn.webp"}
+  }
+ ],
  "lendarios": [
   {
    "id": 43,

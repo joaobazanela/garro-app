@@ -31,7 +31,7 @@ function addPlush(p,x,y){
 }
 const PILE=30;// pilha baixa: nada pode passar da linha do topo da divisória (DIVTOP)
 function pickPlush(cnt){
-  const round=Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
+  const round=MQR.so_redondos!==false||Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
   let t=0;pool.forEach(p=>t+=p.rare);let r=Math.random()*t;for(const p of pool){r-=p.rare;if(r<0)return p}return pool[0];
 }
 // onde a pilha está mais baixa (sorteia alguns pontos e fica com o mais vazio): assim preenche toda a área, inclusive junto da divisória
@@ -67,7 +67,7 @@ function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
 function tiraDaBorda(){const lim=DIV+EDGE_FREE+8;for(const b of bodies){if(b===claw.held||b.plush.won||b.plush.giant)continue;const x=b.position.x,e=b.plush.dw*.42;
     if(x>DIV+4&&x-e<lim&&b.position.y<DIVTOP+30){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
-function restock(){if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60)}
+function restock(){if(MACH===4){if(!bodies.length)placeEpic();return}if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60)}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
 /* ---------- segunda máquina: um bichinho gigante ---------- */
 let MACH=1;const GCOST=50,GK=2.4;
@@ -86,23 +86,36 @@ function drawGiantDecor(){
 const backG=layer(x=>{let g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(30,26,70,.62)');g.addColorStop(1,'rgba(10,8,30,.7)');x.fillStyle=g;x.fillRect(0,0,W,H);
   x.globalAlpha=.07;x.strokeStyle='#ffd27a';for(let i=-H;i<W+H;i+=34){x.beginPath();x.moveTo(i,0);x.lineTo(i+H,H);x.stroke()}x.globalAlpha=1;
   g=x.createRadialGradient(W*.62,0,10,W*.62,0,H*.9);g.addColorStop(0,'rgba(255,214,120,.34)');g.addColorStop(1,'rgba(255,214,120,0)');x.fillStyle=g;x.fillRect(0,0,W,H)});
-function giantOf(i){const p=PLUSH[i],G=Object.create(p);G.giant=1;G.dw=p.dw*GK;G.dh=p.dh*GK;G.cx=p.cx*GK;G.cy=p.cy*GK;G.cm=Math.round(p.cm*GK);G.g=760+Math.round(Math.random()*100);G.tex=Math.max(.85,p.tex);
-  G.verts=p.verts.map(v=>({x:v.x*GK,y:v.y*GK}));G.name=p.name;
+function giantOf(i,K){K=K||GK;const p=PLUSH[i],G=Object.create(p);G.giant=1;G.dw=p.dw*K;G.dh=p.dh*K;G.cx=p.cx*K;G.cy=p.cy*K;G.cm=Math.round(p.cm*K);G.g=760+Math.round(Math.random()*100);G.tex=Math.max(.85,p.tex);
+  G.verts=p.verts.map(v=>({x:v.x*K,y:v.y*K}));G.name=p.name;
   // desenha de novo no tamanho grande, direto da imagem original (esticar a pequena deixava borrado)
   if(p.image&&p.image.complete&&p.image.naturalWidth){const pad=16,c=document.createElement('canvas');c.width=Math.ceil((G.dw+pad*2)*dpr);c.height=Math.ceil((G.dh+pad*2)*dpr);const x=c.getContext('2d');x.scale(dpr,dpr);x.imageSmoothingQuality='high';x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=14;x.shadowOffsetY=7;x.drawImage(p.image,pad,pad,G.dw,G.dh);G.baked=c;G.pad=pad}
-  else Object.defineProperty(G,'pad',{get:()=>(p.pad||10)*GK});return G}
+  else Object.defineProperty(G,'pad',{get:()=>(p.pad||10)*K});return G}
 function placeGiant(){const i=Math.floor(Math.random()*CH0),G=giantOf(i);G.landed=false;const gb=addPlush(G,(DIV+W)/2+12+(Math.random()-.5)*30,-G.dh*.6);Body.setAngle(gb,0);gb.frictionAir=.02;
   const rs=[];while(rs.length<3){const r=CH0+Math.floor(Math.random()*(NPL-CH0));if(!rs.includes(r))rs.push(r)}DECOR=[{i:rs[0],x:DIV+24},{i:rs[1],x:W-58},{i:rs[2],x:W-28}];
   $('who').innerHTML='Gigante da vez: <b>'+G.name+'</b> <em>· '+G.cm+' cm</em>'}
+// travas: gigante só com todos os normais; ovos com normais + gigantes; épico com normais + gigantes + lendários (o servidor confere igual)
+function faltas(){let n=0,g=0,l=0;for(let i=0;i<LEG0;i++)if(!(coll[i]>0))n++;for(let i=0;i<CH0;i++)if(!(GCOLL[i]>0))g++;for(const L of LEGS)if(!(coll[L.id]>0))l++;return{n,g,l}}
+function travaMaq(m){if(DEV)return '';const f=faltas();
+  if(m===2&&f.n)return 'Pegue todos os bichinhos normais primeiro (faltam '+f.n+')';
+  if(m===3&&(f.n||f.g))return 'Pegue todos os normais e todos os gigantes (faltam '+(f.n+f.g)+')';
+  if(m===4&&(f.n||f.g||f.l))return 'Pegue todos os normais, gigantes e lendários (faltam '+(f.n+f.g+f.l)+')';return ''}
+function tabsMaq(){const t=[[2,'mach2','🦖 Gigante · '+GCOST+' 🪙'],[3,'mach4','🥚 Ovos · '+ECOST+' 🪙'],[4,'mach5','🔥 Épico · '+EPM.preco+' 🪙']];
+  for(const [m,id,txt] of t){const b=$(id);if(!b)continue;const tv=travaMaq(m);b.classList.toggle('lock',!!tv);b.title=tv;b.textContent=(tv?'🔒 ':'')+txt}}
+// máquina do épico: o épico do dia, grande como um gigante, liso: só fica firme na garra quando o servidor sorteou "firme"
+function epicOf(i){const G=giantOf(i,72/PLUSH[i].cm);G.epic=1;G.g=1500;G.name=PLUSH[i].name;return G}
+function placeEpic(){for(const b of bodies)Composite.remove(world,b);bodies.length=0;const i=epicDia();if(i<0)return;const G=epicOf(i);G.landed=false;const gb=addPlush(G,(DIV+W)/2+12,-G.dh*.6);Body.setAngle(gb,0);gb.frictionAir=.02;DECOR=[];
+  $('who').innerHTML='Épico do dia: <b>'+G.name+'</b> <em>· muito liso, quase nunca fica firme na garra</em>'}
 function setMachine(m){if(m===MACH)return;if(claw.state!=='ready'){banner('Espere a garra voltar');return}
-  MACH=m;const k=(m===2?1.7:1)/CS;CS=m===2?1.7:1;Body.scale(prongL,k,k);Body.scale(prongR,k,k);
-  for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(m===2)placeGiant();else if(m===3){settleEggs();$('who').textContent='Ovo branco é comum (+1 🪙). O ovo do lendário do dia fica no meio: é liso e escorrega fácil!'}else{settlePile();$('who').textContent='Mire bem no centro da pelúcia. As pesadas escorregam fácil.'}
-  $('gsign').hidden=m!==2;$('mach1').classList.toggle('on',m===1);$('mach2').classList.toggle('on',m===2);if($('mach4'))$('mach4').classList.toggle('on',m===3);document.querySelector('.window').classList.toggle('giant',m===2);document.querySelector('.window').classList.toggle('ovos',m===3);
-  $('hint').textContent=m===2?'Máquina gigante: '+GCOST+' moedas por jogada':m===3?'Máquina de ovos: '+ECOST+' moedas por jogada':'Toque nas setas para colocar uma moeda';audio();click(m===2?300:m===3?420:600);hud()}
+  {const tv=travaMaq(m);if(tv){banner('🔒 Máquina trancada',tv);audio();tone(220,.15,'sine',.06);return}}
+  MACH=m;const gg=m===2||m===4,k=(gg?1.7:1)/CS;CS=gg?1.7:1;Body.scale(prongL,k,k);Body.scale(prongR,k,k);
+  for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(m===2)placeGiant();else if(m===4)placeEpic();else if(m===3){settleEggs();$('who').textContent='Ovo branco é comum (+1 🪙). O ovo do lendário do dia fica no meio: é liso e escorrega fácil!'}else{settlePile();$('who').textContent='Mire bem no centro da pelúcia. As pesadas escorregam fácil.'}
+  $('gsign').hidden=m!==2;if($('mach5'))$('mach5').classList.toggle('on',m===4);$('mach1').classList.toggle('on',m===1);$('mach2').classList.toggle('on',m===2);if($('mach4'))$('mach4').classList.toggle('on',m===3);document.querySelector('.window').classList.toggle('giant',gg);document.querySelector('.window').classList.toggle('ovos',m===3);
+  $('hint').textContent=m===4?'Máquina do épico: '+EPM.preco+' moedas por jogada':m===2?'Máquina gigante: '+GCOST+' moedas por jogada':m===3?'Máquina de ovos: '+ECOST+' moedas por jogada':'Toque nas setas para colocar uma moeda';audio();click(m===2?300:m===3?420:600);hud()}
 
 function swapMachine(){if(claw.state!=='ready'){banner('Espere a garra voltar');return}
   if(!canPay(SWAP_COST)){banner('Moedas insuficientes','Trocar custa '+SWAP_COST+' 🪙');return}
-  pay(SWAP_COST,'swap');for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(MACH===2)placeGiant();else if(MACH===3)settleEggs();else settlePile();sinceDrop=0;
+  pay(SWAP_COST,'swap');for(const b of bodies)Composite.remove(world,b);bodies.length=0;if(MACH===4)placeEpic();else if(MACH===2)placeGiant();else if(MACH===3)settleEggs();else settlePile();sinceDrop=0;
   audio();[523,659,784].forEach((f,k)=>setTimeout(()=>tone(f,.12,'triangle',.09),k*90));banner('Bichinhos trocados!',DEV?'grátis (dev)':'-'+SWAP_COST+' 🪙',true);hud()}
 
 /* ---------- claw ---------- */

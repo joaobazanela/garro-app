@@ -1,7 +1,7 @@
 /* GARRO — batalha, efeitos e movimento da luta, partes extras. Parte 7 de 8 do antigo js/garro.js: os arquivos são carregados em ordem (js/garro/*.js) e dividem o mesmo escopo global. */
 /* ---------- batalha: cada bichinho com nível, ataque e defesa ---------- */
 let BT=null;
-function bStats(f){const S=statsAt(f.i,f.lv,f.rb);if(f.giant){const k=GEVO[f.i]&&f.giant?1.6:1.35;S.atk=Math.round(S.atk*k);S.def=Math.round(S.def*k);S.hp=Math.round(S.hp*(k+.25))}return Object.assign({},f,S)}
+function bStats(f){const S=statsAt(f.i,f.lv,f.rb);if(f.giant){const k=GEVO[f.i]?FORCA.gigante_evoluido:FORCA.gigante;S.atk=Math.round(S.atk*k);S.def=Math.round(S.def*k);S.hp=Math.round(S.hp*k)}return Object.assign({},f,S)}
 function pickOpp(my){const myLv=lvOf(my);const same=Math.random()<.75;let j;do{j=Math.floor(Math.random()*NPL)}while(j===my||(same&&(j<CH0)!==grande(my)));const lv=Math.max(1,Math.min(capOf(j),Math.round(myLv*(.75+Math.random()*.5))));return bStats({i:j,lv,giant:j<CH0&&Math.random()<.12?1:0})}
 function bName(f){return (f.giant?'🏆 '+(GEVO[f.i]?'Gigante★ ':'Gigante '):'')+evName(f.i,f.i<CH0&&(isEvo(f.i,f.lv,f.rb)||(f.giant&&GEVO[f.i]))?1:0)}
 // imagens da luta: todos desenhados de perfil OLHANDO PARA A DIREITA. O da esquerda fica como está, o da direita é espelhado: sempre cara a cara.
