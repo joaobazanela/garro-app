@@ -162,7 +162,7 @@ async function montaModelo(i,evo){
   obj.traverse(o=>{if(o.isMesh){if(m.notail)o.geometry=dropTail(o.geometry,m);if(!o.geometry.attributes.normal)weldNormals(o.geometry);
     const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;mm.roughness=.92;mm.metalness=0;brilhoLeg(mm,m,glow);o.material=mm}});
   if(!m.evoM){try{if(m.HC)attachParts(obj,i,m);else attachExtras(obj,i,m)}catch(e){}}enfeiteLeg(obj,m);
-  obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=b.max.y-b.min.y||1,g=new THREE.Group();
+  obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=Math.max(b.max.y-b.min.y,m.desliza?Math.max(b.max.z-b.min.z,b.max.x-b.min.x)*.45:0)||1,g=new THREE.Group();// serpente deitada: escala pelo comprimento, não pela altura
   obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);return g}
 // tira da cena qualquer modelo que tenha ficado de uma abertura anterior (evita dois bichinhos na tela)
 function tiraModelos(){if(!V.spin)return;for(const c of V.spin.children.slice())if(c.userData.modelo)V.spin.remove(c)}

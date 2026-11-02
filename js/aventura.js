@@ -212,12 +212,12 @@ function prepAndar(g,mini,cobra){const T=G.THREE(),inv=new T.Matrix4(),v=new T.V
   for(const m of ms)for(let k=0;k<m.pts.length;k+=3)if(m.pts[k+1]<mn.y+H*.12){sx+=m.pts[k];n++;zs.push(m.pts[k+2])}
   zs.sort((a,b)=>a-b);const zm=zs.length?zs[zs.length>>1]:(mn.z+mx.z)/2,av=a=>a.reduce((s,x)=>s+x,0)/Math.max(1,a.length);
   const U={uPh:{value:0},uAmp:{value:0},uHip:{value:hip},uMin:{value:mn.y},uXm:{value:n?sx/n:0},uZm:{value:zm},uDx:{value:(mx.x-mn.x)*.08},uDz:{value:(mx.z-mn.z)*.06},uH:{value:H}};
-  if(cobra){U.uK={value:6.283*1.2/Math.max(.2,mx.z-mn.z,mx.x-mn.x)};
+  if(cobra){const Lc=Math.max(.2,mx.z-mn.z);U.uK={value:6.283*1.3/Lc};U.uZh={value:mx.z};U.uLc={value:Lc};
     for(const m of ms){const mat=m.o.material.clone(),M2=m.M.clone(),G2=m.M.clone().invert();
       mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U,{uM2G:{value:M2},uG2M:{value:G2}});
-        sh.vertexShader='uniform float uPh,uAmp,uMin,uH,uK;uniform mat4 uM2G,uG2M;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-          {vec3 gp=(uM2G*vec4(transformed,1.)).xyz;float h=clamp((gp.y-uMin)/uH,0.,1.),a=.25+uAmp/.45*.75,w=gp.z*uK-uPh*2.2+h*1.8;
-            gp.x+=sin(w)*uH*.075*a*(.3+.7*h);gp.z+=cos(w)*uH*.012*a;gp.y+=sin(w*.5+uPh)*uH*.01*a*h;transformed=(uG2M*vec4(gp,1.)).xyz;}`)};
+        sh.vertexShader='uniform float uPh,uAmp,uMin,uH,uK,uZh,uLc;uniform mat4 uM2G,uG2M;\n'+sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+          {vec3 gp=(uM2G*vec4(transformed,1.)).xyz;float t=clamp((uZh-gp.z)/uLc,0.,1.),a=.3+uAmp/.45*.7,w=t*uLc*uK-uPh*2.4,cab=smoothstep(.05,.3,t);
+            gp.x+=sin(w)*uLc*.05*a*cab;gp.y+=max(0.,sin(w*2.))*uLc*.004*a*cab;transformed=(uG2M*vec4(gp,1.)).xyz;}`)};
       mat.customProgramCacheKey=()=>'andar3d_cobra';m.o.material=mat}
     return U}
   for(const m of ms){if(m.lo>mn.y+H*.1)continue;const mat=m.o.material.clone(),M2=m.M.clone(),G2=m.M.clone().invert();
