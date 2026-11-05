@@ -518,5 +518,6 @@ style#btnMis{position:relative}
 .pkqt{display:flex;align-items:center;gap:6px}.pkqt em{font-style:normal;font-weight:900;font-size:18px;min-width:22px;text-align:center;color:#ffd25a}
 .pick .pkqt button{padding:5px 11px;font-size:17px;line-height:1}.pick .pkqt .pktodos{font-size:12px;padding:6px 8px;background:rgba(255,255,255,.14);color:#fff}
 .pkfixo{font-weight:900;color:#ffd25a}
+.pksec{font-weight:900;color:#ffd25a;font-size:14px;margin:8px 2px 0}
 .pkres{text-align:center;font-weight:800;color:#fff;min-height:20px}.pkres small{color:var(--dim)}
 .pkbtns{display:grid;grid-template-columns:1fr 2fr;gap:10px}
