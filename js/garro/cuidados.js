@@ -71,6 +71,12 @@ function updFood(){const s=$('cFeed')&&$('cFeed').querySelector('span');if(s)s.t
 function bolinhaEvolve(i){const g=i-CH0,k=STONE_OF(g),b=coll[i]||0,n=INV.st[k]||0;
   if(b<BOL_N){banner('Faltam bolinhas','Junte '+BOL_N+' '+PLUSH[i].name+' (tem '+b+')');return}
   if(n<PEDRAS){audio();renderShop();$('shMsg').textContent='Precisa de '+PEDRAS+' '+STONES[k].name+' (você tem '+n+')';$('shop').hidden=false;return}
+  if(!bolinhaEvolve.ok){escolha({titulo:'Ritual de evolução',sub:BOL_N+' bolinhas + '+PEDRAS+' '+STONES[k].name,
+      cards:[{img:PLUSH[i].img,nome:PLUSH[i].name,tag:'bolinha',info:infoCopia(i,false),tem:b,fixo:BOL_N,fixoTxt:'usa '+BOL_N+' de '+b},
+        {img:STONES[k].img,nome:STONES[k].name,tag:'pedra',info:[],tem:n,fixo:PEDRAS,fixoTxt:'usa '+PEDRAS+' de '+n},
+        {img:(EVOSPR[g]?EVOSPR[g].img:PLUSH[g].img),nome:evName(g,1),tag:'★ resultado',destaque:1,info:coll[g]>0?['o seu '+PLUSH[g].name+' evolui','continua no Nv '+lvOf(g)]:['entra na coleção','Nv 1, já evoluído']}],
+      resumo:()=>'Sobram '+(b-BOL_N)+' bolinha'+(b-BOL_N===1?'':'s')+' e '+(n-PEDRAS)+' pedra'+(n-PEDRAS===1?'':'s'),botao:()=>'✨ Fazer o ritual',pode:()=>true,
+      ok:()=>{bolinhaEvolve.ok=1;try{bolinhaEvolve(i)}finally{bolinhaEvolve.ok=0}}});return}
   const novo=!(coll[g]>0);coll[i]=b-BOL_N;INV.st[k]=n-PEDRAS;coll[g]=(coll[g]||0)+1;const c=careOf(g);if(novo){c.xp=0;c.rb=0}c.ev=true;c.sp=0;saveX();saveInv();saveCare();evento('stone',PEDRAS);evento('capture');
   srv('bolinha_evolve',{plushId:i},r=>{coll[i]=r.balls;INV.st[k]=r.stones;coll[g]=r.count;const cc=careOf(g);cc.ev=true;cc.xp=r.xp;saveX();saveInv();saveCare();renderShelf()});
   audio();fanfare();for(let q=0;q<8;q++)setTimeout(()=>float('✨','love'),q*90);banner('✨ '+evName(g,1)+'!',(novo?'Novo na coleção · Nv 1':'O seu '+PLUSH[g].name+' evoluiu'),true);
@@ -88,9 +94,26 @@ function rebirth(){const i=V.cur;if(i===undefined||lvOf(i)<capOf(i))return;const
   srv('rebirth',{plushId:i},r=>{const cc=careOf(i);cc.xp=r.xp;cc.rb=r.rebirths|0;cc.sp=0;saveCare();if(V.open&&V.cur===i){renderCare();refreshVStats(i)}});
   audio();fanfare();for(let q=0;q<8;q++)setTimeout(()=>float('🔄','love'),q*90);banner('🔄 Renasceu!',PLUSH[i].name+' · '+c.rb+'× · +'+Math.round(REB_B*c.rb*100)+'% de força',true);
   renderCare();refreshVStats(i)}
+/* ---------- escolher cópias (vender, ritual das bolinhas, gigantes) ----------
+   Cópias iguais (mesmo nível, XP e cuidado): o jogador só escolhe a quantidade. Cópias diferentes (normal × gigante,
+   gigante evoluído): ficam lado a lado, cada uma com o que tem de diferente, e cada uma com a sua quantidade. */
+function escolha(o){let el=$('pick');if(!el){el=document.createElement('div');el.id='pick';el.className='shop pick';el.hidden=true;document.body.appendChild(el)}
+  const q=o.cards.map(c=>c.fixo??c.qtd??0);
+  const cartao=(c,k)=>'<div class="pkcard'+(c.destaque?' res':'')+'"><img src="'+c.img+'" alt=""><b>'+c.nome+'</b>'+(c.tag?'<i class="pktag">'+c.tag+'</i>':'')+
+    '<div class="pkinfo">'+(c.info||[]).map(t=>'<span>'+t+'</span>').join('')+'</div>'+(c.tem!==undefined?'<small>Você tem '+c.tem+'</small>':'')+
+    (c.fixo!==undefined?'<div class="pkfixo">'+c.fixoTxt+'</div>':c.max!==undefined?'<div class="pkqt"><button type="button" data-k="'+k+'" data-d="-1" aria-label="Menos">−</button><em id="pkq'+k+'">'+q[k]+'</em><button type="button" data-k="'+k+'" data-d="1" aria-label="Mais">+</button><button type="button" class="pktodos" data-k="'+k+'" data-d="99">todos</button></div>':'')+'</div>';
+  const pinta=()=>{o.cards.forEach((c,k)=>{const e=$('pkq'+k);if(e)e.textContent=q[k]});$('pkRes').innerHTML=o.resumo(q);const b=$('pkOk');b.textContent=o.botao(q);b.disabled=!o.pode(q)};
+  el.innerHTML='<h3>'+o.titulo+'</h3><div class="shopcoins">'+(o.sub||'')+'</div><div class="shopscroll"><div class="pkcards">'+o.cards.map(cartao).join('')+'</div><div class="pkres" id="pkRes"></div></div>'+
+    '<div class="pkbtns"><button type="button" class="shclose" id="pkNo">Voltar</button><button type="button" id="pkOk"></button></div>';
+  el.querySelectorAll('.pkqt button').forEach(b=>b.addEventListener('click',()=>{const k=+b.dataset.k,d=+b.dataset.d,c=o.cards[k];q[k]=d===99?c.max:Math.max(c.min||0,Math.min(c.max,q[k]+d));click(600);pinta()}));
+  $('pkNo').addEventListener('click',()=>{el.hidden=true});$('pkOk').addEventListener('click',()=>{if(!o.pode(q))return;el.hidden=true;o.ok(q)});
+  pinta();el.hidden=false;audio()}
+// o que mostrar de cada cópia: nível, força e se é evoluído/gigante (o gigante bate mais forte)
+function infoCopia(i,gig){const S=statsAt(i,lvOf(i),rbOf(i)),k=gig?(GEVO[i]?FORCA.gigante_evoluido:FORCA.gigante):1,ev=careStage(i)===1&&i<CH0;
+  return ['Nv '+lvOf(i),'⚔️ '+Math.round(S.atk*k),'🛡️ '+Math.round(S.def*k),'❤️ '+Math.round(S.hp*k)].concat(ev?['★ evoluído']:[]).concat(gig&&GEVO[i]?['🏆★ gigante evoluído']:[])}
 const SELL_PRICE=1,SELL_BIG=30,SELL_GIANT=40;// redondo 1 · bicho especial (que evolui) 30 · pelúcia gigante 40
 function renderSell(i){const b=$('cSell'),bg=$('cSellG');if(!b)return;if(isLeg(i)){b.hidden=true;bg.hidden=true;renderGiantRow(i);return}const n=coll[i]||0,big=i<CH0;b.hidden=false;b.disabled=n<1;b.dataset.armed='';
-  b.textContent=n>=1?'💰 Vender 1 · +'+(big?SELL_BIG:SELL_PRICE)+' moeda'+(big?'s':'')+' (tenho '+n+')':'💰 Nenhum para vender';
+  const gq=big?GCOLL[i]||0:0;b.textContent=n+gq>1?'💰 Vender… (tenho '+n+(gq?' + '+gq+' gigante'+(gq>1?'s':''):'')+')':n>=1?'💰 Vender 1 · +'+(big?SELL_BIG:SELL_PRICE)+' moeda'+(big?'s':'')+' (tenho '+n+')':'💰 Nenhum para vender';b.disabled=n+gq<1;
   renderGiantRow(i);const gn=GCOLL[i]||0;bg.hidden=!(big&&gn);bg.dataset.armed='';bg.disabled=false;bg.textContent='🏆 Vender gigante · +'+SELL_GIANT+' moedas (tenho '+gn+')'}
 async function sellDup(){const i=V.cur;if(i===undefined||isLeg(i))return;const n=coll[i]||0;if(n<1)return;const big=i<CH0,b=$('cSell');
   if(big&&b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Toque de novo: vender '+PLUSH[i].name+' por '+SELL_BIG+' 🪙';return}
@@ -104,7 +127,22 @@ function sellGiant(){const i=V.cur;if(i===undefined||!(GCOLL[i]>0))return;const 
   if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Toque de novo: vender o gigante por '+SELL_GIANT+' 🪙';return}
   GCOLL[i]--;if(!GCOLL[i])delete GEVO[i];saveG();coins+=SELL_GIANT;if(ONL)srv('sell_giant',{plushId:i},r=>{coins=r.coins;GCOLL[i]=r.giants;saveG();hud()});else{bonus+=SELL_GIANT;saveBonus()}audio();fanfare();banner('+'+SELL_GIANT+' moedas','Vendeu o '+PLUSH[i].name+' gigante',true);
   hud();renderShelf();renderSell(i);if(V.open)refreshVStats(i)}
-$('cSell').addEventListener('click',sellDup);$('cSellG').addEventListener('click',sellGiant);
+// mais de uma cópia (ou gigantes junto): escolhe quais e quantas vender
+function venda(){const i=V.cur;if(i===undefined||isLeg(i))return;const n=coll[i]||0,gn=i<CH0?GCOLL[i]||0:0;if(n+gn<=1){if(gn)sellGiant();else sellDup();return}
+  const big=i<CH0,pN=big?SELL_BIG:SELL_PRICE,img=(careStage(i)===1&&EVOSPR[i]?EVOSPR[i].img:PLUSH[i].img),cards=[];
+  if(n)cards.push({tipo:'n',img,nome:evName(i,careStage(i)===1?1:0),tag:big?'normal':ehBolinha(i)?'bolinha':'',info:infoCopia(i,false),tem:n,max:n,qtd:gn?0:1});
+  if(gn)cards.push({tipo:'g',img,nome:evName(i,careStage(i)===1?1:0),tag:'🏆 gigante',info:infoCopia(i,true),tem:gn,max:gn,qtd:n?0:1});
+  const tot=q=>q.reduce((s,v,k)=>s+v*(cards[k].tipo==='g'?SELL_GIANT:pN),0);
+  escolha({titulo:'Vender',sub:'Escolha quantos de cada um',cards,
+    resumo:q=>{const r=[];q.forEach((v,k)=>{if(v)r.push(v+' '+(cards[k].tipo==='g'?(v>1?'gigantes':'gigante'):(v>1?'normais':'normal')))});return r.length?'Vai vender '+r.join(' e ')+(q[0]===n&&cards[0].tipo==='n'?' · <b>era o último normal</b>':''):'Escolha pelo menos 1'},
+    botao:q=>'Vender · +'+tot(q)+' 🪙',pode:q=>q.some(v=>v>0),
+    ok:async q=>{const qn=cards[0].tipo==='n'?q[0]:0,qg=cards.reduce((s,c,k)=>s+(c.tipo==='g'?q[k]:0),0);
+      if(qn){const r=await syncEstado('sell',{plushId:i,qty:qn});if(r&&typeof r.coins==='number'){coins=r.coins+bonus;coll[i]=Math.max(0,typeof r.count==='number'?r.count:n-qn)}else{coll[i]=n-qn;bonus+=qn*pN;coins+=qn*pN;saveBonus()}saveX()}
+      for(let k=0;k<qg;k++){GCOLL[i]=(GCOLL[i]||0)-1;if(!GCOLL[i])delete GEVO[i];coins+=SELL_GIANT;if(ONL)srv('sell_giant',{plushId:i},r=>{coins=r.coins;GCOLL[i]=r.giants;saveG();hud()});else{bonus+=SELL_GIANT;saveBonus()}}
+      saveG();audio();[784,988,1319,1568].forEach((f,k)=>setTimeout(()=>tone(f,.12,'triangle',.09),k*80));for(let k=0;k<6;k++)setTimeout(()=>float('🪙','love'),k*100);
+      banner('+'+tot(q)+' moedas','Vendeu '+(qn?qn+' '+PLUSH[i].name:'')+(qn&&qg?' e ':'')+(qg?qg+' gigante'+(qg>1?'s':''):''),true);
+      hud();renderShelf();if(!coll[i]&&!(GCOLL[i]>0)&&V.open){$('vClose').click();return}renderSell(i);if(V.open)refreshVStats(i)}})}
+$('cSell').addEventListener('click',venda);$('cSellG').addEventListener('click',venda);
 $('cBatG').addEventListener('click',()=>openBattle(true));
 function renderGiantRow(i){const r=$('gRow');if(!r)return;const gn=i<CH0?GCOLL[i]||0:0;r.hidden=!gn;if(!gn)return;const k=STONE_OF(i),n=INV.st[k]||0,b=$('cGEvo');
   b.hidden=!!GEVO[i];b.classList.toggle('buy',n<GEVO_STONES);b.innerHTML=n>=GEVO_STONES?'💎 Evoluir o gigante <small>(usa '+GEVO_STONES+' '+STONES[k].name+' · tem '+n+')</small>':'💎 Gigante evolui com '+GEVO_STONES+' '+STONES[k].name+' <small>· tem '+n+' · comprar</small>'}

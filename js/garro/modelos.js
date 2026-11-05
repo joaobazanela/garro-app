@@ -174,11 +174,15 @@ async function montaModelo(i,evo){
   obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);g.userData.bol=!!m.bol;return g}
 // tira da cena qualquer modelo que tenha ficado de uma abertura anterior (evita dois bichinhos na tela)
 function tiraModelos(){if(!V.spin)return;for(const c of V.spin.children.slice())if(c.userData.modelo)V.spin.remove(c)}
-async function openGLB(i){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir de novo antes de terminar, só o último vale
-  const evo=careStage(i)>0&&i<CH0,m0=MODELS[i];let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;if(!initViewer())return false;
-  let src;try{src=await loadGLB(m)}catch(e){if(m===m0)return false;EVOFAIL[i]=1;delete GLB[m.file];m=m0;try{src=await loadGLB(m)}catch(e2){return false}}
+// modo 'leve': se o modelo detalhado ainda não chegou, abre na hora com a versão leve (_lo) e troca pela detalhada quando ela carregar
+// modo 'troca': só troca o modelo, sem mexer no giro nem no estado do bichinho
+async function openGLB(i,modo){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir de novo antes de terminar, só o último vale
+  const evo=careStage(i)>0&&i<CH0;let m0=MODELS[i];let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;if(!initViewer())return false;
+  const evoModel=m!==m0,mHi=m;let leve=false;
+  if(modo==='leve'&&LEVES.has(m.file)&&!GLB[m.file]){leve=true;const lo=f=>f.replace(/\.glb$/,'_lo.glb');m=Object.assign({},m,{file:lo(m.file),key:m.key+'L'});if(!evoModel)m0=m}
+  let src;try{src=await loadGLB(m)}catch(e){if(leve){m=mHi;leve=false;try{src=await loadGLB(m)}catch(e1){return false}}else{if(m===m0)return false;EVOFAIL[i]=1;delete GLB[m.file];m=m0;try{src=await loadGLB(m)}catch(e2){return false}}}
   if(tok!==V.abre)return false;
-  const evoModel=m!==m0;
+  if(leve)loadGLB(mHi).then(()=>{if(V.open&&V.cur===i&&V.abre===tok)openGLB(i,'troca')},()=>{});
   if(V.C)V.spin.remove(V.C.root);if(V.T){V.spin.remove(V.T.root);V.T=null}
   const U={uHY:{value:0},uHP:{value:0},uHR:{value:0},uTail:{value:0},uT:{value:0},uWing:{value:0}};
   const obj=src.clone(true);
@@ -194,10 +198,16 @@ async function openGLB(i){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir d
   V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts};V.mode='glb';V.chibi=false;V.sp={};
   {const st=careStage(i);V.C.gs=m.leg?GROW[1].gs*(m.escala||1):m.bol?.85:GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
   V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(careStage(i)||m.leg)makeAura(i);
-  Object.assign(V,{ry:temVista(i)?vistaLeg(i):-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
+  if(modo!=='troca')Object.assign(V,{ry:temVista(i)?vistaLeg(i):-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
     G:{hy:0,hp:0,hr:0,tail:0,wagA:.2,wagS:4,roll:0,crouch:0,bob:0,shake:0,lift:0}});
   return true;
 }
+// carrega antes (sem pressa, um por vez) os modelos detalhados que o jogador deve abrir: vizinhos no visualizador e a coleção
+const PRE=[];let preOn=false;
+function arqDe(i){const m0=MODELS[i];if(!m0)return null;try{if(careStage(i)>0&&i<CH0&&EVOFILE[i]&&!EVOFAIL[i])return Object.assign({},m0,{file:EVOFILE[i],remote:1,evoM:1})}catch(e){}return m0}
+function preCarrega(ids,frente){for(const i of ids){const m=arqDe(i);if(m&&!GLB[m.file]&&!PRE.some(q=>q.file===m.file))frente?PRE.unshift(m):PRE.push(m)}
+  if(preOn)return;preOn=true;const vez=()=>{const m=PRE.shift();if(!m){preOn=false;return}if(GLB[m.file]){vez();return}
+    const segue=()=>setTimeout(()=>(window.requestIdleCallback||setTimeout)(vez,{timeout:1500}),250);loadGLB(m).then(segue,segue)};setTimeout(vez,600)}
 function hitGLB(e){
   const r=$('v3d').getBoundingClientRect();V.ray.setFromCamera({x:(e.clientX-r.left)/r.width*2-1,y:-(e.clientY-r.top)/r.height*2+1},V.cam);
   const h=V.ray.intersectObject(V.C.root,true)[0];if(!h)return null;
@@ -374,7 +384,7 @@ function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}cons
 function openViewer(i){
   vTags(i);if(i>=CH0&&!isLeg(i)&&!MODELS[i]){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
   if(MODELS[i]){const rq=V.rq=(V.rq|0)+1;// o corpo antigo (em código) nunca aparece: se o modelo 3D não carregar, tenta de novo e avisa
-    const tenta=n=>openGLB(i).then(ok=>{if(V.rq!==rq)return;if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
+    const tenta=n=>openGLB(i,'leve').then(ok=>{if(V.rq!==rq)return;if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
       $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(gloop)}
       else if(n<8){if(n===0)banner('Carregando '+PLUSH[i].name+'…','um instante');EVOFAIL[i]=0;setTimeout(()=>{if(V.rq===rq)tenta(n+1)},1200+n*500)}
       else{logErro('viewer:'+PLUSH[i].name,'modelo 3D não carregou depois de 8 tentativas');banner('Não carregou','Confira a internet e toque no bichinho de novo')}});
