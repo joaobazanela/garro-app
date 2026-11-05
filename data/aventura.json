@@ -5529,7 +5529,7 @@
     "cenario2": {"estilo":"caverna","chao_tile":9,"chao_brilho":0.7,"rocha":"#a08ea0","musgo":"#7a8a6a","voadores":0,"halo":0.6,"chao_cor":"#a89cb0","parede_raio":0.85,"_nota":"Referência da Caverna: rochas roxas, estalagmites, cristais roxos/azuis/rosa, cogumelos que brilham, poças de água azul, lanternas e baús."},
     "luz": {"hemi":["#b89aff","#2a1a3a",0.95],"sol":["#d8c0ff",0.6],"neblina":[12,32],"ceu":"#140e22","cor":"#1e1430"},
     "texturas": {"chao":{"map":"img/tex/montanha/chao2_cor.jpg","normalMap":"img/tex/montanha/chao2_normal.jpg","emissiveMap":"img/tex/montanha/chao2_emis.jpg"},"cristal":{"map":"img/tex/montanha/cristal_cor.jpg","normalMap":"img/tex/montanha/cristal_normal.jpg","roughnessMap":"img/tex/montanha/cristal_rug.jpg","emissiveMap":"img/tex/montanha/cristal_emissivo.jpg"},"casca":{"map":"img/tex/montanha/casca_cor.jpg","normalMap":"img/tex/montanha/casca_normal.jpg","roughnessMap":"img/tex/montanha/casca_rug.jpg"}},
-    "cenario3d": {"portal": "models/cenario/dio_caverna.glb", "portal_tamanho": 16, "portal_centro": [-0.115, 0.1, -0.135], "veu": [0.05, 0.055], "portal_obs": [[0.08, 0, 0.03], [-0.08, 0, 0.03], [0.16, 0, 0.04], [-0.16, 0, 0.04]], "arvores": ["models/cenario/pedras.glb", "models/cenario/cogumelo_rosa.glb"], "arvore_tamanho": 2.4, "cogumelos": "models/cenario/barril.glb", "cogumelo_tamanho": 1.1, "lanterna": "models/cenario/lanterna.glb"},
+    "cenario3d": {"marcos": [{"modelo": "models/cenario/masmorra.glb", "tamanho": 6, "ao_lado": 0.3, "afasta": 4.5, "solido": 2.6, "de_frente": true, "giro": 0.35}, {"modelo": "models/cenario/masmorra.glb", "tamanho": 6, "ao_lado": 0.7, "afasta": 4.5, "solido": 2.6, "de_frente": true, "giro": -0.35}], "portal": "models/cenario/dio_caverna.glb", "portal_tamanho": 16, "portal_centro": [-0.115, 0.1, -0.135], "veu": [0.05, 0.055], "portal_obs": [[0.08, 0, 0.03], [-0.08, 0, 0.03], [0.16, 0, 0.04], [-0.16, 0, 0.04]], "arvores": ["models/cenario/pedras.glb", "models/cenario/cogumelo_rosa.glb"], "arvore_tamanho": 2.4, "cogumelos": "models/cenario/barril.glb", "cogumelo_tamanho": 1.1, "lanterna": "models/cenario/lanterna.glb"},
     "cristais": ["#ff7ad9", "#6ef0ff", "#b48aff"],
     "lanterna_cor": "#ffb35a",
     "voadores": ["✨", "🔮", "✨", "💎"],
@@ -8127,7 +8127,7 @@
     "luz": {"hemi":["#a898d0","#1a1028",0.8],"sol":["#b8a8e0",0.35],"neblina":[11,30],"ceu":"#120c1e","cor":"#241838"},
     "texturas": {"chao":{"map":"img/tex/trevas/chao2_cor.jpg","normalMap":"img/tex/trevas/chao2_normal.jpg","emissiveMap":"img/tex/trevas/chao2_emis.jpg"},"cristal":{"map":"img/tex/trevas/cristal_cor.jpg","normalMap":"img/tex/trevas/cristal_normal.jpg","roughnessMap":"img/tex/trevas/cristal_rug.jpg","emissiveMap":"img/tex/trevas/cristal_emissivo.jpg"},"casca":{"map":"img/tex/trevas/casca_cor.jpg","normalMap":"img/tex/trevas/casca_normal.jpg","roughnessMap":"img/tex/trevas/casca_rug.jpg"},"pedra":{"map":"img/tex/trevas/pedra_cor.jpg","normalMap":"img/tex/trevas/pedra_normal.jpg","roughnessMap":"img/tex/trevas/pedra_rug.jpg"}},
      "escuro": true,
-     "cenario3d": {"portal": "models/cenario/dio_trevas.glb", "portal_tamanho": 11, "portal_centro": [-0.015, 0.262, -0.333], "veu": [0.075, 0.085], "portal_obs": [[0.12, 0, 0.04], [-0.12, 0, 0.04], [0.22, 0, 0.05], [-0.22, 0, 0.05]], "arvores": ["models/cenario/pedras.glb"], "arvore_tamanho": 2.3},
+     "cenario3d": {"marcos": [{"modelo": "models/cenario/castelo_assombrado.glb", "tamanho": 26, "x": 0, "z": 1.12, "giro": 3.1416}], "portal": "models/cenario/dio_trevas.glb", "portal_tamanho": 11, "portal_centro": [-0.015, 0.262, -0.333], "veu": [0.075, 0.085], "portal_obs": [[0.12, 0, 0.04], [-0.12, 0, 0.04], [0.22, 0, 0.05], [-0.22, 0, 0.05]], "arvores": ["models/cenario/pedras.glb"], "arvore_tamanho": 2.3},
     "ceu": "#120c1c",
     "neblina": "#221634",
     "chao": "#3a3046",
@@ -16433,6 +16433,9 @@
   }
  },
  "cenario3d": {
+  "pedras_modelos": ["models/cenario/pilha_pedras.glb", "models/cenario/tronco.glb"],
+  "pedra_tamanho": 2.3,
+  "_nota_extras": "pedras_modelos: modelos no lugar das pedras do mapa (mundos sem cenario2). marcos: [{modelo,tamanho,x,z,giro}] cenários grandes; x em meias-larguras (|x|>1 = fora das paredes), z em fração do comprimento (>1 = depois do portal); ou {ao_lado: fração do caminho, afasta: distância, solido: raio do obstáculo} para ficar ao lado do caminho, de frente para ele (de_frente: true = aberto para a câmera). Modelos do Tripo em models/cenario/ (veja models/cenario/LEIAME.md).",
   "portal": "models/cenario/portal.glb",
   "portal_tamanho": 7.6,
   "arvores": [

@@ -203,9 +203,13 @@ function luta(){TELA='luta';msg('');const R=RUN,f=R.f,h=R.hero;$('advTitle').tex
 
 // ---- pernas andando no próprio modelo 3D (passo diagonal, a pata de apoio fica no chão) ----
 // cobra=true (data/lendarios.json → anda: "desliza", ex.: Astrakai): o corpo todo ondula de lado e desliza, sem passos
-// bolinha (3D feito da arte de frente): fica virada para a câmera, inclinando só um pouco para onde anda
-const BOL_INCL=.7;// a câmera olha de cima: a bolinha deita um pouco para trás para mostrar a arte de frente
-const virar=(m,a)=>m&&m.userData.bol?Math.PI+Math.max(-.45,Math.min(.45,Math.atan2(Math.sin(a-Math.PI),Math.cos(a-Math.PI))*.35)):a;
+// ponto ao lado do caminho (fração t do comprimento do caminho), afastado d dele e longe de outros trechos; devolve [x,z,giro de frente para o caminho]
+function lugarAoLado(M,t,d){const C=M.caminho;if(!C||C.length<2)return null;const seg=[];let tot=0;for(let k=0;k<C.length-1;k++){const l=Math.hypot(C[k+1][0]-C[k][0],C[k+1][1]-C[k][1]);seg.push(l);tot+=l}
+  const distC=(x,z)=>{let m=1e9;for(let k=0;k<C.length-1;k++){const [ax,az]=C[k],[bx,bz]=C[k+1],vx=bx-ax,vz=bz-az,L2=vx*vx+vz*vz||1,u=Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/L2));m=Math.min(m,Math.hypot(ax+vx*u-x,az+vz*u-z))}return m};
+  for(const dt of [0,.04,-.04,.08,-.08,.12,-.12]){let alvo=Math.max(0,Math.min(1,t+dt))*tot,k=0;while(k<seg.length-1&&alvo>seg[k]){alvo-=seg[k];k++}
+    const [ax,az]=C[k],[bx,bz]=C[k+1],l=seg[k]||1,ux=(bx-ax)/l,uz=(bz-az)/l,px=ax+ux*Math.min(alvo,l),pz=az+uz*Math.min(alvo,l);
+    for(const lado of [1,-1]){const x=px-uz*d*lado,z=pz+ux*d*lado;if(Math.abs(x)<M.largura/2+2&&distC(x,z)>d*.85)return[x,z,Math.atan2(px-x,pz-z)]}}
+  return null}
 function prepAndar(g,mini,cobra){const T=G.THREE(),inv=new T.Matrix4(),v=new T.Vector3();g.updateMatrixWorld(true);inv.copy(g.matrixWorld).invert();
   const ms=[],mn=new T.Vector3(1e9,1e9,1e9),mx=new T.Vector3(-1e9,-1e9,-1e9),low=[];
   g.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const M=new T.Matrix4().multiplyMatrices(inv,o.matrixWorld),p=o.geometry.attributes.position;
@@ -256,9 +260,13 @@ let SOMBRA=null;function sombra(r){const T=G.THREE();if(!SOMBRA){const c=documen
 const C3C={};const cfgDe=TT=>Object.assign({},D.cenario3d||{},(TT&&TT.cenario3d)||{});
 function props3d(TT){const CF=cfgDe(TT);if(!D.cenario3d||!G.glb)return Promise.resolve(null);const ck=JSON.stringify(CF);if(C3C[ck])return C3C[ck];
   const malha=g=>{let m=null;g.traverse(o=>{if(o.isMesh&&!m)m=o});if(!m)throw new Error('sem malha');const mat=m.material;mat.roughness=.9;mat.metalness=0;if(mat.map)mat.map.encoding=G.THREE().sRGBEncoding;return{geo:m.geometry,mat}};
+  // extras (opcionais): pedras_modelos = modelos no lugar das pedras do mapa; marcos = cenários grandes fora do caminho (castelo, masmorra…)
+  const PM=CF.pedras_modelos||[],MK=CF.marcos||[],ok=f=>G.glb(f).catch(e=>{console.warn('cenario 3d',f,e);return null});
+  const fixa=o=>{o.traverse(q=>{if(q.isMesh&&q.material){q.material.roughness=.9;q.material.metalness=0;if(q.material.map)q.material.map.encoding=G.THREE().sRGBEncoding}});return o};
   return C3C[ck]=Promise.all([G.glb(CF.portal),...CF.arvores.map(f=>G.glb(f)),G.glb(CF.cogumelos),CF.lanterna?G.glb(CF.lanterna).catch(()=>null):null]).then(([por,...r])=>{const lan=r.pop(),cog=r.pop();
-    por.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=.9;o.material.metalness=0;if(o.material.map)o.material.map.encoding=G.THREE().sRGBEncoding}});
-    return{portal:por,arv:r.map(malha),cog:malha(cog),lan:lan?malha(lan):null}}).catch(e=>{console.warn('cenario 3d',e);delete C3C[ck];return null})}
+    fixa(por);
+    return Promise.all([Promise.all(PM.map(ok)),Promise.all(MK.map(m=>ok(m.modelo)))]).then(([ped,mk])=>
+      ({portal:por,arv:r.map(malha),cog:malha(cog),lan:lan?malha(lan):null,ped:ped.filter(Boolean).map(malha),marcos:MK.map((m,k)=>mk[k]?Object.assign({},m,{obj:fixa(mk[k])}):null).filter(Boolean)}))}).catch(e=>{console.warn('cenario 3d',e);delete C3C[ck];return null})}
 // Texturas PBR reais (512px, tiling). O cache mantém uma única cópia por caminho.
 // 'map' usa sRGB; normal, rugosidade e emissivo são mapas de dados lineares.
 const TEX_PBR={};
@@ -377,11 +385,19 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   const cores=['#2e6b4a','#3a7d4e','#2a5e52','#4a8a4a','#365f3a'];
   inst(new T.IcosahedronGeometry(1,0),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,1.9*s,z);o.scale.set(.95*s,1.05*s,.95*s);o.rotation.set(0,(x*7+z)%6,0);c.set(cores[Math.abs(Math.round(x*3+z))%5])});
   inst(new T.IcosahedronGeometry(1,0),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,2.7*s,z);o.scale.set(.6*s,.7*s,.6*s);o.rotation.set(0,(x+z*5)%6,0);c.set(cores[Math.abs(Math.round(x+z*3))%5]).offsetHSL(0,0,.05)})}
-  if(!E2)inst(new T.DodecahedronGeometry(.5,0),lam(),M.pedras,(o,[x,z,s],c)=>{o.position.set(x,.2*s,z);o.scale.set(s,.65*s,s*1.1);o.rotation.set(0,(x*3+z)%6,0);c.set(TT.pedra||'#8a8a7e')});
+  if(!E2&&C3&&C3.ped&&C3.ped.length)emBlocos(C3.ped,M.pedras,(o,[x,z,s])=>{const k=(CF.pedra_tamanho||1.6)*s;o.position.set(x,-.04*k,z);o.scale.setScalar(k);o.rotation.set(0,(x*4.3+z*6.1)%6.283,0)});
+  else if(!E2)inst(new T.DodecahedronGeometry(.5,0),lam(),M.pedras,(o,[x,z,s],c)=>{o.position.set(x,.2*s,z);o.scale.set(s,.65*s,s*1.1);o.rotation.set(0,(x*3+z)%6,0);c.set(TT.pedra||'#8a8a7e')});
   if(E2){}else if(C3)emBlocos(tinge([C3.cog],TT.cogumelo),M.cogumelos,(o,[x,z,s])=>{const k=(CF.cogumelo_tamanho||1.5)*s;o.position.set(x,-.12*k,z);o.scale.setScalar(k);o.rotation.set(0,(x*5.1+z*9.7)%6.283,0)});
   else{inst(new T.CylinderGeometry(.09,.12,1,6),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.3*s,z);o.scale.set(s,.6*s,s);o.rotation.set(0,0,0);c.set('#efe6d8')});
   inst(new T.SphereGeometry(.42,10,6,0,Math.PI*2,0,Math.PI/2),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.58*s,z);o.scale.set(s,.8*s,s);o.rotation.set(0,0,0);c.set(['#e86a8a','#b46ae8','#f2a04a'][Math.abs(Math.round(x+z))%3])})}
   const mec=decorMundo(S,M,C3,inst,rnd);
+  // marcos: cenários grandes fora do caminho; x em meias-larguras do mapa (|x|>1 = fora das paredes), z em fração do comprimento (>1 = depois do portal)
+  // ou "ao_lado": fração do caminho; fica a "afasta" do caminho (do lado livre), de frente para ele, e "solido" vira obstáculo
+  const marcoObs=[];
+  if(C3&&C3.marcos)for(const mk of C3.marcos){const o=mk.obj.clone();o.scale.setScalar(mk.tamanho||10);let x=(mk.x||0)*M.largura/2,z=(mk.z??.5)*M.comprimento,giro=mk.giro||0;
+    if(mk.ao_lado!==undefined){const L=lugarAoLado(M,mk.ao_lado,mk.afasta||5);if(!L)continue;[x,z,giro]=L}
+    if(mk.de_frente)giro=Math.PI+(mk.giro||0);// aberto para a câmera (que olha para +z)
+    o.position.set(x,mk.y||0,z);o.rotation.set(0,giro,0);S.add(o);if(mk.solido)marcoObs.push([x,z,mk.solido])}
   if(E2){try{const m3=window.GARRO_MUNDOS3D.monta({T,S,M,blocos,texPBR,matLava:mec.matLava,cam:[AR.cam_altura||11.5,AR.cam_tras||8.5]});if(m3){mec.anim=m3.anim;mec.obs3d=m3.obs}}catch(e){console.warn('mundos3d',e)}}
   // sombras das árvores
   if(!E2)for(const [x,z,s] of M.arvores){if(z<-1||z>M.comprimento+1)continue;const sh=sombra(1.1*s);sh.position.set(x+.25,.015,z+.25);S.add(sh)}
@@ -406,7 +422,7 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   // vagalumes (no mar: peixinhos e bolhas; na caverna: esporos brilhando)
   const VG=TT.voadores||['✨'],vg=[];for(let k=0;k<(E2?(E2.voadores??0):40);k++){const s=sprEmoji(VG[k%VG.length],TT.voadores?.45:.25);s.position.set((rnd()-.5)*M.largura,1+rnd()*2.5,rnd()*M.comprimento);S.add(s);vg.push({s,y:s.position.y,f:rnd()*6})}
   // obstáculos para colisão
-  const obs=obsP.slice().concat(mec.obs3d||[]);const rP=E2?(E2.parede_raio??.85):C3?.45:.38;for(const [x,z,s] of M.arvores)obs.push([x,z,rP*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
+  const obs=obsP.slice().concat(mec.obs3d||[],marcoObs);const rP=E2?(E2.parede_raio??.85):C3?.45:.38;for(const [x,z,s] of M.arvores)obs.push([x,z,rP*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
   // área secreta: baú escondido no canto do mapa (cura tudo) e o bichinho raro que o guarda (acampamento secreto do mapa)
   if(M.secreto){const [sx,sz]=M.secreto,b=new T.Group(),mad=new T.MeshLambertMaterial({color:'#7a4a22'}),our=new T.MeshStandardMaterial({color:'#ffd04a',emissive:'#a07000',emissiveIntensity:.6});
     const c1=new T.Mesh(new T.BoxGeometry(.9,.55,.6),mad);c1.position.y=.28;const t1=new T.Mesh(new T.BoxGeometry(.95,.18,.65),our);t1.position.y=.62;b.add(c1,t1);b.position.set(sx,0,sz);S.add(b);
@@ -422,7 +438,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
   const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1);hg.scale.setScalar(Hs);
-  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));if(hg.userData.bol)hg.rotation.x=-BOL_INCL;const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
+  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
   R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);
   R.minMobs=((M.acampamentos[0]&&M.acampamentos[0].inimigos.length)||0)+5;// portal só abre depois de matar pelo menos os bichinhos do acampamento inicial (+5)
@@ -435,7 +451,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
 async function novoInimigo(j,lv,x,z,camp,chefe,tipo){const R=RUN,T=G.THREE(),L_=lutador(j,lv,{chefe}),Tp=(tipo&&TP[tipo])||{};const k=(chefe?(AR.chefe_vida||1.6):(AR.inimigo_vida||.45))*(Tp.vida||1);L_.hp=L_.max=Math.max(10,Math.round(L_.hp*k));
   if(Tp.dano)L_.atk*=Tp.dano;const esc=Tp.escudo?Math.round(L_.max*Tp.escudo):0;
   const g=await G.modelo(j,chefe),s=(chefe?(AR.tam_chefe||3):redondo(j)?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
-  const U=prepAndar(g,redondo(j),cobra(j)),root=new T.Group();if(g.userData.bol)g.rotation.x=-BOL_INCL;root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
+  const U=prepAndar(g,redondo(j),cobra(j)),root=new T.Group();root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
   const bar=document.createElement('div');bar.className='advebar'+(chefe?' chefe':'')+(tipo?' '+tipo:'');bar.innerHTML='<small class="'+corNv(lv,R.hero.lv)+'">'+(Tp.icone?Tp.icone+' ':'')+'Nv '+lv+'</small>'+(esc?'<i class="esc"><b></b></i>':'')+'<i><b></b></i>';bar.hidden=true;$('advFx').appendChild(bar);
   if(tipo==='elite'){const a=new T.Mesh(new T.RingGeometry(.55*s,.68*s,32),new T.MeshBasicMaterial({color:'#7ad0ff',transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide}));a.rotation.x=-Math.PI/2;a.position.y=.04;root.add(a)}
   if(tipo==='curandeiro'){const a=sprEmoji('💚',.45);a.position.y=1.55*s;root.add(a)}
@@ -628,8 +644,8 @@ function desistir(){const R=RUN;if(!R||(R.fim&&!R.fimPend)){limpa3D();mapa();ret
 // ---- desenho ----
 const V3=()=>new (G.THREE().Vector3)();
 function desenha(){const R=RUN;if(!R||!R.r3||!R.p)return;const {rd,S,cam}=R.r3,p=R.p,w=R.w;
-  p.g.position.set(p.x+Math.sin(p.ang)*p.lunge*1.5,0,p.z+Math.cos(p.ang)*p.lunge*1.5);p.g.rotation.y=virar(p.m,p.ang);p.g.visible=!(p.inv>0&&!p.dash&&Math.floor(p.inv*16)%2);
-  for(const e of w.ents){if(!e.g.visible)continue;e.lunge=Math.max(0,(e.lunge||0)-1/60);e.g.position.x=e.x+Math.sin(e.ang)*e.lunge*1.2;e.g.position.z=e.z+Math.cos(e.ang)*e.lunge*1.2;e.g.rotation.y=virar(e.m,e.ang);
+  p.g.position.set(p.x+Math.sin(p.ang)*p.lunge*1.5,0,p.z+Math.cos(p.ang)*p.lunge*1.5);p.g.rotation.y=p.ang;p.g.visible=!(p.inv>0&&!p.dash&&Math.floor(p.inv*16)%2);
+  for(const e of w.ents){if(!e.g.visible)continue;e.lunge=Math.max(0,(e.lunge||0)-1/60);e.g.position.x=e.x+Math.sin(e.ang)*e.lunge*1.2;e.g.position.z=e.z+Math.cos(e.ang)*e.lunge*1.2;e.g.rotation.y=e.ang;
     const tr=e.aviso>0&&!e.chefe?1+Math.sin(R.t*40)*.06:1;e.m.scale.setScalar(e.s*tr);e.pisca=Math.max(0,(e.pisca||0)-1/60);e.m.position.y=e.pisca>0?.08:0}
   for(const it of w.itens)if(!it.ok)it.g.rotation.y+=.03;
   // câmera de cima, inclinada, atrás do bichinho

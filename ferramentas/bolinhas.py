@@ -5,10 +5,11 @@ Para cada bolinha gera:
   • img/bolinhas/<slug>.webp — o recorte com transparência (arte de referência);
   • data/sprites.json → SPRITES[20+k] (imagem da máquina, lado maior 210, com o contorno "hull" para a física);
   • data/sprites_luta.json → BSPR[20+k] (imagem da batalha);
-  • models/bolinhas/<slug>.glb — 3D: a silhueta da arte "inflada" (frente = a própria arte; costas = a arte espelhada
+  • (com --3d) models/bolinhas/<slug>.glb — 3D simples: a silhueta da arte "inflada" (frente = a própria arte; costas = a arte espelhada
     sem o rosto), costuradas na borda exata da silhueta, olhando para +z e apoiada em y = 0.
 
-Uso: python3 ferramentas/bolinhas.py folha_bolinhas.png"""
+Uso: python3 ferramentas/bolinhas.py folha_bolinhas.png [--3d]
+Os modelos 3D usados no jogo são os do Tripo (folha 3D das 20 bolinhas separada em 20 arquivos leves, ~14 mil triângulos cada)."""
 import sys, os, io, json, base64, struct, unicodedata
 import numpy as np
 from PIL import Image, ImageFilter
@@ -183,8 +184,9 @@ def main(folha):
         rgb = np.asarray(atlas).astype(float); a = rgb[..., 3:]/255
         bl = np.dstack([ndi.gaussian_filter(rgb[..., c]*a[..., 0], 3) for c in range(3)])/(ndi.gaussian_filter(a[..., 0], 3)[..., None]+1e-6)
         rgb[..., :3] = np.where(a > .5, rgb[..., :3], bl); atlas = Image.fromarray(rgb.clip(0, 255).astype(np.uint8))
-        Pm, UVm, Im = malha(sq)
-        grava_glb(os.path.join(RAIZ, f'models/bolinhas/{sl}.glb'), Pm, UVm, Im, atlas)
+        if '--3d' in sys.argv:            # 3D simples da arte (só frente); os modelos do jogo hoje vêm do Tripo
+            Pm, UVm, Im = malha(sq)
+            grava_glb(os.path.join(RAIZ, f'models/bolinhas/{sl}.glb'), Pm, UVm, Im, atlas)
         print(20+k, nome, sl, rec.size, len(Pm), 'vért')
     # dados: bolinha 20+k = mini do grande k (mesmo elemento e pedra), força de redondo (~36% do grande), raridade do grande
     for k in range(20):

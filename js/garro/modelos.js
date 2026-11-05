@@ -98,9 +98,9 @@ for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
     glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null,vista:L.vista??-.62,desliza:L.anda==='desliza',fileAnda:L.modelo_anda||null};NOEXTRA.add(L.id)}
 // ângulo em que o lendário aparece no visualizador (data/lendarios.json → vista; os da folha nova olham para outro lado)
 const vistaLeg=i=>(MODELS[i]&&MODELS[i].vista)??-.62;
-// bolinhas (20+k = mini do grande k): 3D feito da arte (ferramentas/bolinhas.py), visto mais de frente
+// bolinhas (20+k = mini do grande k): modelos 3D do Tripo (folha das 20 bolinhas separada em models/bolinhas/)
 for(let k=0;k<20;k++){const id=CH0+k;if(PLUSH[id]&&!PLUSH[id].fora)MODELS[id]={file:'models/bolinhas/'+PLUSH[k].name.toLowerCase()+'.glb',skin:null,evoM:1,noDeform:1,wing:null,notail:false,
-  hc:[0,.62,.25],hr:.2,hp:[0,.45,.2],tz:-.3,tp:[0,.3,-.3],spd:.9,wag:.2,key:'B'+k,bol:1,vista:-.22}}
+  hc:[0,.62,.25],hr:.2,hp:[0,.45,.2],tz:-.3,tp:[0,.3,-.3],spd:.9,wag:.2,key:'B'+k,bol:1,vista:-.35}}
 const temVista=i=>isLeg(i)||!!(MODELS[i]&&MODELS[i].bol);
 const EVT={};
 function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img.width)return map;
