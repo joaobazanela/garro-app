@@ -91,6 +91,7 @@ function weldNormals(g){const p=g.attributes.position,n=p.count,id=new Int32Arra
 const SKIN={};
 // forma evoluída: arquivo .glb próprio quando existir (ex.: 'models/petrun_evo.glb'); senão o mesmo corpo com a pele evoluída
 // modelos Tripo das formas evoluídas (cada arquivo veio com base+evolução; aqui só a evolução)
+const LEVES=new Set(GD.modelos.LEVES||[]);
 const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
 // lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
 for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
@@ -100,7 +101,8 @@ for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
 const vistaLeg=i=>(MODELS[i]&&MODELS[i].vista)??-.62;
 // bolinhas (20+k = mini do grande k): modelos 3D do Tripo (folha das 20 bolinhas separada em models/bolinhas/)
 for(let k=0;k<20;k++){const id=CH0+k;if(PLUSH[id]&&!PLUSH[id].fora)MODELS[id]={file:'models/bolinhas/'+PLUSH[k].name.toLowerCase()+'.glb',skin:null,evoM:1,noDeform:1,wing:null,notail:false,
-  hc:[0,.62,.25],hr:.2,hp:[0,.45,.2],tz:-.3,tp:[0,.3,-.3],spd:.9,wag:.2,key:'B'+k,bol:1,vista:-.35}}
+  hc:[0,.62,.25],hr:.2,hp:[0,.45,.2],tz:-.3,tp:[0,.3,-.3],spd:.9,wag:.2,key:'B'+k,bol:1,vista:-.35,
+  fileAnda:'models/bolinhas/'+PLUSH[k].name.toLowerCase()+'_lo.glb'}}// na Aventura: versão leve (~3,5 mil triângulos); na coleção: a detalhada
 const temVista=i=>isLeg(i)||!!(MODELS[i]&&MODELS[i].bol);
 const EVT={};
 function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img.width)return map;
@@ -162,6 +164,7 @@ async function montaModelo(i,evo){
   let m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
   if(m0.fileAnda)m0=Object.assign({},m0,{file:m0.fileAnda,key:m0.key+'A'});// Aventura: pose de andar (ex.: serpente deitada); a coleção usa o modelo normal
   let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;
+  if(LEVES.has(m.file)){const ml=Object.assign({},m,{file:m.file.replace(/\.glb$/,'_lo.glb'),key:m.key+'L'});if(m===m0)m0=ml;m=ml}// Aventura: versão leve do modelo (data/modelos.json → LEVES)
   let src;try{src=await loadGLB(m)}catch(e){if(m===m0)throw e;m=m0;src=await loadGLB(m)}
   const obj=src.clone(true),skin=m.skin?await loadSkin(m.skin):null,glow=m.glow?await loadSkin(m.glow):null;
   obj.traverse(o=>{if(o.isMesh){if(m.notail)o.geometry=dropTail(o.geometry,m);if(!o.geometry.attributes.normal)weldNormals(o.geometry);

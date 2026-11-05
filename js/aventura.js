@@ -431,7 +431,7 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
 
 // ---- montar a fase ----
 async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||!M)throw new Error('sem 3d');
-  const cv=$('advCv'),rd=new T.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));rd.outputEncoding=T.sRGBEncoding;
+  const cv=$('advCv'),rd=new T.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));rd.outputEncoding=T.sRGBEncoding;
   const S=new T.Scene();const TMA=(R.M&&R.M.tema)||{},LZ=TMA.luz||{};S.background=new T.Color(LZ.ceu||TMA.ceu||'#2c3a52');S.fog=new T.Fog(LZ.cor||TMA.neblina||TMA.ceu||'#2c3a52',(LZ.neblina||[])[0]??(TMA.escuro?9:26),(LZ.neblina||[])[1]??(TMA.escuro?26:52));
   S.add(LZ.hemi?new T.HemisphereLight(LZ.hemi[0],LZ.hemi[1],LZ.hemi[2]):new T.HemisphereLight(0xfff2e0,0x2f4a32,TMA.escuro?.35:1.05));const sol=LZ.sol?new T.DirectionalLight(LZ.sol[0],LZ.sol[1]):new T.DirectionalLight(0xffe2c4,TMA.escuro?.25:.95);sol.position.set(6,12,-5);S.add(sol);
   const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};const C3=await props3d(R.M&&R.M.tema);if(RUN!==R)return;R.w={M,...cenario(S,M,C3),ents:[],tiros:[],efeitos:[],nums:[]};
@@ -644,6 +644,9 @@ function desistir(){const R=RUN;if(!R||(R.fim&&!R.fimPend)){limpa3D();mapa();ret
 // ---- desenho ----
 const V3=()=>new (G.THREE().Vector3)();
 function desenha(){const R=RUN;if(!R||!R.r3||!R.p)return;const {rd,S,cam}=R.r3,p=R.p,w=R.w;
+  // resolução que se ajusta: se o aparelho não dá conta (quadro > 24 ms), baixa a resolução; se sobra, sobe de volta
+  {const q=R.r3,ag=performance.now(),dq=ag-(q.tl||ag);q.tl=ag;if(dq>0&&dq<250)q.ema=(q.ema||16)*.94+dq*.06;q.prMax=q.prMax||rd.getPixelRatio();
+    if(!q.tq)q.tq=ag;else if(ag-q.tq>1500){q.tq=ag;const pr=rd.getPixelRatio();if(q.ema>24&&pr>1)rd.setPixelRatio(Math.max(1,pr-.25));else if(q.ema<15&&pr<q.prMax)rd.setPixelRatio(Math.min(q.prMax,pr+.25))}}
   p.g.position.set(p.x+Math.sin(p.ang)*p.lunge*1.5,0,p.z+Math.cos(p.ang)*p.lunge*1.5);p.g.rotation.y=p.ang;p.g.visible=!(p.inv>0&&!p.dash&&Math.floor(p.inv*16)%2);
   for(const e of w.ents){if(!e.g.visible)continue;e.lunge=Math.max(0,(e.lunge||0)-1/60);e.g.position.x=e.x+Math.sin(e.ang)*e.lunge*1.2;e.g.position.z=e.z+Math.cos(e.ang)*e.lunge*1.2;e.g.rotation.y=e.ang;
     const tr=e.aviso>0&&!e.chefe?1+Math.sin(R.t*40)*.06:1;e.m.scale.setScalar(e.s*tr);e.pisca=Math.max(0,(e.pisca||0)-1/60);e.m.position.y=e.pisca>0?.08:0}

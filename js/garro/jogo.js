@@ -198,7 +198,9 @@ function draw(){
   drawClaw();drawFX();
 }
 let last=performance.now(),acc=0;
-function loop(now){acc+=Math.min(80,now-last);last=now;let n=0;while(acc>=16.67&&n<4){step();acc-=16.67;n++}draw();requestAnimationFrame(loop)}
+// com a Aventura, o visualizador, a luta ou a loja por cima, a máquina para (não gasta o celular desenhando o que ninguém vê)
+const cobre=()=>{const a=document.getElementById('aventura');let vo=false;try{vo=!!V.open}catch(e){}return !!((a&&!a.hidden)||vo||!$('battle').hidden||!$('shop').hidden||!$('inv').hidden)};
+function loop(now){if(cobre()){last=now;requestAnimationFrame(loop);return}acc+=Math.min(80,now-last);last=now;let n=0;while(acc>=16.67&&n<4){step();acc-=16.67;n++}draw();requestAnimationFrame(loop)}
 setProngs();requestAnimationFrame(loop);
 
 /* ---------- sound ---------- */
