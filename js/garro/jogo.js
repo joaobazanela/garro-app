@@ -38,6 +38,13 @@ function showGrab(p,force,closed){
   $('mForce').style.width=Math.min(100,force/12)+'%';$('mWeight').style.width=Math.min(100,p.g/12)+'%';
 }
 
+/* ---------- modo HABILIDADE (data/regras.json → HABILIDADE): sem sorteio. A mesma jogada dá sempre o mesmo resultado.
+   Pega firme quem (1) fecha a garra perto do centro do bichinho (mira) e (2) trava a barra de força na faixa verde.
+   Quanto mais raro, mais estreitas a mira e a faixa verde. ---------- */
+const HAB=Object.assign({ativo:false,periodo_ms:1200,verde_centro:.72,garra:1000,classes:{}},GD.regras.HABILIDADE||{});
+const HABC=p=>{const C=HAB.classes||{},k=p.epic?'epico':p.giant?'gigante':p.egg!==undefined?(p.egg>=0?'ovo_lendario':'ovo_comum'):p.stone!==undefined?'pedra':p.i<CH0?'grande':'bolinha';return Object.assign({mira:.4,verde:.25},C[k]||{},{k})};
+function habForca(){const t=(performance.now()-(claw.habT0||0))/HAB.periodo_ms,f=t-Math.floor(t);return f<.5?f*2:2-f*2}// sobe e desce sempre no mesmo ritmo
+function habTrava(){if(HAB.ativo&&claw.habF==null&&(claw.state==='down'||claw.state==='close')){claw.habF=habForca();click(900)}}
 function start(){
   if(claw.state!=='ready')return false;
   if(MACH===3){if(!canPay(ECOST)){$('hint').textContent='A máquina de ovos custa '+ECOST+' moedas por jogada.';banner('Moedas insuficientes','Ovos: '+ECOST+' 🪙 por jogada');return false}
@@ -61,9 +68,10 @@ function start(){
     if(useBonus){bonus--;saveBonus()}else syncEstado('round_start').then(r=>{if(r)coins=r.coins+bonus;else{coins++;erroAmigavel('Não deu pra confirmar a jogada — a próxima pode não valer')}});}
   // real machines vary the claw voltage each play; after a losing streak they pay out
   claw.force=losses>=MQR.garra.derrotas_ajuda?1150+Math.random()*150:MQR.garra.min+Math.random()*MQR.garra.var;
+  if(HAB.ativo)claw.force=HAB.garra;
   $('hint').textContent='Posicione e aperte PEGAR';click(500);hud();return true;
 }
-function drop(){if(claw.state!=='move')return;claw.state='down';claw.press=0;dir=0;hum(true);$('bar').style.width='0';hud()}
+function drop(){if(HAB.ativo&&(claw.state==='down'||claw.state==='close')){habTrava();return}if(claw.state!=='move')return;if(HAB.ativo){claw.force=HAB.garra;claw.habT0=performance.now();claw.habF=null;claw.habRes=null}claw.state='down';claw.press=0;dir=0;hum(true);$('bar').style.width='0';if(HAB.ativo)$('hint').textContent='Toque PEGAR de novo quando a barra estiver no verde';hud()}
 
 function attach(b,hits,mult,closed){mult=mult||1;
   const p=b.plush,dx=Math.abs(b.position.x-claw.x),half=p.dw/2;
@@ -80,7 +88,13 @@ function attach(b,hits,mult,closed){mult=mult||1;
   if(p.epic){if(claw.epicFirm===true){claw.hold=grip=Math.max(grip,p.g*3);claw.slipAt=-1;claw.firme=true}else{claw.firme=false;claw.slipAt=claw.y-10-Math.random()*30}}
   if(p.egg!==undefined){const firme=p.egg>=0?claw.eggFirm===true:Math.random()>=(MQ.escorregar_comum??.4);
     if(firme){claw.hold=grip=Math.max(grip,p.g*3);claw.slipAt=-1;claw.firme=true}else claw.slipAt=claw.y-14-Math.random()*46}
+  if(HAB.ativo){const C=HABC(p),f=claw.habF==null?habForca():claw.habF,aim=(b===claw.target&&claw.habDx!=null?claw.habDx:dx/half)<=C.mira,forca=Math.abs(f-HAB.verde_centro)<=C.verde/2;claw.habF=f;
+    claw.habRes={aim,forca,C};
+    if(aim&&forca){claw.hold=grip=Math.max(grip,p.g*3);claw.slipAt=-1;claw.firme=true}
+    else{claw.firme=false;claw.slipAt=claw.y-24;claw.hold=grip=Math.min(grip,p.g*.9)}
+}
   showGrab(p,grip,closed);
+  if(claw.habRes){const R=claw.habRes,f=claw.habF;$('who').innerHTML=(R.aim?'✅':'❌')+' Mira'+(R.aim?'':' · faltou centralizar')+' &nbsp; '+(R.forca?'✅':'❌')+' Força'+(R.forca?'':' · '+(f>HAB.verde_centro?'forte demais':'fraca demais'))}
 }
 function release(reason){
   const b=claw.held;if(!b)return;
@@ -117,7 +131,7 @@ function won(b){
     roundWin=true;losses=0;banner('🏆 GIGANTE! '+p.name,'+60 XP · selo de gigante na coleção',true);fanfare();setTimeout(fanfare,700);renderShelf(p.i);hud();return}
   // redondo pego pode virar um grande do mesmo grupo de pedra (logado: o servidor sorteia; sem login/dev: sorteio aqui)
   let id=p.i,tr=false;
-  if((!ONL||DEV)&&id>=CH0&&Math.random()<(MQR.transformar_chance||0)){const g=[];for(let j=0;j<CH0;j++)if(STONE_OF(j)===STONE_OF(id))g.push(j);if(g.length){id=g[Math.random()*g.length|0];tr=true}}
+  if(!HAB.ativo&&(!ONL||DEV)&&id>=CH0&&Math.random()<(MQR.transformar_chance||0)){const g=[];for(let j=0;j<CH0;j++)if(STONE_OF(j)===STONE_OF(id))g.push(j);if(g.length){id=g[Math.random()*g.length|0];tr=true}}
   evento('capture');coll[id]=(coll[id]||0)+1;saveX();const dup=coll[id]>1,evo=id<CH0;if(dup){const c0=careOf(id);c0.xp+=evo?20:5;saveCare()}
   syncEstado('capture',{plushId:p.i}).then(r=>{if(r&&r.transformed&&r.plushId!==p.i){coll[p.i]=Math.max(0,(coll[p.i]||0)-1);coll[r.plushId]=Math.max((coll[r.plushId]||0)+1,r.count||1);saveX();transformou(p.i,r.plushId)}});
   roundWin=true;losses=0;
@@ -159,15 +173,15 @@ function step(){
     const heavy=c.held&&c.held.plush.giant;c.y-=heavy?.85:1.5;
     if(c.held){
       if(c.slipAt>0&&c.y<c.slipAt)release(c.held.plush.egg!==undefined?'liso':c.held.plush.g>c.hold*1.25?'heavy':'slip');
-      else if(!c.firme&&Math.random()<Math.max(0,stress()-.6)*.01+(Math.abs(c.held.angularVelocity)>.06?stress()*.012:0))release('slip');
+      else if(!HAB.ativo&&!c.firme&&Math.random()<Math.max(0,stress()-.6)*.01+(Math.abs(c.held.angularVelocity)>.06?stress()*.012:0))release('slip');
     }
     if(c.y<=REST){c.y=REST;c.state='top';c.t=0;hum(false);
-      if(c.held&&!c.firme){c.hold*=.82;const s=stress();if(s>1&&Math.random()<.8)release('slip');else if(Math.random()<Math.pow(s,4)*.35)release('slip')}}
+      if(c.held&&!c.firme&&!HAB.ativo){c.hold*=.82;const s=stress();if(s>1&&Math.random()<.8)release('slip');else if(Math.random()<Math.pow(s,4)*.35)release('slip')}}
   }else if(c.state==='top'){
     if(++c.t>24){c.state='return';hum(true)}
   }else if(c.state==='return'){
     const d=HOME-c.x;c.x+=Math.sign(d)*Math.min(Math.abs(d),c.held&&c.held.plush.giant?1.05:1.8);
-    if(c.held&&!c.firme&&Math.random()<Math.max(0,stress()-.7)*.008+(Math.abs(c.held.angularVelocity)>.07?stress()*.01:0))release('slip');
+    if(!HAB.ativo&&c.held&&!c.firme&&Math.random()<Math.max(0,stress()-.7)*.008+(Math.abs(c.held.angularVelocity)>.07?stress()*.01:0))release('slip');
     if(Math.abs(d)<.5){c.state='release';c.t=0;hum(false)}
   }else if(c.state==='release'){
     c.t++;if(c.t>10){c.open=Math.min(1,c.open+.04);c.oL=c.oR=c.oB=c.open}
@@ -189,13 +203,29 @@ function step(){
     else if(b.plush.giant&&!b.plush.landed&&b.position.y>FLOOR-b.plush.dh*.5-26&&Math.abs(b.velocity.y)<1.6){b.plush.landed=true;shakeWin(8);boom();puff(b.position.x,FLOOR-6,30,['#8a7a6a','#b8a890','#6a5a4a']);banner('🦖 GIGANTE!',b.plush.name+' · '+b.plush.cm+' cm',true)}
     else if(b.plush.giant&&!b.plush.won&&b.position.x>=DIV+30&&b.position.y>FLOOR+10){Body.setPosition(b,{x:Math.min(W-90,b.position.x),y:FLOOR-130});Body.setVelocity(b,{x:0,y:0})}}
 }
+function drawHab(){const c=claw;
+  // guia de mira: linha até o bichinho embaixo; verde quando está dentro da margem dele
+  if(c.state==='move'||c.state==='ready'){let alvo=null;for(const b of bodies){if(b.position.x<DIV)continue;const h=b.plush.dw/2;if(Math.abs(b.position.x-c.x)<h&&(!alvo||b.position.y<alvo.position.y))alvo=b}
+    let ok=false;if(alvo){const C=HABC(alvo.plush);ok=Math.abs(alvo.position.x-c.x)<=alvo.plush.dw/2*C.mira}
+    const y1=alvo?alvo.position.y:FLOOR;ctx.save();ctx.setLineDash([4,5]);ctx.lineWidth=2;ctx.strokeStyle=ok?'rgba(90,255,140,.9)':'rgba(255,255,255,.45)';ctx.beginPath();ctx.moveTo(c.x,c.y+40*CS);ctx.lineTo(c.x,y1);ctx.stroke();ctx.setLineDash([]);
+    if(alvo){const C=HABC(alvo.plush),w=alvo.plush.dw*C.mira;ctx.fillStyle=ok?'rgba(90,255,140,.28)':'rgba(255,255,255,.16)';ctx.fillRect(alvo.position.x-w/2,alvo.position.y-3,w,6)}ctx.restore()}
+  // barra de força: sobe e desce; toque em PEGAR de novo para travar na faixa verde
+  if(c.state==='down'||c.state==='close'||(c.state==='up'&&c.habF!=null&&c.y>REST+40)){const X=W-22,Y0=120,Hh=220,alvo=c.target||null;
+    let C=HABC((alvo&&alvo.plush)||{i:CH0});if(!alvo){let mais=null;for(const b of bodies)if(Math.abs(b.position.x-c.x)<b.plush.dw/2&&(!mais||b.position.y<mais.position.y))mais=b;if(mais)C=HABC(mais.plush)}
+    const f=c.habF!=null?c.habF:habForca();ctx.save();ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(X-12,Y0-6,24,Hh+12);
+    ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(X-8,Y0,16,Hh);
+    const gv=C.verde,gc=HAB.verde_centro;ctx.fillStyle='#4be37a';ctx.fillRect(X-8,Y0+Hh*(1-(gc+gv/2)),16,Hh*gv);
+    const yy=Y0+Hh*(1-f);ctx.fillStyle=c.habF!=null?'#ffd25a':'#fff';ctx.fillRect(X-14,yy-3,28,6);
+    ctx.font='900 9px system-ui';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText('FORÇA',X,Y0-10);
+    if(c.habF==null&&c.state==='down'){ctx.font='800 11px system-ui';ctx.fillText('toque PEGAR',X-40,Y0+Hh+18)}ctx.restore()}
+}
 function draw(){
   ctx.drawImage(back,0,0,W,H);if(MACH===2){ctx.drawImage(backG,0,0,W,H);drawGiantDecor()}
   for(const b of bodies)if(b!==claw.held)drawPlush(b);
   if(claw.held)drawPlush(claw.held);
   ctx.drawImage(front,0,0,W,H);
   ctx.drawImage(rail,0,0,W,H);
-  drawClaw();drawFX();
+  drawClaw();drawFX();if(HAB.ativo)drawHab();
 }
 let last=performance.now(),acc=0;
 // com a Aventura, o visualizador, a luta ou a loja por cima, a máquina para (não gasta o celular desenhando o que ninguém vê)

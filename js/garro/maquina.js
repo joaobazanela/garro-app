@@ -135,7 +135,7 @@ function beginClose(){
   for(let oy=0;oy<=60&&!c.target;oy+=4){const h=Query.point(bodies,{x:c.x,y:c.y+(12+oy)*CS});if(h.length)c.target=h[0]}
   if(!c.target)for(const s of[-1,1]){const h=Query.point(bodies,tip(s,s<0?c.oL:c.oR));if(h.length){c.target=h[0];break}}
   let n=0;for(const b of bodies)if(b!==c.target&&Math.abs(b.position.x-c.x)<60&&b.bounds.min.y<c.y+50)n++;
-  c.bsnag=Math.random()<Math.min(.5,n*.12);
+  c.bsnag=HAB.ativo?false:Math.random()<Math.min(.5,n*.12);if(HAB.ativo&&c.habF==null)c.habF=habForca();c.habDx=c.target?Math.abs(c.target.position.x-c.x)/(c.target.plush.dw/2):9;// mira medida quando a garra começa a fechar (o que o jogador controla)// HABILIDADE: não travou → vale a força do momento em que fechou
 }
 /* ---------- static art, pre-rendered ---------- */
 function layer(fn){const c=document.createElement('canvas');c.width=W*dpr;c.height=H*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);fn(x);return c}
