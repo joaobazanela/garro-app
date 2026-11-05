@@ -536,11 +536,11 @@ style#btnMis{position:relative}
 .mslot .mqt{position:absolute;right:4px;bottom:3px;font-style:normal;font-weight:900;font-size:12px;color:#fff;text-shadow:0 1px 2px #000,0 0 4px #000}
 .mslot .msel{position:absolute;left:3px;top:3px;font-style:normal;font-weight:900;font-size:11px;background:#ffd25a;color:#2a1200;border-radius:999px;min-width:18px;padding:1px 5px}
 .mochila .mslot.on{box-shadow:inset 0 0 0 3px #ffd25a,0 0 12px rgba(255,210,90,.45)} .mochila .mslot.foco{transform:scale(1.04)}
-.mbar{display:grid;gap:8px}.mbar[hidden]{display:none}
+.macoes{display:grid;gap:8px}.macoes[hidden]{display:none}
 .mdet{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center;background:rgba(255,255,255,.07);border-radius:14px;padding:8px}
 .mdet img{width:48px;height:48px;object-fit:contain}.mdet .memo{font-size:34px;text-align:center}.mdet b{color:#fff;font-size:14px;display:block}.mdet small{display:block;color:var(--dim);font-size:11px;font-weight:700;line-height:1.25}
 .mdet.vazio{grid-template-columns:1fr;text-align:center}
-.mbar .pkbtns,#mNova .pkbtns,.mtroca .pkbtns{display:flex;gap:8px}.mochila .mbtn{flex:1;padding:11px 8px;border-radius:12px;background:rgba(255,255,255,.12);color:#fff;font-weight:900;font-size:14px}
+.macoes .pkbtns,#mNova .pkbtns,.mtroca .pkbtns{display:flex;gap:8px}.mochila .mbtn{flex:1;padding:11px 8px;border-radius:12px;background:rgba(255,255,255,.12);color:#fff;font-weight:900;font-size:14px}
 .mochila .mbtn.troca{background:linear-gradient(#ffb23a,#e07a12);color:#2a1200} .mochila .mbtn:disabled{opacity:.4}
 .mnota{color:var(--dim);font-weight:700;font-size:11px;text-align:center}
 .mmsg{margin:0;text-align:center;font-weight:800;font-size:13px;color:#ff8a8a}.mmsg.ok{color:#7dff9a}.mmsg[hidden]{display:none}
@@ -555,9 +555,10 @@ style#btnMis{position:relative}
 .shtem{color:var(--dim)!important}.shtem.tem{color:#ffd25a!important}
 #ivPick h4{display:flex;justify-content:space-between;align-items:center} .mochila .ivx{background:rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:2px 9px;font-weight:900}
 .mochila .pkqt{display:flex;gap:4px;align-items:center}.mochila .pkqt b{color:#fff;min-width:18px;text-align:center}.mochila .pkqt button{padding:5px 10px;font-size:16px}.mochila .pkqt .pktodos{font-size:11px;padding:6px 7px}
-.mochila .shopscroll{min-height:0}.mochila .mbar{min-height:max-content}
+.mochila .shopscroll{min-height:0}.mochila .macoes{min-height:max-content}
 .mochila .mslot img{position:absolute;inset:9%;width:82%;height:82%}.mochila .mped .mslot img{inset:6% 14% 30%;width:72%;height:64%}.mochila .mped .memo{margin-bottom:20px}
-.shop.mochila{display:flex;flex-direction:column}.mochila>h3,.mochila>.mtabs2,.mochila>.mbar,.mochila>.shclose,.mochila>.mmsg{flex:none}.mochila>.shopscroll{flex:1 1 0;min-height:0;overflow-y:auto}
+.shop.mochila{display:flex;flex-direction:column}.mochila>h3,.mochila>.mtabs2,.mochila>.macoes,.mochila>.shclose,.mochila>.mmsg{flex:none}.mochila>.shopscroll{flex:1 1 0;min-height:0;overflow-y:auto}
 .mochila .ivsec{color:var(--dim);font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px}
 .mochila .ivrow.off{opacity:.6}.mochila .ivrow button{white-space:nowrap}
 .mochila .ivrow{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+/* barra de ações da mochila (classe própria: .mbar já era a barrinha de XP de 7px, por isso no iPhone ela ficava espremida) */
