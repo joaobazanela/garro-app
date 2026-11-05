@@ -50,6 +50,11 @@ function erroAmigavel(msg){
   banner(msg||'Ops! Algo deu errado.','Tente de novo em instantes');
 }
 addEventListener('error',e=>{logErro('window.onerror',e.error||e.message)});
+// versão de teste (artefato): mostra o erro na tela para o jogador mandar o print (no site de verdade só vai para o relatório)
+if(window.GARRO_OFFLINE){const mostra=(t)=>{try{let b=document.getElementById('erroTela');if(!b){b=document.createElement('div');b.id='erroTela';b.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#3a1020;color:#fff;font:600 12px system-ui;padding:8px 10px;border-radius:10px;max-height:30vh;overflow:auto';b.onclick=()=>b.remove();document.body.appendChild(b)}
+    const d=document.createElement('div');d.textContent='⚠️ '+t;b.appendChild(d)}catch(e){}};
+  addEventListener('error',e=>mostra((e.message||e.error)+' · '+String(e.filename||'').split('/').pop().split('?')[0]+':'+(e.lineno||'')));
+  addEventListener('unhandledrejection',e=>mostra('promessa: '+((e.reason&&e.reason.message)||e.reason)))}
 addEventListener('unhandledrejection',e=>{logErro('unhandledrejection',e.reason)});
 
 async function syncEstado(action,extra){
