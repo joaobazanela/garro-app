@@ -557,3 +557,7 @@ style#btnMis{position:relative}
 .mochila .pkqt{display:flex;gap:4px;align-items:center}.mochila .pkqt b{color:#fff;min-width:18px;text-align:center}.mochila .pkqt button{padding:5px 10px;font-size:16px}.mochila .pkqt .pktodos{font-size:11px;padding:6px 7px}
 .mochila .shopscroll{min-height:0}.mochila .mbar{min-height:max-content}
 .mochila .mslot img{position:absolute;inset:9%;width:82%;height:82%}.mochila .mped .mslot img{inset:6% 14% 30%;width:72%;height:64%}.mochila .mped .memo{margin-bottom:20px}
+.shop.mochila{display:flex;flex-direction:column}.mochila>h3,.mochila>.mtabs2,.mochila>.mbar,.mochila>.shclose,.mochila>.mmsg{flex:none}.mochila>.shopscroll{flex:1 1 0;min-height:0;overflow-y:auto}
+.mochila .ivsec{color:var(--dim);font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px}
+.mochila .ivrow.off{opacity:.6}.mochila .ivrow button{white-space:nowrap}
+.mochila .ivrow{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}

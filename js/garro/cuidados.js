@@ -200,11 +200,11 @@ function renderInv(){const L=itensMochila(),g=$('mGrid');
   if(MO.foco&&!L.find(x=>x.key===MO.foco))MO.foco=null;
   const vazios=Math.max(0,Math.ceil(Math.max(L.length,12)/4)*4-L.length);
   g.innerHTML=L.map(it=>slotHTML(it,MO.sel[it.key]|0,MO.foco===it.key)).join('')+'<span class="mslot vazio"></span>'.repeat(vazios);
-  $('mVazio').hidden=L.length>0;$('mItens').hidden=MO.aba!=='i'||!!MO.nova;$('mTrocas').hidden=MO.aba!=='t'||!!MO.nova;
+  $('mVazio').hidden=L.length>0;$('mItens').hidden=MO.aba!=='i'||!!MO.nova||!$('ivPick').hidden;$('mTrocas').hidden=MO.aba!=='t'||!!MO.nova;
   $('mTabI').classList.toggle('on',MO.aba==='i');$('mTabT').classList.toggle('on',MO.aba==='t');
   const abertas=MO.ofertas.filter(o=>o.status==='aberta'&&!o.mine).length;$('mTrN').textContent=abertas?abertas:'';
   barra(L)}
-function barra(L){const b=$('mBar');if(MO.nova||MO.aba!=='i'){b.innerHTML='';b.hidden=true;return}b.hidden=false;
+function barra(L){const b=$('mBar');if(MO.nova||MO.aba!=='i'||!$('ivPick').hidden){b.innerHTML='';b.hidden=true;return}b.hidden=false;
   const it=L.find(x=>x.key===MO.foco),ks=Object.keys(MO.sel),temOvo=ks.some(k=>k.startsWith('egg_')),
     total=ks.reduce((a,k)=>{const x=L.find(y=>y.key===k);return a+(x&&x.preco?x.preco*MO.sel[k]:0)},0),nIt=ks.reduce((a,k)=>a+MO.sel[k],0);
   let h='';
@@ -223,7 +223,7 @@ $('mBar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)
   if(b.dataset.q&&it){const q=b.dataset.q;MO.sel[it.key]=q==='all'?it.n:Math.max(0,Math.min(it.n,(MO.sel[it.key]|0)+(+q)));if(!MO.sel[it.key])delete MO.sel[it.key];renderInv();return}
   const a=b.dataset.a;
   if(a==='usar'&&it){if(it.egg){$('inv').hidden=true;if(GARRO.abrirNinho)GARRO.abrirNinho();return}
-    if(it.key==='food'){mMsg('A comida se usa na tela do bichinho: toque nele na estante e depois em 🍓 Comida.');return}
+    if(it.key==='food'){usoComida();return}
     invPick(pedraK(it.key));return}
   if(a==='vender')venderMochila(L);
   if(a==='trocar')novaTroca(L)});
@@ -281,11 +281,35 @@ $('mTrocas').addEventListener('click',async e=>{const b=e.target.closest('button
 async function recarregaInv(){try{const {data:inv,error}=await sb.from('inventory').select('item,qty');
   if(inv&&!error){INV.food=0;INV.st=INV.st.map(()=>0);inv.forEach(r=>{if(r.item==='food')INV.food=r.qty;else{const k=+r.item.split('_')[1];if(k>=0&&k<INV.st.length)INV.st[k]=r.qty}});saveInv()}
   const {data:ps}=await sb.from('player_state').select('coins').single();if(ps&&typeof ps.coins==='number'){coins=ps.coins+bonus;hud()}}catch(e){}renderInv()}
-function invPick(k){const box=$('ivPick'),list=[];for(let i=0;i<CH0;i++)if(canEvolveWith(i,k))list.push(i);
-  box.hidden=false;box.innerHTML='<h4>'+STONES[k].name+' · escolha quem evolui <button type="button" class="ivx" data-x="1">✕</button></h4>'+(list.length?list.map(i=>'<div class="ivrow"><img src="'+PLUSH[i].img+'" alt=""><div><b>'+PLUSH[i].name+'</b><small>Nv '+lvOf(i)+' → vira '+(EVN[PLUSH[i].name]||'forma evoluída')+'</small></div><button data-i="'+i+'">Evoluir</button></div>').join(''):'<small style="color:var(--dim);font-weight:700">Nenhum bichinho seu pode evoluir com esta pedra agora (precisa estar no Nv '+EVO_LV+', ainda não evoluído, e ter '+PEDRAS+' pedras).</small>');
-  box.parentElement.scrollTo({top:0,behavior:'smooth'})}
-$('ivPick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.x){$('ivPick').hidden=true;return}const i=+b.dataset.i;$('inv').hidden=true;openViewer(i);setTimeout(useStone,900)});
-$('mTabI').addEventListener('click',()=>{audio();MO.aba='i';MO.nova=null;renderNova()});
-$('mTabT').addEventListener('click',()=>{audio();MO.aba='t';MO.nova=null;renderNova();renderTrocas();carregaTrocas()});
+// Usar: mostra onde o item serve (pedra → quem evolui com ela, inclusive gigantes e o ritual das bolinhas; comida → quem está com fome)
+function imgDe(i){return careStage(i)===1&&EVOSPR[i]?EVOSPR[i].img:PLUSH[i].img}
+function usoRow(i,tit,info,acao,txt){return '<div class="ivrow'+(acao?'':' off')+'"><img src="'+imgDe(i)+'" alt=""><div><b>'+tit+'</b><small>'+info+'</small></div>'+(acao?'<button type="button" data-i="'+i+'" data-a="'+acao+'">'+txt+'</button>':'')+'</div>'}
+function invPick(k){const box=$('ivPick'),ok=[],nao=[],n=INV.st[k]||0,nome=STONES[k].name;
+  for(let i=0;i<CH0;i++){if(STONE_OF(i)!==k)continue;
+    if((coll[i]||0)>0){const c=careOf(i),lv=lvOf(i);
+      if(c.ev)nao.push(usoRow(i,PLUSH[i].name,'★ já evoluído'));
+      else if(lv<EVO_LV)nao.push(usoRow(i,PLUSH[i].name,'Nv '+lv+' · evolui no Nv '+EVO_LV+' com '+PEDRAS+' pedras'));
+      else if(n<PEDRAS)nao.push(usoRow(i,PLUSH[i].name,'Pronto no Nv '+lv+' · faltam '+(PEDRAS-n)+' '+nome));
+      else ok.push(usoRow(i,PLUSH[i].name,'Nv '+lv+' → vira '+evName(i,1)+' · usa '+PEDRAS+' pedras','evo','Evoluir'))}
+    if((GCOLL[i]||0)>0){if(GEVO[i])nao.push(usoRow(i,'🏆 '+PLUSH[i].name+' gigante','★ gigante já evoluído'));
+      else if(n<GEVO_STONES)nao.push(usoRow(i,'🏆 '+PLUSH[i].name+' gigante','Faltam '+(GEVO_STONES-n)+' '+nome));
+      else ok.push(usoRow(i,'🏆 '+PLUSH[i].name+' gigante','Evolui o gigante · usa '+GEVO_STONES+' pedras','gig','Evoluir'))}
+    const bi=CH0+i,b=coll[bi]||0;if(b>0&&ehBolinha(bi)){
+      if(b>=BOL_N&&n>=PEDRAS)ok.push(usoRow(bi,PLUSH[bi].name+' (bolinha)','Ritual: '+BOL_N+' bolinhas + '+PEDRAS+' pedras → '+evName(i,1),'bol','Ritual'));
+      else nao.push(usoRow(bi,PLUSH[bi].name+' (bolinha)','Ritual: '+Math.min(b,BOL_N)+'/'+BOL_N+' bolinhas · '+Math.min(n,PEDRAS)+'/'+PEDRAS+' pedras'))}}
+  abreUso('✨ Usar '+nome,ok,nao,'Você ainda não tem bichinhos que usam a '+nome+'.')}
+function usoComida(){const L=[];for(const i in coll){const j=+i;if((coll[j]||0)>0&&PLUSH[j]&&!PLUSH[j].fora)L.push(j)}
+  L.sort((a,b)=>careOf(a).f-careOf(b).f);
+  abreUso('🍓 Dar comida',L.slice(0,40).map(i=>{const f=Math.round(careOf(i).f);return usoRow(i,careStage(i)===1?evName(i,1):PLUSH[i].name,(f<25?'😟 Com fome · ':'')+'Barriga '+f+'%','food','Alimentar')}),[],'Você ainda não tem bichinhos.')}
+function abreUso(tit,ok,nao,vazio){const box=$('ivPick');box.hidden=false;
+  box.innerHTML='<h4>'+tit+' <button type="button" class="ivx" data-x="1">✕</button></h4>'+(ok.length?'<div class="ivsec">Pode usar agora</div>'+ok.join(''):'')+
+    (nao.length?'<div class="ivsec">'+(ok.length?'Ainda não':'Ninguém pode usar agora')+'</div>'+nao.join(''):'')+(!ok.length&&!nao.length?'<small class="mnada">'+vazio+'</small>':'');
+  $('mItens').hidden=true;$('mBar').hidden=true;box.parentElement.scrollTo({top:0})}
+function fechaUso(){$('ivPick').hidden=true;renderInv()}
+$('ivPick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;audio();if(b.dataset.x){fechaUso();return}
+  const i=+b.dataset.i,a=b.dataset.a;$('ivPick').hidden=true;$('inv').hidden=true;openViewer(i);
+  setTimeout(()=>{if(a==='evo'||a==='bol')useStone();else if(a==='gig')evolveGiant();else if(a==='food')$('cFeed').click()},900)});
+$('mTabI').addEventListener('click',()=>{audio();MO.aba='i';$('ivPick').hidden=true;MO.nova=null;renderNova()});
+$('mTabT').addEventListener('click',()=>{audio();MO.aba='t';$('ivPick').hidden=true;MO.nova=null;renderNova();renderTrocas();carregaTrocas()});
 $('btnInv').addEventListener('click',()=>{audio();MO.nova=null;$('mNova').hidden=true;$('ivPick').hidden=true;renderTrocas();renderInv();$('inv').hidden=false;carregaTrocas()});
 $('ivClose').addEventListener('click',()=>{$('inv').hidden=true;MO.nova=null;MO.sel={};MO.foco=null});
