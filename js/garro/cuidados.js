@@ -99,9 +99,10 @@ function rebirth(){const i=V.cur;if(i===undefined||lvOf(i)<capOf(i))return;const
    gigante evoluído): ficam lado a lado, cada uma com o que tem de diferente, e cada uma com a sua quantidade. */
 function escolha(o){let el=$('pick');if(!el){el=document.createElement('div');el.id='pick';el.className='shop pick';el.hidden=true;document.body.appendChild(el)}
   const q=o.cards.map(c=>c.fixo??c.qtd??0);
-  const cartao=(c,k)=>'<div class="pkcard'+(c.destaque?' res':'')+'"><img src="'+c.img+'" alt=""><b>'+c.nome+'</b>'+(c.tag?'<i class="pktag">'+c.tag+'</i>':'')+
-    '<div class="pkinfo">'+(c.info||[]).map(t=>'<span>'+t+'</span>').join('')+'</div>'+(c.tem!==undefined?'<small>Você tem '+c.tem+'</small>':'')+
-    (c.fixo!==undefined?'<div class="pkfixo">'+c.fixoTxt+'</div>':c.max!==undefined?'<div class="pkqt"><button type="button" data-k="'+k+'" data-d="-1" aria-label="Menos">−</button><em id="pkq'+k+'">'+q[k]+'</em><button type="button" data-k="'+k+'" data-d="1" aria-label="Mais">+</button><button type="button" class="pktodos" data-k="'+k+'" data-d="99">todos</button></div>':'')+'</div>';
+  const cartao=(c,k)=>'<div class="pkcard'+(c.destaque?' res':'')+'"><img src="'+c.img+'" alt=""><div class="pkcorpo"><div class="pktit"><b>'+c.nome+'</b>'+(c.tag?'<i class="pktag">'+c.tag+'</i>':'')+'</div>'+
+    '<div class="pkinfo">'+(c.info||[]).map(t=>'<span>'+t+'</span>').join('')+'</div>'+
+    '<div class="pkrodape">'+(c.tem!==undefined?'<small>Tem '+c.tem+'</small>':'')+
+    (c.fixo!==undefined?'<div class="pkfixo">'+c.fixoTxt+'</div>':c.max!==undefined?'<div class="pkqt"><button type="button" data-k="'+k+'" data-d="-1" aria-label="Menos">−</button><em id="pkq'+k+'">'+q[k]+'</em><button type="button" data-k="'+k+'" data-d="1" aria-label="Mais">+</button><button type="button" class="pktodos" data-k="'+k+'" data-d="99">todos</button></div>':'')+'</div></div></div>';
   const pinta=()=>{o.cards.forEach((c,k)=>{const e=$('pkq'+k);if(e)e.textContent=q[k]});$('pkRes').innerHTML=o.resumo(q);const b=$('pkOk');b.textContent=o.botao(q);b.disabled=!o.pode(q)};
   el.innerHTML='<h3>'+o.titulo+'</h3><div class="shopcoins">'+(o.sub||'')+'</div><div class="shopscroll"><div class="pkcards">'+o.cards.map(cartao).join('')+'</div><div class="pkres" id="pkRes"></div></div>'+
     '<div class="pkbtns"><button type="button" class="shclose" id="pkNo">Voltar</button><button type="button" id="pkOk"></button></div>';
@@ -134,7 +135,8 @@ function venda(){const i=V.cur;if(i===undefined||isLeg(i))return;const n=coll[i]
   if(gn)cards.push({tipo:'g',img,nome:evName(i,careStage(i)===1?1:0),tag:'🏆 gigante',info:infoCopia(i,true),tem:gn,max:gn,qtd:n?0:1});
   const tot=q=>q.reduce((s,v,k)=>s+v*(cards[k].tipo==='g'?SELL_GIANT:pN),0);
   escolha({titulo:'Vender',sub:'Escolha quantos de cada um',cards,
-    resumo:q=>{const r=[];q.forEach((v,k)=>{if(v)r.push(v+' '+(cards[k].tipo==='g'?(v>1?'gigantes':'gigante'):(v>1?'normais':'normal')))});return r.length?'Vai vender '+r.join(' e ')+(q[0]===n&&cards[0].tipo==='n'?' · <b>era o último normal</b>':''):'Escolha pelo menos 1'},
+    resumo:q=>{const nm=ehBolinha(i)?['bolinha','bolinhas']:big?['normal','normais']:['pelúcia','pelúcias'],r=[];q.forEach((v,k)=>{if(v)r.push(v+' '+(cards[k].tipo==='g'?(v>1?'gigantes':'gigante'):nm[v>1?1:0]))});
+      return r.length?'Vai vender '+r.join(' e ')+' · <b>+'+tot(q)+' 🪙</b>'+(q[0]===n&&cards[0].tipo==='n'?'<br><small>era o último '+nm[0]+'</small>':''):'Escolha pelo menos 1'},
     botao:q=>'Vender · +'+tot(q)+' 🪙',pode:q=>q.some(v=>v>0),
     ok:async q=>{const qn=cards[0].tipo==='n'?q[0]:0,qg=cards.reduce((s,c,k)=>s+(c.tipo==='g'?q[k]:0),0);
       if(qn){const r=await syncEstado('sell',{plushId:i,qty:qn});if(r&&typeof r.coins==='number'){coins=r.coins+bonus;coll[i]=Math.max(0,typeof r.count==='number'?r.count:n-qn)}else{coll[i]=n-qn;bonus+=qn*pN;coins+=qn*pN;saveBonus()}saveX()}
