@@ -2,7 +2,7 @@
 /* ---------- batalha: cada bichinho com nível, ataque e defesa ---------- */
 let BT=null;
 function bStats(f){const S=statsAt(f.i,f.lv,f.rb);if(f.giant){const k=GEVO[f.i]?FORCA.gigante_evoluido:FORCA.gigante;S.atk=Math.round(S.atk*k);S.def=Math.round(S.def*k);S.hp=Math.round(S.hp*k)}return Object.assign({},f,S)}
-function pickOpp(my){const myLv=lvOf(my);const same=Math.random()<.75;let j;do{j=Math.floor(Math.random()*NPL)}while(j===my||(same&&(j<CH0)!==grande(my)));const lv=Math.max(1,Math.min(capOf(j),Math.round(myLv*(.75+Math.random()*.5))));return bStats({i:j,lv,giant:j<CH0&&Math.random()<.12?1:0})}
+function pickOpp(my){const myLv=lvOf(my);const same=Math.random()<.75;let j;do{j=Math.floor(Math.random()*NPL)}while(j===my||!PLUSH[j]||PLUSH[j].fora||(same&&(j<CH0)!==grande(my)));const lv=Math.max(1,Math.min(capOf(j),Math.round(myLv*(.75+Math.random()*.5))));return bStats({i:j,lv,giant:j<CH0&&Math.random()<.12?1:0})}
 function bName(f){return (f.giant?'🏆 '+(GEVO[f.i]?'Gigante★ ':'Gigante '):'')+evName(f.i,f.i<CH0&&(isEvo(f.i,f.lv,f.rb)||(f.giant&&GEVO[f.i]))?1:0)}
 // imagens da luta: todos desenhados de perfil OLHANDO PARA A DIREITA. O da esquerda fica como está, o da direita é espelhado: sempre cara a cara.
 const BSPR=GD.sprites_luta.BSPR,BSPRE=GD.sprites_luta.BSPRE;const EVOSPR=BSPRE;// coleção usa as mesmas imagens evoluídas
@@ -81,7 +81,7 @@ function fightBattle(){if(!BT||BT.busy)return;if(BT.fought){BT.fought=0;BT.op=pi
     $('bRes').innerHTML=line;$('bGo').textContent='⚔️ Lutar de novo';$('bGo').disabled=$('bOther').disabled=$('bClose').disabled=false;BT.busy=false;
     // depois de ganhar XP o nível pode ter mudado: atualiza o meu lado e sorteia outro adversário
     BT.me=bStats({i:my,lv:lvOf(my),giant:BT.me.giant});$('bMeSt').textContent=(ELNAME[ELEM[my]]||'')+' · Nv '+BT.me.lv+' · ⚔️ '+BT.me.atk+' · 🛡️ '+BT.me.def+' · ❤️ '+BT.me.hp;BT.fought=1},R.log.length*850+700)}
-$('cBat').addEventListener('click',openBattle);
+$('cBat').addEventListener('click',()=>{const i=V.cur;if(i===undefined)return;escolheCopia(i,'Batalhar com qual?',g=>openBattle(g))});
 $('bGo').addEventListener('click',fightBattle);
 $('bOther').addEventListener('click',()=>{if(!BT||BT.busy)return;BT.op=pickOpp(BT.me.i);BT.fought=0;bFill('Me',BT.me);bFill('Op',BT.op);bIdle();$('bRes').textContent='Novo adversário!';click(700)});
 $('bClose').addEventListener('click',()=>{if(BT&&BT.busy)return;$('battle').hidden=true;if(window.GARRO_SOM)GARRO_SOM.parar();if(V.open&&V.cur!==undefined){renderCare();refreshVStats(V.cur)}});
@@ -138,7 +138,7 @@ function feedPet(){
   INV.food--;saveInv();updFood();
   const k=Math.floor(Math.random()*FOODS.length),g=foodMesh(k);castAll(g);V.scene.add(g);
   const from=V.cam.position.clone().add(new THREE.Vector3(1.1*V.k,.9*V.k+.4,-3.6));
-  setState('eat',2.6);V.ry=isLeg(i)?vistaLeg(i):-.15;V.vy=0;
+  setState('eat',2.6);V.ry=temVista(i)?vistaLeg(i):-.15;V.vy=0;
   FOOD={g,k,t0:performance.now(),from,done:0,i};mood('Que cheirinho! '+FOODS[k].e)}
 function tickFood(){if(!FOOD)return;const F=FOOD,u=(performance.now()-F.t0)/1000,to=mouthWorld();
   const s=V.k*.9+.18;F.g.scale.setScalar(s);
@@ -233,7 +233,8 @@ let moodT=0;
 function mood(txt){const el=$('vMood');if(!el)return;if(!txt){el.classList.remove('on');return}el.textContent=txt;el.classList.add('on');clearTimeout(moodT);moodT=setTimeout(()=>el.classList.remove('on'),2200)}
 function vTags(i){const p=PLUSH[i],r=p.rare<=2?3:p.rare<=4?2:1;
   $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span>'+(p.leg?(isEpic(i)?'<span class="rL">🔥 Épico</span>':'<span class="rL">✦ Lendário</span>'):'<span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>');
-  const own=PLUSH.filter(q=>coll[q.i]).map(q=>q.i);V.cur=i;V.own=own;const many=own.length>1;$('vPrev').hidden=$('vNext').hidden=!many}
+  const own=PLUSH.filter(q=>coll[q.i]&&!q.fora).map(q=>q.i);V.cur=i;V.own=own;const many=own.length>1;$('vPrev').hidden=$('vNext').hidden=!many;
+  if(many&&typeof preCarrega==='function'){const k=own.indexOf(i);preCarrega([own[(k+1)%own.length],own[(k-1+own.length)%own.length]],true)}}// os vizinhos já vão carregando
 function vStep(d){const o=V.own||[];if(o.length<2)return;let k=o.indexOf(V.cur);k=(k+d+o.length)%o.length;audio();click(700);openViewer(o[k])}
 $('vPrev').addEventListener('click',()=>vStep(-1));$('vNext').addEventListener('click',()=>vStep(1));
 $('vHelp').addEventListener('click',()=>{const g=$('gest'),open=g.hidden;g.hidden=!open;$('vHelp').setAttribute('aria-expanded',open)});

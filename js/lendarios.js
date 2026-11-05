@@ -24,12 +24,17 @@ function diam(){return dev()?Infinity:box().diam}
 async function carregar(){
   if(!G.online()){S=null;tudo();return}
   try{const sb=G.sb();
-    const [{data:ps},{data:ov}]=await Promise.all([sb.from('player_state').select('diamonds').single(),
-      sb.from('legendary_eggs').select('id,leg,days,last_day,hint,source,created_at,hatched_at').order('id')]);
+    const C='id,leg,days,last_day,hint,source,created_at,hatched_at',ovq=async()=>{const r=await sb.from('legendary_eggs').select(C+',trade_id').order('id');// ovo numa proposta de troca (migração 0017) não aparece
+      return r.error?await sb.from('legendary_eggs').select(C).order('id'):r};
+    let [{data:ps},{data:ov}]=await Promise.all([sb.from('player_state').select('diamonds').single(),ovq()]);ov=(ov||[]).filter(r=>r.trade_id==null);
     S={diam:ps&&typeof ps.diamonds==='number'?ps.diamonds:0,ovos:(ov||[]).map(r=>({id:r.id,leg:r.leg,days:r.days,last:r.last_day,hint:r.hint,src:r.source,nasceu:!!r.hatched_at}))};
   }catch(e){console.warn('lendarios',e)}
   tudo()}
 function tudo(){chip();estante();if(!$('ninho').hidden)ninho()}
+// usados pela Mochila (js/garro/cuidados.js): ovos guardados aparecem como itens; ovo numa proposta de troca não
+G.ovoInfo=k=>{const x=leg(k);return x?{nome:x.nome,img:'img/lendarios/ovo_'+x.slug+'.webp'}:null};
+G.ovosMochila=()=>box().ovos.filter(o=>!o.nasceu).map(o=>Object.assign({id:o.id,days:o.days|0,epico:ehEpico(o.leg)},G.ovoInfo(o.leg)));
+G.recarregaOvos=()=>carregar();G.abrirNinho=f=>abrirNinho(f);
 
 // ---------- HUD: diamantes ----------
 const hud=document.querySelector('.hud');

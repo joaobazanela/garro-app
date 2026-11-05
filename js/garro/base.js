@@ -3,7 +3,9 @@
 const SPRITES=GD.sprites.SPRITES;
 const CH0=20;// first id of the round collectibles (no evolution)
 const DATA=GD.pelucias.DATA;
-const PLUSH=DATA.map((d,i)=>({i,name:d[0],cm:d[1],g:d[2],tex:d[3],rare:d[4],desc:d[5],...SPRITES[i]}));const NPL=PLUSH.length;
+const PLUSH=DATA.map((d,i)=>({i,name:d[0],cm:d[1],g:d[2],tex:d[3],rare:d[4],desc:d[5],...SPRITES[i]}));const NPL=PLUSH.length;const FORA=new Set(GD.pelucias.FORA||[]);PLUSH.forEach(p=>{if(FORA.has(p.i))p.fora=1});
+// bolinhas: BOL_N iguais + as pedras da evolução viram o grande evoluído (data/regras.json → EVOLUCAO.bolinhas)
+const BOL_N=((GD.regras||{}).EVOLUCAO||{}).bolinhas||10,ehBolinha=i=>i>=CH0&&i<CH0+20&&!(PLUSH[i]||{}).fora;// redondos antigos aposentados (fora da máquina e da coleção)
 // lendários (data/lendarios.json): ids depois das 43 pelúcias; não caem na máquina, nascem de ovos
 const LEGD=GD.lendarios||{lendarios:[]},LEG0=LEGD.id0||43,LEGS=LEGD.lendarios||[];
 const isLeg=i=>i>=LEG0,grande=i=>i<CH0||i>=LEG0;
@@ -48,6 +50,11 @@ function erroAmigavel(msg){
   banner(msg||'Ops! Algo deu errado.','Tente de novo em instantes');
 }
 addEventListener('error',e=>{logErro('window.onerror',e.error||e.message)});
+// versão de teste (artefato): mostra o erro na tela para o jogador mandar o print (no site de verdade só vai para o relatório)
+if(window.GARRO_OFFLINE){const mostra=(t)=>{try{let b=document.getElementById('erroTela');if(!b){b=document.createElement('div');b.id='erroTela';b.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#3a1020;color:#fff;font:600 12px system-ui;padding:8px 10px;border-radius:10px;max-height:30vh;overflow:auto';b.onclick=()=>b.remove();document.body.appendChild(b)}
+    const d=document.createElement('div');d.textContent='⚠️ '+t;b.appendChild(d)}catch(e){}};
+  addEventListener('error',e=>mostra((e.message||e.error)+' · '+String(e.filename||'').split('/').pop().split('?')[0]+':'+(e.lineno||'')));
+  addEventListener('unhandledrejection',e=>mostra('promessa: '+((e.reason&&e.reason.message)||e.reason)))}
 addEventListener('unhandledrejection',e=>{logErro('unhandledrejection',e.reason)});
 
 async function syncEstado(action,extra){
@@ -59,7 +66,7 @@ async function syncEstado(action,extra){
       headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
       body:JSON.stringify(Object.assign({action},extra||{}))
     });
-    if(!res.ok){let d='';try{const j=await res.clone().json();d=' '+(j.error||'')+(j.detail?' '+String(j.detail).slice(0,120):'')}catch(e){}logErro('syncEstado:'+action,'HTTP '+res.status+d);return null}
+    if(!res.ok){let d='';try{const j=await res.clone().json();d=' '+(j.error||'')+(j.detail?' '+String(j.detail).slice(0,120):'')}catch(e){}syncEstado.erro=d;logErro('syncEstado:'+action,'HTTP '+res.status+d);return null}
     return res.json();
   }catch(e){logErro('syncEstado:'+action,e);return null}
 }

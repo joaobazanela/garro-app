@@ -39,7 +39,7 @@
 </div>
 
 <div id="gameRoot" hidden>
-<div id="attract" hidden><canvas id="a3d"></canvas><div class="att"><h2>GARRO</h2><p>35 pelúcias para colecionar</p><button id="play">JOGAR</button></div></div>
+<div id="attract" hidden><canvas id="a3d"></canvas><div class="att"><h2>GARRO</h2><p>40 bichinhos para colecionar</p><button id="play">JOGAR</button></div></div>
 <div class="cab">
   <h1 class="marquee">GARRO</h1>
   <div class="hud">
@@ -47,7 +47,7 @@
     <div class="chip"><span>Tempo</span><b id="time">--</b></div>
     <div class="chip"><span>Prêmios</span><b id="wins">0</b></div>
     <button class="chip shopbtn" id="btnShop" type="button"><span>Loja</span><b>🛒</b></button>
-    <button class="chip shopbtn" id="btnInv" type="button"><span>Itens</span><b>🎒</b></button>
+    <button class="chip shopbtn" id="btnInv" type="button"><span>Mochila</span><b>🎒</b></button>
   </div>
   <div class="mtabs"><button id="mach1" class="on" type="button">🎪 Máquina · 1 🪙</button><button id="mach2" type="button">🦖 Gigante · 50 🪙</button><button id="mach4" type="button">🥚 Ovos · 200 🪙</button><button id="mach5" type="button">🔥 Épico · 500 🪙</button></div>
   <div class="gsign" id="gsign" hidden>★ GIGANTE ★</div>
@@ -99,22 +99,22 @@
   <h3>Loja</h3><div class="shopcoins">Suas moedas: <b id="shCoins">0</b> 🪙<div id="shMsg" style="color:#ff8a8a;min-height:16px;font-size:12px"></div></div>
   <div class="shopscroll">
     <div class="shsec">Comida</div>
-    <div class="shitem food"><div class="shpic">🍓</div><div class="shtx"><b>Comida</b><small>Alimenta um bichinho · você tem <i id="shFood">0</i></small></div><button id="buyFood">5 🪙</button></div>
+    <div class="shitem food"><div class="shpic">🍓</div><div class="shtx"><b>Comida</b><small>Alimenta um bichinho · <i id="shFood">0</i></small></div><button id="buyFood">5 🪙</button></div>
     <div class="shsec">Pedras de evolução <small>raras · uso único</small></div>
     <div class="shgrid" id="shStones"></div>
     <p class="shnote">A pedra evolui na hora o bicho grande do mesmo elemento (vai direto ao Nv 50). Também aparece rara na máquina.</p>
   </div>
   <button id="shClose" class="shclose">Voltar</button>
 </div>
-<div class="shop" id="inv" hidden>
-  <h3>Itens</h3><div class="shopcoins">Toque numa pedra para evoluir um bichinho</div>
-  <div class="shopscroll">
-    <div class="shsec">Comida</div>
-    <div class="shitem food"><div class="shpic">🍓</div><div class="shtx"><b>Comida ×<i id="ivFood">0</i></b><small>Use na tela do bichinho (botão Comida)</small></div><button id="ivBuy">Loja 🛒</button></div>
+<div class="shop mochila" id="inv" hidden>
+  <h3>🎒 Mochila</h3><div class="mtabs2"><button type="button" id="mTabI" class="on">Itens</button><button type="button" id="mTabT">Trocas <i id="mTrN"></i></button></div>
+  <div class="shopscroll" id="mScroll">
     <div id="ivPick" hidden></div>
-    <div class="shsec">Pedras de evolução</div>
-    <div class="shgrid" id="ivStones"></div>
+    <div id="mItens"><div class="mgrid" id="mGrid"></div><p class="shnote" id="mVazio" hidden>Sua mochila está vazia. Compre comida e pedras na 🛒 Loja; ovos saem das máquinas e da Aventura.</p></div>
+    <div id="mTrocas" hidden></div>
+    <div id="mNova" hidden></div>
   </div>
+  <div class="macoes" id="mBar"></div>
   <button id="ivClose" class="shclose">Voltar</button>
 </div>
 <div class="battle" id="battle" hidden>
