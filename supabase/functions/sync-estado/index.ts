@@ -147,6 +147,42 @@ async function handle(req: Request): Promise<Response> {
     if (!E) return json({ error: "regras_indisponiveis" }, 503);
     return call("rpc_bolinha_evolve", { p_plush: p, p_balls: E.bolinhas ?? 10, p_stones: E.pedras ?? 5 }, "bolinha_evolve_rejected");
   }
+  // ---- mochila (migração 0017): vender comida/pedra e trocar itens com outro jogador ----
+  const itemOk = (k: string) => k === "food" || /^stone_[0-7]$/.test(k);
+  const itens = (v: unknown) => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) return v == null ? {} : null;
+    const o: Record<string, number> = {};
+    for (const [k, n] of Object.entries(v as Record<string, unknown>)) {
+      if (!itemOk(k) || !Number.isInteger(n) || (n as number) < 1 || (n as number) > 999) return null;
+      o[k] = n as number;
+    }
+    return o;
+  };
+  if (body.action === "item_sell") {
+    const item = typeof body.item === "string" ? body.item : "";
+    const qty = int(body.qty, 1, 999);
+    if (!itemOk(item) || qty === null) return json({ error: "bad_item" }, 400);
+    const V = (await regras())?.VENDA as { food?: number; stone?: number } | undefined;
+    if (!V) return json({ error: "regras_indisponiveis" }, 503);
+    return call("rpc_item_sell", { p_item: item, p_qty: qty, p_price: item === "food" ? V.food ?? 0 : V.stone ?? 0 }, "item_sell_rejected");
+  }
+  if (body.action === "trade_offer") {
+    const to = typeof body.to === "string" ? body.to.trim().slice(0, 200) : "";
+    const give = itens(body.give), want = itens(body.want);
+    const eggs = Array.isArray(body.eggs) ? body.eggs.map(Number) : [];
+    if (!to || !give || !want || eggs.length > 10 || eggs.some((e: number) => !Number.isSafeInteger(e) || e < 1)) return json({ error: "bad_trade" }, 400);
+    return call("rpc_trade_offer", { p_to_email: to, p_give: give, p_eggs: eggs, p_want: want }, "trade_rejected");
+  }
+  if (body.action === "trade_answer") {
+    const id = Number(body.id);
+    if (!Number.isSafeInteger(id) || id < 1) return json({ error: "bad_trade" }, 400);
+    return call("rpc_trade_answer", { p_id: id, p_accept: body.accept === true }, "trade_rejected");
+  }
+  if (body.action === "trade_list") {
+    const { data, error } = await admin.rpc("rpc_trade_list", { p_user: userId });
+    if (error) return json({ error: "trade_list_rejected" }, 400);
+    return json({ offers: data ?? [] });
+  }
   if (body.action === "care") {
     const p = int(body.plushId, 0, 56), kind = body.kind;
     if (p === null || !["f", "l", "p"].includes(kind)) return json({ error: "bad_request" }, 400);

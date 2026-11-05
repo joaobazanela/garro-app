@@ -169,10 +169,10 @@ $('mach1').addEventListener('click',()=>setMachine(1));$('mach2').addEventListen
 
 /* ---------- loja ---------- */
 const PRICE=GD.regras.PRICE;
-function renderShop(){$('shCoins').textContent=DEV?'∞':coins;$('shFood').textContent=INV.food;$('buyFood').disabled=!canPay(PRICE.food);
-  const g=$('shStones');if(!g.children.length){STONES.forEach((p,k)=>{const d=document.createElement('div');d.className='shst';d.innerHTML='<img src="'+p.img+'" alt=""><b>'+p.name+'</b><small>'+p.desc+'</small><small>Você tem: <i id="shS'+k+'">0</i></small><button data-k="'+k+'">'+PRICE.stone+' 🪙</button>';g.appendChild(d)});
+function renderShop(){$('shCoins').textContent=DEV?'∞':coins;$('shFood').textContent=INV.food?'🎒 você tem '+INV.food:'você não tem nenhuma';$('buyFood').disabled=!canPay(PRICE.food);
+  const g=$('shStones');if(!g.children.length){STONES.forEach((p,k)=>{const d=document.createElement('div');d.className='shst';d.innerHTML='<img src="'+p.img+'" alt=""><b>'+p.name+'</b><small>'+p.desc+'</small><small class="shtem" id="shS'+k+'"></small><button data-k="'+k+'">'+PRICE.stone+' 🪙</button>';g.appendChild(d)});
     g.addEventListener('click',e=>{const b=e.target.closest('button');if(b)buyThing('stone',+b.dataset.k)})}
-  STONES.forEach((p,k)=>{$('shS'+k).textContent=INV.st[k]});g.querySelectorAll('button').forEach(b=>b.disabled=!canPay(PRICE.stone))}
+  STONES.forEach((p,k)=>{const n=INV.st[k]||0,e=$('shS'+k);e.textContent=n?'🎒 Você tem '+n:'Você não tem nenhuma';e.classList.toggle('tem',n>0)});g.querySelectorAll('button').forEach(b=>b.disabled=!canPay(PRICE.stone))}
 function buyThing(kind,k){const pr=PRICE[kind];if(!canPay(pr)){$('shMsg').textContent='Moedas insuficientes: faltam '+(pr-coins)+' 🪙';return}$('shMsg').textContent='';
   if(ONL&&!DEV){const item=kind==='food'?'food':'stone_'+k;$('shMsg').textContent='Comprando...';syncEstado('buy',{item}).then(r=>{if(!r||r.error){$('shMsg').textContent='Não deu para comprar agora. Tente de novo.';return}
     $('shMsg').textContent='';coins=r.coins;if(kind==='food')INV.food=r.qty;else{INV.st[k]=r.qty;evento('stone')}saveInv();hud();audio();[784,988,1319].forEach((f,q)=>setTimeout(()=>tone(f,.1,'triangle',.08),q*70));renderShop();if(V.open)renderCare()});return}
@@ -181,18 +181,111 @@ $('btnShop').addEventListener('click',()=>{audio();renderShop();$('shop').hidden
 $('shClose').addEventListener('click',()=>{$('shop').hidden=true});
 $('buyFood').addEventListener('click',()=>buyThing('food'));
 $('cStone').addEventListener('click',useStone);$('cRebirth').addEventListener('click',rebirth);
-/* ---------- inventário ---------- */
+/* ---------- mochila (inventário): só o que você tem; vender e trocar com outro jogador ---------- */
 function canEvolveWith(i,k){return i<CH0&&(coll[i]||0)>0&&STONE_OF(i)===k&&!careOf(i).ev&&lvOf(i)>=EVO_LV}
-function renderInv(){$('ivFood').textContent=INV.food;const g=$('ivStones');g.innerHTML='';
-  STONES.map((p,k)=>k).sort((a,b)=>((INV.st[b]||0)>0)-((INV.st[a]||0)>0)||a-b).forEach(k=>{const p=STONES[k],n=INV.st[k]||0,d=document.createElement('div');d.className='shst ivst'+(n?'':' zero');
-    const who=[];for(let i=0;i<CH0;i++)if(STONE_OF(i)===k)who.push(PLUSH[i].name);
-    d.innerHTML='<span class="n">×'+n+'</span><img src="'+p.img+'" alt=""><b>'+p.name+'</b><small>'+(who.length?'Evolui: '+who.join(', '):'Ainda sem bicho')+'</small><button data-k="'+k+'">'+(n?'Evoluir um bichinho':'Comprar na loja')+'</button>';g.appendChild(d)});
-}
+const VENDA=Object.assign({food:2,stone:80},GD.regras.VENDA||{});
+const MO={sel:{},foco:null,aba:'i',ofertas:[],nova:null};
+const pedraK=key=>+key.split('_')[1];
+function itensMochila(){const L=[];
+  if(INV.food>0)L.push({key:'food',n:INV.food,nome:'Comida',emoji:'🍓',desc:'Alimenta um bichinho (use na tela dele, botão Comida).',preco:VENDA.food});
+  STONES.forEach((p,k)=>{const n=INV.st[k]||0;if(n){const who=[];for(let i=0;i<CH0;i++)if(STONE_OF(i)===k)who.push(PLUSH[i].name);
+    L.push({key:'stone_'+k,n,nome:p.name,img:p.img,desc:'Evolui: '+(who.join(', ')||'—'),preco:VENDA.stone,raro:1})}});
+  const ov=(window.GARRO&&GARRO.ovosMochila)?GARRO.ovosMochila():[];
+  ov.forEach(o=>L.push({key:'egg_'+o.id,egg:o.id,n:1,nome:'Ovo de '+o.nome,img:o.img,desc:o.days+' dia'+(o.days===1?'':'s')+' de carinho · ovo não se vende, só se troca',raro:o.epico?3:2}));
+  return L}
+function slotHTML(it,q,foco,extra){return '<button type="button" class="mslot r'+(it.raro|0)+(q?' on':'')+(foco?' foco':'')+'" data-key="'+it.key+'">'+(it.img?'<img src="'+it.img+'" alt="">':'<span class="memo">'+it.emoji+'</span>')+
+  '<i class="mqt">'+(it.egg?'':'×'+it.n)+'</i>'+(q?'<i class="msel">'+(it.egg?'✓':q)+'</i>':'')+(extra||'')+'</button>'}
+function renderInv(){const L=itensMochila(),g=$('mGrid');
+  for(const k in MO.sel){const it=L.find(x=>x.key===k);if(!it)delete MO.sel[k];else MO.sel[k]=Math.min(MO.sel[k],it.n)}
+  if(MO.foco&&!L.find(x=>x.key===MO.foco))MO.foco=null;
+  const vazios=Math.max(0,Math.ceil(Math.max(L.length,12)/4)*4-L.length);
+  g.innerHTML=L.map(it=>slotHTML(it,MO.sel[it.key]|0,MO.foco===it.key)).join('')+'<span class="mslot vazio"></span>'.repeat(vazios);
+  $('mVazio').hidden=L.length>0;$('mItens').hidden=MO.aba!=='i'||!!MO.nova;$('mTrocas').hidden=MO.aba!=='t'||!!MO.nova;
+  $('mTabI').classList.toggle('on',MO.aba==='i');$('mTabT').classList.toggle('on',MO.aba==='t');
+  const abertas=MO.ofertas.filter(o=>o.status==='aberta'&&!o.mine).length;$('mTrN').textContent=abertas?abertas:'';
+  barra(L)}
+function barra(L){const b=$('mBar');if(MO.nova||MO.aba!=='i'){b.innerHTML='';b.hidden=true;return}b.hidden=false;
+  const it=L.find(x=>x.key===MO.foco),ks=Object.keys(MO.sel),temOvo=ks.some(k=>k.startsWith('egg_')),
+    total=ks.reduce((a,k)=>{const x=L.find(y=>y.key===k);return a+(x&&x.preco?x.preco*MO.sel[k]:0)},0),nIt=ks.reduce((a,k)=>a+MO.sel[k],0);
+  let h='';
+  if(it){const q=MO.sel[it.key]|0;h+='<div class="mdet">'+(it.img?'<img src="'+it.img+'" alt="">':'<span class="memo">'+it.emoji+'</span>')+'<div><b>'+it.nome+'</b><small>'+it.desc+'</small><small>Você tem '+it.n+(it.preco?' · vende por '+it.preco+' 🪙 cada':'')+'</small></div>'+
+    (it.egg?'':'<div class="pkqt"><button type="button" data-q="-1">−</button><b>'+q+'</b><button type="button" data-q="1">+</button><button type="button" class="pktodos" data-q="all">Todos</button></div>')+'</div>'}
+  else h+='<div class="mdet vazio"><small>Toque num item para ver e selecionar. Pode marcar vários para vender ou trocar.</small></div>';
+  const usar=it&&(it.key.startsWith('stone_')||it.egg||it.key==='food');
+  h+='<div class="pkbtns">'+(usar?'<button type="button" class="mbtn" data-a="usar">'+(it.egg?'🥚 Ninho':'✨ Usar')+'</button>':'')+
+    '<button type="button" class="mbtn" data-a="vender"'+(!nIt||temOvo?' disabled':'')+'>💰 Vender'+(nIt&&!temOvo?' '+nIt+' · +'+total+' 🪙':'')+'</button>'+
+    '<button type="button" class="mbtn troca" data-a="trocar"'+(!nIt?' disabled':'')+'>🔁 Trocar'+(nIt?' ('+nIt+')':'')+'</button></div>';
+  if(temOvo&&nIt)h+='<small class="mnota">Ovo não se vende — só troca.</small>';
+  b.innerHTML=h}
+$('mGrid').addEventListener('click',e=>{const s=e.target.closest('.mslot');if(!s||!s.dataset.key)return;const k=s.dataset.key;audio();click(560);
+  if(!MO.sel[k]){MO.sel[k]=1;MO.foco=k}else if(MO.foco===k){delete MO.sel[k];MO.foco=null}else MO.foco=k;renderInv()});
+$('mBar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const L=itensMochila(),it=L.find(x=>x.key===MO.foco);audio();
+  if(b.dataset.q&&it){const q=b.dataset.q;MO.sel[it.key]=q==='all'?it.n:Math.max(0,Math.min(it.n,(MO.sel[it.key]|0)+(+q)));if(!MO.sel[it.key])delete MO.sel[it.key];renderInv();return}
+  const a=b.dataset.a;
+  if(a==='usar'&&it){if(it.egg){$('inv').hidden=true;if(GARRO.abrirNinho)GARRO.abrirNinho();return}
+    if(it.key==='food'){mMsg('A comida se usa na tela do bichinho: toque nele na estante e depois em 🍓 Comida.');return}
+    invPick(pedraK(it.key));return}
+  if(a==='vender')venderMochila(L);
+  if(a==='trocar')novaTroca(L)});
+function mMsg(t,ok){let m=$('mMsg');if(!m){m=document.createElement('p');m.id='mMsg';m.className='mmsg';$('mBar').before(m)}m.textContent=t||'';m.classList.toggle('ok',!!ok);m.hidden=!t;clearTimeout(mMsg.t);if(t)mMsg.t=setTimeout(()=>{m.hidden=true},4500)}
+async function venderMochila(L){const ks=Object.keys(MO.sel).filter(k=>!k.startsWith('egg_'));if(!ks.length)return;
+  let ganho=0;for(const k of ks){const it=L.find(x=>x.key===k);if(it)ganho+=it.preco*MO.sel[k]}
+  if(ONL&&!DEV){mMsg('Vendendo...');for(const k of ks){const r=await syncEstado('item_sell',{item:k,qty:MO.sel[k]});
+      if(!r||r.error){mMsg('Não deu para vender agora. Tente de novo.');renderInv();return}
+      coins=r.coins;if(k==='food')INV.food=r.qty;else INV.st[pedraK(k)]=r.qty}}
+  else{for(const k of ks){const q=MO.sel[k];if(k==='food')INV.food=Math.max(0,INV.food-q);else{const j=pedraK(k);INV.st[j]=Math.max(0,(INV.st[j]||0)-q)}}if(!DEV){coins+=ganho;bonus+=ganho;saveBonus()}}
+  saveInv();hud();MO.sel={};MO.foco=null;[659,880,1175].forEach((f,q)=>setTimeout(()=>tone(f,.1,'triangle',.08),q*70));mMsg('Vendido! +'+ganho+' 🪙',true);renderInv();if(V.open)renderCare()}
+/* ---- trocas ---- */
+const nomeItem=k=>k==='food'?'Comida':STONES[pedraK(k)]?STONES[pedraK(k)].name:k;
+const imgItem=k=>k==='food'?'<span class="memo">🍓</span>':'<img src="'+STONES[pedraK(k)].img+'" alt="">';
+function listaItens(o,ovos){const p=Object.keys(o||{}).map(k=>'<span class="mch">'+imgItem(k)+'<b>×'+o[k]+'</b><small>'+nomeItem(k)+'</small></span>');
+  (ovos||[]).forEach(e=>{const x=GARRO.ovoInfo?GARRO.ovoInfo(e.leg):null;p.push('<span class="mch">'+(x?'<img src="'+x.img+'" alt="">':'🥚')+'<b>×1</b><small>Ovo de '+(x?x.nome:'?')+'</small></span>')});
+  return p.length?p.join(''):'<small class="mnada">nada</small>'}
+function novaTroca(L){if(!(ONL&&!DEV)){mMsg(ONL?'Troca só com conta normal: no modo dev os itens ficam só neste aparelho.':'Entre com sua conta para trocar com outro jogador.');return}
+  const dar={},ovos=[];for(const k in MO.sel){if(k.startsWith('egg_'))ovos.push(+k.slice(4));else dar[k]=MO.sel[k]}
+  MO.nova={dar,ovos,pedir:{},para:(MO.nova&&MO.nova.para)||''};renderNova(L)}
+function renderNova(L){const N=MO.nova,box=$('mNova');if(!N){box.hidden=true;box.innerHTML='';renderInv();return}
+  L=L||itensMochila();const dLista=Object.keys(N.dar).map(k=>'<span class="mch">'+imgItem(k)+'<b>×'+N.dar[k]+'</b><small>'+nomeItem(k)+'</small></span>').concat(N.ovos.map(id=>{const it=L.find(x=>x.key==='egg_'+id);return '<span class="mch"><img src="'+(it?it.img:'')+'" alt=""><b>×1</b><small>'+(it?it.nome:'Ovo')+'</small></span>'})).join('');
+  const pedir=['food'].concat(STONES.map((p,k)=>'stone_'+k));
+  box.hidden=false;box.innerHTML='<div class="shsec">Nova troca</div>'+
+    '<label class="mlab">E-mail do outro jogador<input id="mPara" type="email" autocomplete="off" placeholder="amigo@gmail.com" value="'+N.para.replace(/"/g,'')+'"></label>'+
+    '<div class="mlab">Você dá</div><div class="mchs">'+dLista+'</div>'+
+    '<div class="mlab">Pedir em troca <small>(opcional — deixe vazio para dar de presente)</small></div><div class="mgrid mped">'+pedir.map(k=>{const q=N.pedir[k]|0;return '<div class="mslot r'+(k==='food'?0:1)+(q?' on':'')+'">'+imgItem(k)+(q?'<i class="msel">'+q+'</i>':'')+'<span class="mpm"><button type="button" data-p="'+k+'" data-d="-1">−</button><button type="button" data-p="'+k+'" data-d="1">+</button></span></div>'}).join('')+'</div>'+
+    '<p class="shnote">O que você dá sai da mochila e fica guardado na proposta. Se o outro recusar ou você cancelar, volta para você.</p>'+
+    '<div class="pkbtns"><button type="button" class="mbtn" data-n="voltar">Voltar</button><button type="button" class="mbtn troca" data-n="enviar">Enviar proposta</button></div>';
+  renderInv();$('mScroll').scrollTo({top:0})}
+$('mNova').addEventListener('input',e=>{if(e.target.id==='mPara'&&MO.nova)MO.nova.para=e.target.value});
+$('mNova').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||!MO.nova)return;audio();const N=MO.nova;
+  if(b.dataset.p){const k=b.dataset.p;N.pedir[k]=Math.max(0,Math.min(999,(N.pedir[k]|0)+(+b.dataset.d)));if(!N.pedir[k])delete N.pedir[k];renderNova();return}
+  if(b.dataset.n==='voltar'){MO.nova=null;renderNova();return}
+  if(b.dataset.n==='enviar'){const para=(N.para||'').trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(para)){mMsg('Escreva o e-mail do outro jogador.');return}
+    b.disabled=true;mMsg('Enviando...');const r=await syncEstado('trade_offer',{to:para,give:N.dar,eggs:N.ovos,want:N.pedir});b.disabled=false;
+    if(!r||r.error){const d=syncEstado.erro||'';mMsg(/jogador_nao_encontrado/.test(d)?'Não achei um jogador com esse e-mail.':/troca_consigo/.test(d)?'Não dá para trocar com você mesmo.':/muitas_propostas/.test(d)?'Você já tem 10 propostas abertas. Cancele alguma.':/sem_item|ovo_indisponivel/.test(d)?'Você não tem mais esses itens.':'Não deu para enviar agora. Tente de novo.');return}
+    for(const k in N.dar){if(k==='food')INV.food-=N.dar[k];else INV.st[pedraK(k)]-=N.dar[k]}saveInv();if(N.ovos.length&&GARRO.recarregaOvos)GARRO.recarregaOvos();
+    MO.nova=null;MO.sel={};MO.foco=null;MO.aba='t';renderNova();mMsg('Proposta enviada para '+para+'!',true);carregaTrocas()}});
+async function carregaTrocas(){if(!(ONL&&!DEV)){MO.ofertas=[];renderTrocas();return}const r=await syncEstado('trade_list');MO.ofertas=r&&Array.isArray(r.offers)?r.offers:[];renderTrocas();renderInv()}
+function renderTrocas(){const box=$('mTrocas');
+  if(!(ONL&&!DEV)){box.innerHTML='<p class="shnote">'+(ONL?'Troca só com conta normal: no modo dev os itens ficam só neste aparelho.':'Entre com sua conta para trocar itens com outro jogador.')+'</p>';return}
+  if(!MO.ofertas.length){box.innerHTML='<p class="shnote">Nenhuma troca ainda. Na aba Itens, marque o que quer dar e toque em 🔁 Trocar.</p>';return}
+  const ST={aceita:'✓ aceita',recusada:'✗ recusada',cancelada:'cancelada'};
+  box.innerHTML=MO.ofertas.map(o=>{const ab=o.status==='aberta';return '<div class="mtroca'+(ab?'':' fechada')+'"><div class="mtt">'+'<span>'+(o.mine?'Você → <b>'+o.other+'</b>':'<b>'+o.other+'</b> → você')+'</span>'+(ab?'':'<i>'+(ST[o.status]||o.status)+'</i>')+'</div>'+
+    '<div class="mlab">'+(o.mine?'Você dá':'Você recebe')+'</div><div class="mchs">'+listaItens(o.give,o.give_eggs)+'</div>'+
+    '<div class="mlab">'+(o.mine?'Você pede':'Pede de você')+'</div><div class="mchs">'+listaItens(o.want)+'</div>'+
+    (ab?'<div class="pkbtns">'+(o.mine?'<button type="button" class="mbtn" data-t="'+o.id+'" data-ok="0">Cancelar</button>':'<button type="button" class="mbtn" data-t="'+o.id+'" data-ok="0">Recusar</button><button type="button" class="mbtn troca" data-t="'+o.id+'" data-ok="1">Aceitar</button>')+'</div>':'')+'</div>'}).join('')}
+$('mTrocas').addEventListener('click',async e=>{const b=e.target.closest('button[data-t]');if(!b)return;audio();b.disabled=true;
+  const ok=b.dataset.ok==='1',r=await syncEstado('trade_answer',{id:+b.dataset.t,accept:ok});
+  if(!r||r.error){const d=syncEstado.erro||'';mMsg(/sem_item/.test(d)?'Você não tem os itens que ele pediu.':/proposta_fechada/.test(d)?'Essa proposta já foi fechada.':'Não deu agora. Tente de novo.');carregaTrocas();return}
+  mMsg(r.status==='aceita'?'Troca feita! 🎉':r.status==='cancelada'?'Proposta cancelada; os itens voltaram.':'Proposta recusada.',true);
+  if(r.status==='aceita')[523,659,784,1046].forEach((f,q)=>setTimeout(()=>tone(f,.12,'triangle',.08),q*80));
+  await recarregaInv();if(GARRO.recarregaOvos)GARRO.recarregaOvos();carregaTrocas()});
+async function recarregaInv(){try{const {data:inv,error}=await sb.from('inventory').select('item,qty');
+  if(inv&&!error){INV.food=0;INV.st=INV.st.map(()=>0);inv.forEach(r=>{if(r.item==='food')INV.food=r.qty;else{const k=+r.item.split('_')[1];if(k>=0&&k<INV.st.length)INV.st[k]=r.qty}});saveInv()}
+  const {data:ps}=await sb.from('player_state').select('coins').single();if(ps&&typeof ps.coins==='number'){coins=ps.coins+bonus;hud()}}catch(e){}renderInv()}
 function invPick(k){const box=$('ivPick'),list=[];for(let i=0;i<CH0;i++)if(canEvolveWith(i,k))list.push(i);
-  box.hidden=false;box.innerHTML='<h4>'+STONES[k].name+' · escolha quem evolui</h4>'+(list.length?list.map(i=>'<div class="ivrow"><img src="'+PLUSH[i].img+'" alt=""><div><b>'+PLUSH[i].name+'</b><small>Nv '+lvOf(i)+' → vira '+(EVN[PLUSH[i].name]||'forma evoluída')+'</small></div><button data-i="'+i+'">Evoluir</button></div>').join(''):'<small style="color:var(--dim);font-weight:700">Nenhum bichinho seu pode evoluir com esta pedra agora (precisa estar no Nv '+EVO_LV+', ainda não evoluído, e ter '+PEDRAS+' pedras).</small>');
+  box.hidden=false;box.innerHTML='<h4>'+STONES[k].name+' · escolha quem evolui <button type="button" class="ivx" data-x="1">✕</button></h4>'+(list.length?list.map(i=>'<div class="ivrow"><img src="'+PLUSH[i].img+'" alt=""><div><b>'+PLUSH[i].name+'</b><small>Nv '+lvOf(i)+' → vira '+(EVN[PLUSH[i].name]||'forma evoluída')+'</small></div><button data-i="'+i+'">Evoluir</button></div>').join(''):'<small style="color:var(--dim);font-weight:700">Nenhum bichinho seu pode evoluir com esta pedra agora (precisa estar no Nv '+EVO_LV+', ainda não evoluído, e ter '+PEDRAS+' pedras).</small>');
   box.parentElement.scrollTo({top:0,behavior:'smooth'})}
-$('ivStones').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=+b.dataset.k;audio();if((INV.st[k]||0)>0)invPick(k);else{$('inv').hidden=true;renderShop();$('shop').hidden=false}});
-$('ivPick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;$('inv').hidden=true;openViewer(i);setTimeout(useStone,900)});
-$('btnInv').addEventListener('click',()=>{audio();renderInv();$('ivPick').hidden=true;$('inv').hidden=false});
-$('ivClose').addEventListener('click',()=>{$('inv').hidden=true});
-$('ivBuy').addEventListener('click',()=>{$('inv').hidden=true;renderShop();$('shop').hidden=false});
+$('ivPick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.x){$('ivPick').hidden=true;return}const i=+b.dataset.i;$('inv').hidden=true;openViewer(i);setTimeout(useStone,900)});
+$('mTabI').addEventListener('click',()=>{audio();MO.aba='i';MO.nova=null;renderNova()});
+$('mTabT').addEventListener('click',()=>{audio();MO.aba='t';MO.nova=null;renderNova();renderTrocas();carregaTrocas()});
+$('btnInv').addEventListener('click',()=>{audio();MO.nova=null;$('mNova').hidden=true;$('ivPick').hidden=true;renderTrocas();renderInv();$('inv').hidden=false;carregaTrocas()});
+$('ivClose').addEventListener('click',()=>{$('inv').hidden=true;MO.nova=null;MO.sel={};MO.foco=null});

@@ -66,7 +66,7 @@ async function syncEstado(action,extra){
       headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
       body:JSON.stringify(Object.assign({action},extra||{}))
     });
-    if(!res.ok){let d='';try{const j=await res.clone().json();d=' '+(j.error||'')+(j.detail?' '+String(j.detail).slice(0,120):'')}catch(e){}logErro('syncEstado:'+action,'HTTP '+res.status+d);return null}
+    if(!res.ok){let d='';try{const j=await res.clone().json();d=' '+(j.error||'')+(j.detail?' '+String(j.detail).slice(0,120):'')}catch(e){}syncEstado.erro=d;logErro('syncEstado:'+action,'HTTP '+res.status+d);return null}
     return res.json();
   }catch(e){logErro('syncEstado:'+action,e);return null}
 }
