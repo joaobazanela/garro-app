@@ -27,6 +27,7 @@ function lutador(i,lv,o){o=o||{};const s=STAT[i],M=grande(i)?MB:MS,k=MB/M,a=(s[0
   const P=1+LT.nivel_k*(lv-1),ev=G.isEvo(i,lv,o.rb)?LT.evoluido:1,RB=1+G.REB_B*(o.rb|0);
   let atk=a*P*ev*RB,def=d*P*ev*RB,hp=(a+d)*P*ev*RB*LT.vida_k*(o.heroi?LT.heroi_vida:1);
   if(o.chefe){hp*=LT.chefe_vida;atk*=LT.chefe_ataque}
+  if(o.gig){const F=(GD.regras&&GD.regras.FORCA)||{},g=o.gigEvo?(F.gigante_evoluido||1.35):(F.gigante||1.2);atk*=g;def*=g;hp*=g}// gigante: mais forte (data/regras.json → FORCA)
   hp=Math.round(hp);return{i,lv,rb:o.rb|0,atk,def,hp,max:hp,el:ELEM[i],cd:0,defesa:false,chefe:!!o.chefe}}
 const grupo=el=>(D.grupos&&D.grupos[el])||el;
 function elemMult(A,B){const a=grupo(A.el),b=grupo(B.el);if((D.vantagens[a]||[]).includes(b))return LT.vantagem;if((D.vantagens[b]||[]).includes(a))return LT.desvantagem;return 1}
@@ -148,7 +149,8 @@ async function descansar(i){if(G.coins()<EN.descanso_preco){msg('Faltam moedas p
 const ERROS={sem_moedas:'Faltam moedas para jogar.',cansado:'Seu bichinho está cansado. Descanse ou espere a energia voltar.',fase_bloqueada:'Vença a fase anterior primeiro.',nao_tem:'Você não tem esse bichinho.'};
 // cada partida custa moedas (data/aventura.json → custo_moedas); o servidor cobra no adv_start; admin (dev) joga de graça
 const CUSTO=D.custo_moedas||0;
-async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=energia(i);if(E.e<1||G.lvOf(i)<nivelMin(f)){escolha(k);return}
+async function comecar(k,i,gig){const f=FASES[k];if(!liberada(k))return;
+  if(gig===undefined&&G.copias){const c=G.copias(i);if(c.n+c.g>1){G.escolheCopia(i,'Levar qual para a aventura?',g=>comecar(k,i,g));return}gig=c.g>0&&!c.n}const E=energia(i);if(E.e<1||G.lvOf(i)<nivelMin(f)){escolha(k);return}
   if(CUSTO&&!G.dev()&&G.coins()<CUSTO){msg('Cada partida custa '+CUSTO+' 🪙. Faltam '+(CUSTO-G.coins())+' moedas.');return}
   const b=$('advStart');if(b)b.disabled=true;G.click(820);
   if(G.online()){const r=await G.sync('adv_start',{plushId:i,stage:f.id});
@@ -159,7 +161,7 @@ async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=ener
   // mapa novo a cada partida (js/mapas.js): percurso e quantidade de bichinhos mudam; sem o gerador usa o mapa reserva do JSON
   let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=GARRO_MAPAS.novo(f.desafio?11:f.mundo.fases.findIndex(x=>x.id===f.id)+1,{inimigos:f.inimigos,chefe:f.chefe},!!f.desafio,D.mapa_variacao,f.desafio?null:f.mundo.dif)}catch(e){console.warn('mapa',e)}
   if(M3&&!f.desafio&&f.mundo.tema)M3.tema=f.mundo.tema;
-  RUN={k,f,i,M:M3,hero:lutador(i,lv,{heroi:1,rb:G.rbOf(i)}),fim:false,quit:0,leaves:0,dif:difDe(k)};
+  RUN={k,f,i,gig:!!gig,M:M3,hero:lutador(i,lv,{heroi:1,rb:G.rbOf(i),gig:!!gig,gigEvo:!!(gig&&G.copias&&G.copias(i).gevo)}),fim:false,quit:0,leaves:0,dif:difDe(k)};
   luta()}
 
 // ---------- a fase: mapa 3D visto de cima (joystick, luta em tempo real, habilidades) ----------
@@ -437,7 +439,7 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};const C3=await props3d(R.M&&R.M.tema);if(RUN!==R)return;R.w={M,...cenario(S,M,C3),ents:[],tiros:[],efeitos:[],nums:[]};
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
-  const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1);hg.scale.setScalar(Hs);
+  const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=(redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1))*(R.gig?1.3:1);// gigante fica maiorhg.scale.setScalar(Hs);
   const hU=prepAndar(hg,redondo(R.i),cobra(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
   R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);

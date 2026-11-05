@@ -81,7 +81,7 @@ function fightBattle(){if(!BT||BT.busy)return;if(BT.fought){BT.fought=0;BT.op=pi
     $('bRes').innerHTML=line;$('bGo').textContent='⚔️ Lutar de novo';$('bGo').disabled=$('bOther').disabled=$('bClose').disabled=false;BT.busy=false;
     // depois de ganhar XP o nível pode ter mudado: atualiza o meu lado e sorteia outro adversário
     BT.me=bStats({i:my,lv:lvOf(my),giant:BT.me.giant});$('bMeSt').textContent=(ELNAME[ELEM[my]]||'')+' · Nv '+BT.me.lv+' · ⚔️ '+BT.me.atk+' · 🛡️ '+BT.me.def+' · ❤️ '+BT.me.hp;BT.fought=1},R.log.length*850+700)}
-$('cBat').addEventListener('click',openBattle);
+$('cBat').addEventListener('click',()=>{const i=V.cur;if(i===undefined)return;escolheCopia(i,'Batalhar com qual?',g=>openBattle(g))});
 $('bGo').addEventListener('click',fightBattle);
 $('bOther').addEventListener('click',()=>{if(!BT||BT.busy)return;BT.op=pickOpp(BT.me.i);BT.fought=0;bFill('Me',BT.me);bFill('Op',BT.op);bIdle();$('bRes').textContent='Novo adversário!';click(700)});
 $('bClose').addEventListener('click',()=>{if(BT&&BT.busy)return;$('battle').hidden=true;if(window.GARRO_SOM)GARRO_SOM.parar();if(V.open&&V.cur!==undefined){renderCare();refreshVStats(V.cur)}});

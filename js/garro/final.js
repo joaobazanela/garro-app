@@ -216,6 +216,7 @@ window.GARRO={
   ac:()=>{audio();return ac},coll:()=>coll,lvOf:i=>lvOf(i),CH0,banner:(t,s,w)=>banner(t,s,w),fanfare:()=>fanfare(),click:f=>{audio();click(f||600)},
   // usados pela Aventura (js/aventura.js)
   modelo:(i,evo)=>montaModelo(i,evo),THREE:()=>window.THREE,
+  copias:i=>({n:coll[i]||0,g:i<CH0?GCOLL[i]||0:0,gevo:!!GEVO[i]}),escolheCopia:(i,t,f)=>escolheCopia(i,t,f),
   name:i=>PLUSH[i].name,evName:i=>evName(i,1),sprite:(i,lv,giant,rb)=>bSrc({i,lv,rb:rb|0,giant:giant?1:0}),EVO_LV,
   xpLocal:(i,n)=>gainXp(i,n),xpSet:(i,x)=>{careOf(i).xp=x;saveCare()},xpTotal,lvFromXp,xp:i=>careOf(i).xp,xpBar:i=>({pct:xpPct(i),txt:lvOf(i)>=capOf(i)?'Nível máximo':'Nv '+lvOf(i)+' · '+xpTxt(i)}),
   stoneLocal:k=>{INV.st[k]=(INV.st[k]||0)+1;saveInv()},stone:k=>STONES[k],

@@ -107,13 +107,21 @@ function escolha(o){let el=$('pick');if(!el){el=document.createElement('div');el
   const pinta=()=>{o.cards.forEach((c,k)=>{const e=$('pkq'+k);if(e)e.textContent=q[k];const m=$('pkm'+k);if(m){m.textContent=q[k]?'✓ marcado':'marcar';m.classList.toggle('on',!!q[k]);m.closest('.pkcard').classList.toggle('on',!!q[k])}});$('pkRes').innerHTML=o.resumo(q);const b=$('pkOk');b.textContent=o.botao(q);b.disabled=!o.pode(q)};
   el.innerHTML='<h3>'+o.titulo+'</h3><div class="shopcoins">'+(o.sub||'')+'</div><div class="shopscroll"><div class="pkcards">'+o.cards.map((c,k)=>(c.secao?'<div class="pksec">'+c.secao+'</div>':'')+cartao(c,k)).join('')+'</div><div class="pkres" id="pkRes"></div></div>'+
     '<div class="pkbtns"><button type="button" class="shclose" id="pkNo">Voltar</button><button type="button" id="pkOk"></button></div>';
-  el.querySelectorAll('.pkcard').forEach((cd,k)=>{const c=o.cards[k];if(c&&c.marca)cd.addEventListener('click',()=>{if(!q[k]&&o.limite&&q.reduce((a,v)=>a+v,0)>=o.limite)return;q[k]=q[k]?0:1;click(600);pinta()})});
+  el.querySelectorAll('.pkcard').forEach((cd,k)=>{const c=o.cards[k];if(c&&c.marca)cd.addEventListener('click',()=>{if(!q[k]&&o.limite===1){q.fill(0)}else if(!q[k]&&o.limite&&q.reduce((a,v)=>a+v,0)>=o.limite)return;q[k]=q[k]?0:1;click(600);pinta()})});
   el.querySelectorAll('.pkqt button').forEach(b=>b.addEventListener('click',()=>{const k=+b.dataset.k,d=+b.dataset.d,c=o.cards[k];q[k]=d===99?c.max:Math.max(c.min||0,Math.min(c.max,q[k]+d));click(600);pinta()}));
   $('pkNo').addEventListener('click',()=>{el.hidden=true});$('pkOk').addEventListener('click',()=>{if(!o.pode(q))return;el.hidden=true;o.ok(q)});
   pinta();el.hidden=false;audio()}
 // o que mostrar de cada cópia: nível, força e se é evoluído/gigante (o gigante bate mais forte)
 function infoCopia(i,gig){const S=statsAt(i,lvOf(i),rbOf(i)),k=gig?(GEVO[i]?FORCA.gigante_evoluido:FORCA.gigante):1,ev=careStage(i)===1&&i<CH0;
   return ['Nv '+lvOf(i),'⚔️ '+Math.round(S.atk*k),'🛡️ '+Math.round(S.def*k),'❤️ '+Math.round(S.hp*k)].concat(ev?['★ evoluído']:[]).concat(gig&&GEVO[i]?['🏆★ gigante evoluído']:[])}
+// escolher qual cópia usar (batalha e aventura): uma linha por cópia, as diferentes (gigantes) primeiro; com uma só, segue direto
+function escolheCopia(i,titulo,ok){const big=i<CH0,n=coll[i]||0,gn=big?GCOLL[i]||0:0;if(n+gn<=1){ok(gn>0&&!n);return}
+  const img=(careStage(i)===1&&EVOSPR[i]?EVOSPR[i].img:PLUSH[i].img),nome=evName(i,careStage(i)===1?1:0),cards=[];
+  for(let k=0;k<gn;k++)cards.push({gig:true,img,nome,tag:'🏆 gigante'+(gn>1?' '+(k+1):''),info:infoCopia(i,true),marca:1,qtd:k===0?1:0});
+  for(let k=0;k<n;k++)cards.push({gig:false,img,nome,tag:(ehBolinha(i)?'bolinha':big?'normal':'pelúcia')+(n>1?' '+(k+1):''),info:infoCopia(i,false),marca:1,qtd:!gn&&k===0?1:0});
+  escolha({titulo,sub:'Toque no que vai usar',cards,limite:1,
+    resumo:q=>{const k=q.indexOf(1);return k<0?'Escolha 1':'Vai com '+cards[k].tag.replace(/ \d+$/,'')+' · '+cards[k].info.slice(1,4).join(' ')},
+    botao:()=>'Escolher',pode:q=>q.includes(1),ok:q=>ok(cards[q.indexOf(1)].gig)})}
 const SELL_PRICE=1,SELL_BIG=30,SELL_GIANT=40;// redondo 1 · bicho especial (que evolui) 30 · pelúcia gigante 40
 function renderSell(i){const b=$('cSell'),bg=$('cSellG');if(!b)return;if(isLeg(i)){b.hidden=true;bg.hidden=true;renderGiantRow(i);return}const n=coll[i]||0,big=i<CH0;b.hidden=false;b.disabled=n<1;b.dataset.armed='';
   const gq=big?GCOLL[i]||0:0;b.textContent=n+gq>1?'💰 Vender… (tenho '+n+(gq?' + '+gq+' gigante'+(gq>1?'s':''):'')+')':n>=1?'💰 Vender 1 · +'+(big?SELL_BIG:SELL_PRICE)+' moeda'+(big?'s':'')+' (tenho '+n+')':'💰 Nenhum para vender';b.disabled=n+gq<1;
