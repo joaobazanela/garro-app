@@ -11,7 +11,12 @@ const $=id=>document.getElementById(id);
 const LT=D.luta,EN=D.energia,STAT=PD.STAT,ELEM=PD.ELEM,ECOL=PD.ECOL,ELNAME=PD.ELNAME,BFX=(GD.modelos&&GD.modelos.BFX)||{};
 const FASES=[];D.mundos.forEach(m=>m.fases.forEach(f=>FASES.push(Object.assign({mundo:m},f))));
 // lendários (js/lendarios.js, ids a partir de G.LEG0): contam como bichinhos grandes
-const LEG0=G.LEG0||43,NLEG=((GD.lendarios||{}).lendarios||[]).length,grande=i=>i<G.CH0||(NLEG>0&&i>=LEG0),redondo=i=>!grande(i);
+// criaturas da Aventura (data/aventura.json → criaturas; modelos em js/criaturas.js): ids 1000+, não são bichinhos da coleção
+const CRI={};for(const c of (D.criaturas||[]))CRI[c.id]=c;const ehCri=i=>!!CRI[i];
+const LEG0=G.LEG0||43,NLEG=((GD.lendarios||{}).lendarios||[]).length,grande=i=>ehCri(i)?CRI[i].tipo==='evoluido':i<G.CH0||(NLEG>0&&i>=LEG0),redondo=i=>!grande(i);
+const statDe=i=>ehCri(i)?CRI[i].stat:STAT[i],elemDe=i=>ehCri(i)?CRI[i].elemento:ELEM[i];
+const sprDe=(j,lv)=>ehCri(j)?'img/criaturas/'+CRI[j].slug+'.webp':G.sprite(j,lv),nomeInim=(j,chefe)=>ehCri(j)?CRI[j].nome:chefe?G.evName(j):G.name(j);
+async function modeloDe(j,chefe){if(ehCri(j)&&window.GARRO_CRIATURAS){const m=GARRO_CRIATURAS.modelo(CRI[j].slug);if(m)return m}return G.modelo(ehCri(j)?(CRI[j].tipo==='evoluido'?0:22):j,chefe)}
 const DESLIZA=new Set(((GD.lendarios||{}).lendarios||[]).concat((GD.lendarios||{}).epicos||[]).filter(L=>L.anda==='desliza').map(L=>+L.id)),cobra=i=>DESLIZA.has(i);
 // Desafio Lendário: fase extra depois do chefão do mundo; o chefão é o lendário do dia (troca à meia-noite de Brasília, igual ao servidor)
 function legDoDia(){const h=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);return Math.floor(Date.parse(h+'T00:00:00Z')/864e5)%10}
@@ -23,12 +28,12 @@ const LKEY='garro-aventura';
 const media=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const MB=media(STAT.slice(0,G.CH0).map(s=>(s[0]+s[1])/2)),MS=media(STAT.slice(G.CH0,G.LEG0||43).map(s=>(s[0]+s[1])/2));
 // o nível pesa muito: ataque, defesa e vida crescem juntos; bichinhos redondos são equiparados aos grandes
-function lutador(i,lv,o){o=o||{};const s=STAT[i],M=grande(i)?MB:MS,k=MB/M,a=(s[0]+M)/2*k,d=(s[1]+M)/2*k;
-  const P=1+LT.nivel_k*(lv-1),ev=G.isEvo(i,lv,o.rb)?LT.evoluido:1,RB=1+G.REB_B*(o.rb|0);
+function lutador(i,lv,o){o=o||{};const s=statDe(i),M=grande(i)?MB:MS,k=MB/M,a=(s[0]+M)/2*k,d=(s[1]+M)/2*k;
+  const P=1+LT.nivel_k*(lv-1),ev=!ehCri(i)&&G.isEvo(i,lv,o.rb)?LT.evoluido:1,RB=1+G.REB_B*(o.rb|0);
   let atk=a*P*ev*RB,def=d*P*ev*RB,hp=(a+d)*P*ev*RB*LT.vida_k*(o.heroi?LT.heroi_vida:1);
   if(o.chefe){hp*=LT.chefe_vida;atk*=LT.chefe_ataque}
   if(o.gig){const F=(GD.regras&&GD.regras.FORCA)||{},g=o.gigEvo?(F.gigante_evoluido||1.35):(F.gigante||1.2);atk*=g;def*=g;hp*=g}// gigante: mais forte (data/regras.json → FORCA)
-  hp=Math.round(hp);return{i,lv,rb:o.rb|0,atk,def,hp,max:hp,el:ELEM[i],cd:0,defesa:false,chefe:!!o.chefe}}
+  hp=Math.round(hp);return{i,lv,rb:o.rb|0,atk,def,hp,max:hp,el:elemDe(i),cd:0,defesa:false,chefe:!!o.chefe}}
 const grupo=el=>(D.grupos&&D.grupos[el])||el;
 function elemMult(A,B){const a=grupo(A.el),b=grupo(B.el);if((D.vantagens[a]||[]).includes(b))return LT.vantagem;if((D.vantagens[b]||[]).includes(a))return LT.desvantagem;return 1}
 function dano(A,B,mult){const em=elemMult(A,B);let d=A.atk*mult*(1-LT.variacao+Math.random()*2*LT.variacao)*60/(60+B.def)*em;
@@ -119,10 +124,10 @@ function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('a
   const coll=G.coll(),meus=Object.keys(coll).map(Number).filter(i=>coll[i]>0).sort((a,b)=>G.lvOf(b)-G.lvOf(a));
   if(SEL===null||!meus.includes(SEL))SEL=meus[0]??null;
   const LG=f.desafio&&window.GARRO_LEND?window.GARRO_LEND.porId(f.chefe[0]):null;
-  let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b><small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
+  let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b>'+(!f.desafio&&vezesDe(f.id)?'<small class="advvez">🔁 '+vezesDe(f.id)+(vezesDe(f.id)===1?' vitória':' vitórias')+' · cada vitória muda o mapa e a quantidade de inimigos</small>':'')+'<small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
   const meuLv=SEL!==null?G.lvOf(SEL):1,tps=tiposDa(f);
   h+='<div class="advdif"><span class="cav">'+caveiras(f)+'</span>'+Object.keys(tps).map(t=>TP[t]?'<span class="tp">'+TP[t].icone+' '+TP[t].nome+(tps[t]>1?' ×'+tps[t]:'')+'</span>':'').join('')+'</div>';
-  h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+G.sprite(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
+  h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+sprDe(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
   h+='<small class="advrec">Recomendado: Nv '+recomendado(f)+' ou mais</small></div>';
   if(!meus.length)h+='<p class="advnote">Pegue uma pelúcia na máquina para começar a aventura.</p>';
   h+='<div class="advpets">'+meus.map(i=>{const lv=G.lvOf(i),E=energia(i),el=ELEM[i];return '<button type="button" class="advpet'+(i===SEL?' sel':'')+(lv<recomendado(f)-4?' fraco':'')+'" data-i="'+i+'"><img src="'+G.sprite(i,lv,0,G.rbOf(i))+'" alt=""><b>'+(lv>=G.EVO_LV&&i<G.CH0?G.evName(i):G.name(i))+'</b><small>Nv '+lv+' · '+(ELNAME[el]||'')+'</small>'+pips(E.e)+(E.e<EN.max?'<small class="advwait">+1 ⚡ em '+tempo(E.falta)+'</small>':'')+'</button>'}).join('')+'</div>';
@@ -149,6 +154,14 @@ async function descansar(i){if(G.coins()<EN.descanso_preco){msg('Faltam moedas p
 const ERROS={sem_moedas:'Faltam moedas para jogar.',cansado:'Seu bichinho está cansado. Descanse ou espere a energia voltar.',fase_bloqueada:'Vença a fase anterior primeiro.',nao_tem:'Você não tem esse bichinho.'};
 // cada partida custa moedas (data/aventura.json → custo_moedas); o servidor cobra no adv_start; admin (dev) joga de graça
 const CUSTO=D.custo_moedas||0;
+// cada vez que você vence a mesma fase, ela muda inteira (data/aventura.json → repeticao): semente nova a partir do número de vitórias
+// e a quantidade de inimigos segue a lista repeticao.extra. O nível dos inimigos continua o da fase (sobe de uma fase para a outra).
+function vezesDe(id){return (L.vezes&&L.vezes[id])|0}
+function mapaDaVez(f){const n=f.desafio?11:f.mundo.fases.findIndex(x=>x.id===f.id)+1,W=f.desafio?{}:(f.mundo.dif||{});
+  if(f.desafio)return GARRO_MAPAS.novo(n,{inimigos:f.inimigos,chefe:f.chefe},true,D.mapa_variacao,null);
+  const RP=D.repeticao||{},v=vezesDe(f.id),lista=RP.extra||[0],ex=Math.min(RP.extra_max??4,lista[v%lista.length]|0);
+  let h=7;for(const ch of f.id)h=(h*31+ch.charCodeAt(0))>>>0;const seed=(h+v*7919)>>>0||1;
+  return GARRO_MAPAS.gera(n,{inimigos:f.inimigos,chefe:f.chefe},seed,false,ex+(W.extra|0),W)}
 async function comecar(k,i,gig){const f=FASES[k];if(!liberada(k))return;
   if(gig===undefined&&G.copias){const c=G.copias(i);if(c.n+c.g>1){G.escolheCopia(i,'Levar qual para a aventura?',g=>comecar(k,i,g));return}gig=c.g>0&&!c.n}const E=energia(i);if(E.e<1||G.lvOf(i)<nivelMin(f)){escolha(k);return}
   if(CUSTO&&!G.dev()&&G.coins()<CUSTO){msg('Cada partida custa '+CUSTO+' 🪙. Faltam '+(CUSTO-G.coins())+' moedas.');return}
@@ -159,7 +172,7 @@ async function comecar(k,i,gig){const f=FASES[k];if(!liberada(k))return;
   else{L.en[i]={e:E.e-1,s:E.e>=EN.max?Date.now():E.s};saveL();if(CUSTO&&!G.dev())G.addCoinsLocal(-CUSTO)}
   const lv=admLv(i,f);
   // mapa novo a cada partida (js/mapas.js): percurso e quantidade de bichinhos mudam; sem o gerador usa o mapa reserva do JSON
-  let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=GARRO_MAPAS.novo(f.desafio?11:f.mundo.fases.findIndex(x=>x.id===f.id)+1,{inimigos:f.inimigos,chefe:f.chefe},!!f.desafio,D.mapa_variacao,f.desafio?null:f.mundo.dif)}catch(e){console.warn('mapa',e)}
+  let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=mapaDaVez(f)}catch(e){console.warn('mapa',e)}
   if(M3&&!f.desafio&&f.mundo.tema)M3.tema=f.mundo.tema;
   RUN={k,f,i,gig:!!gig,M:M3,hero:lutador(i,lv,{heroi:1,rb:G.rbOf(i),gig:!!gig,gigEvo:!!(gig&&G.copias&&G.copias(i).gevo)}),fim:false,quit:0,leaves:0,dif:difDe(k)};
   luta()}
@@ -452,13 +465,13 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   R.last=performance.now();R.acc=0;R.raf=requestAnimationFrame(passo)}
 async function novoInimigo(j,lv,x,z,camp,chefe,tipo){const R=RUN,T=G.THREE(),L_=lutador(j,lv,{chefe}),Tp=(tipo&&TP[tipo])||{};const k=(chefe?(AR.chefe_vida||1.6):(AR.inimigo_vida||.45))*(Tp.vida||1);L_.hp=L_.max=Math.max(10,Math.round(L_.hp*k));
   if(Tp.dano)L_.atk*=Tp.dano;const esc=Tp.escudo?Math.round(L_.max*Tp.escudo):0;
-  const g=await G.modelo(j,chefe),s=(chefe?(AR.tam_chefe||3):redondo(j)?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
+  const g=await modeloDe(j,chefe),s=(chefe?(AR.tam_chefe||3):redondo(j)?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
   const U=prepAndar(g,redondo(j),cobra(j)),root=new T.Group();root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
   const bar=document.createElement('div');bar.className='advebar'+(chefe?' chefe':'')+(tipo?' '+tipo:'');bar.innerHTML='<small class="'+corNv(lv,R.hero.lv)+'">'+(Tp.icone?Tp.icone+' ':'')+'Nv '+lv+'</small>'+(esc?'<i class="esc"><b></b></i>':'')+'<i><b></b></i>';bar.hidden=true;$('advFx').appendChild(bar);
   if(tipo==='elite'){const a=new T.Mesh(new T.RingGeometry(.55*s,.68*s,32),new T.MeshBasicMaterial({color:'#7ad0ff',transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide}));a.rotation.x=-Math.PI/2;a.position.y=.04;root.add(a)}
   if(tipo==='curandeiro'){const a=sprEmoji('💚',.45);a.position.y=1.55*s;root.add(a)}
   return Object.assign(L_,{j,lv,g:root,m:g,U,x,z,cx:camp.x,cz:camp.z,ang:Math.PI,r:(chefe?.95:.4)*s/1.1,s,chefe:!!chefe,vivo:true,estado:'parado',t:0,cdA:1+Math.random(),cdT:2+Math.random()*2,
-    aviso:0,lento:0,preso:0,veneno:0,morre:0,bar,nome:chefe?G.evName(j):G.name(j),tipo:tipo||'',Tp,esc,escMax:esc,longe:tipo==='atirador'||tipo==='curandeiro',cdC:2+Math.random()*2,
+    aviso:0,lento:0,preso:0,veneno:0,morre:0,bar,nome:nomeInim(j,chefe),tipo:tipo||'',Tp,esc,escMax:esc,longe:tipo==='atirador'||tipo==='curandeiro',cdC:2+Math.random()*2,
     pancada:chefe?{r:2.6,av:.9,m:1.5,rec:2}:tipo==='elite'?{r:Tp.pancada_raio||1.9,av:Tp.pancada_aviso||.75,m:1.2,rec:Tp.recarga||2.2}:null,ph:Math.random()*6})}
 function tamanho3D(){const R=RUN;if(!R||!R.r3)return;const cv=$('advCv'),r=cv.getBoundingClientRect();R.r3.rd.setSize(r.width,r.height,false);R.r3.cam.aspect=r.width/Math.max(1,r.height);R.r3.cam.updateProjectionMatrix()}
 window.addEventListener('resize',()=>{if(RUN&&TELA==='luta'&&RUN.r3)tamanho3D()});
@@ -684,6 +697,7 @@ function minimapa(){const R=RUN,c=$('advMini');if(!c)return;const x=c.getContext
 
 async function terminar(win){const R=RUN;if(!R||R.salvo)return;R.salvo=1;R.fim=true;
   const f=R.f,id=f.id,st=win?Math.min(3,R.leaves):0;
+  if(win&&!f.desafio){L.vezes=L.vezes||{};L.vezes[id]=(L.vezes[id]|0)+1;saveL()}// a próxima vez nesta fase vem com outro mapa
   // XP como no Pokémon (5ª geração): por bichinho derrotado, mais forte quanto maior o nível do inimigo; chefão vale mais. O servidor refaz a conta.
   const lvMax=Math.max(1,...f.inimigos.map(x=>x[1]),f.chefe?f.chefe[1]:1),xk=(D.xp.por_inimigo||0),kx=Math.floor(xk*lvMax/5*Math.pow((2*lvMax+10)/(lvMax+R.hero.lv+10),2.5)+1);
   const nk=R.kills||0,xpK=nk*kx+(R.chefeMorto&&win?Math.round((D.xp.chefe||1)*kx):0);

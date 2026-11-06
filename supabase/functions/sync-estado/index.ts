@@ -231,7 +231,7 @@ async function handle(req: Request): Promise<Response> {
     const minLv = Math.max(1, Math.max(...niveis) - (A.nivel_min_folga ?? 6));
     // máximo de bichinhos comuns numa partida: normal da fase + variação + guardas das fases finais
     const nFase = f.mundo ? f.mundo.fases.findIndex((x) => x.id === f.fase.id) + 1 : 11;
-    const maxKills = (f.desafio ? 4 : f.fase.chefe ? 9 : 6 + nFase) + (A.mapa_variacao?.mais ?? 0) + (f.desafio ? 0 : f.mundo?.dif?.extra ?? 0) + 3;  // mundos novos têm bichinhos a mais (mundos[].dif.extra)
+    const maxKills = (f.desafio ? 4 : f.fase.chefe ? 9 : 6 + nFase) + (A.mapa_variacao?.mais ?? 0) + (f.desafio ? 0 : A.repeticao?.extra_max ?? 0) + (f.desafio ? 0 : f.mundo?.dif?.extra ?? 0) + 3;  // mundos novos têm bichinhos a mais (mundos[].dif.extra)
     const estrelas = int(body.stars, 1, 3) ?? 1;
     const L = await lendarios(), DM = L?.diamantes, ch = L?.chocar;
     return call("rpc_adv_end", {
@@ -323,6 +323,7 @@ type Aventura = {
   energia: { max: number; recarga_min: number; descanso_preco: number };
   xp: { vitoria: number; derrota: number; por_inimigo?: number; chefe?: number };
   mapa_variacao?: { menos: number; mais: number };
+  repeticao?: { extra?: number[]; extra_max?: number };
   tempo_min_seg?: number; nivel_min_folga?: number;
   chefe_pedra: { chance: number; pedras: number[] };
   mundos: { id: string; fases: Fase[]; dif?: { extra?: number } }[];
