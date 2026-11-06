@@ -78,7 +78,7 @@ function attach(b,hits,mult,closed){mult=mult||1;
   const centered=1-Math.min(1,dx/(half*.9));
   let grip=claw.force*p.tex*(.3+.45*centered+.25*Math.min(1,hits/18))*mult;
   if(p.giant)grip*=1.45;// garra grande da máquina gigante aperta mais
-  claw.hold=grip;claw.held=b;
+  claw.hold=grip;claw.held=b;b._repo=0;
   const gp={x:claw.x,y:claw.y+30*CS};
   claw.link=Constraint.create({pointA:{x:gp.x,y:gp.y},bodyB:b,pointB:{x:gp.x-b.position.x,y:gp.y-b.position.y},length:0,stiffness:.12,damping:.08});
   Composite.add(world,claw.link);
@@ -195,10 +195,10 @@ function step(){
   }
   if(c.link){c.link.pointA.x=c.x;c.link.pointA.y=c.y+30*CS}
   setProngs();
-  tiraDaBorda();
+  tiraDaBorda();cuidaReposicao();
   Engine.update(engine,1000/60);
   for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];
-    if(b.position.y>H+60){Composite.remove(world,b);bodies.splice(i,1);if(b.position.x<DIV+20)won(b)}
+    if(b.position.y>H+60){Composite.remove(world,b);bodies.splice(i,1);if(b.position.x<DIV+20&&!b._repo)won(b)}
     else if(b.plush.giant&&b!==claw.held&&(b.plush.won?b.position.y>FLOOR-40:(b.position.x<DIV+30&&b.position.y>230))){Composite.remove(world,b);bodies.splice(i,1);won(b)}
     else if(b.plush.giant&&!b.plush.landed&&b.position.y>FLOOR-b.plush.dh*.5-26&&Math.abs(b.velocity.y)<1.6){b.plush.landed=true;shakeWin(8);boom();puff(b.position.x,FLOOR-6,30,['#8a7a6a','#b8a890','#6a5a4a']);banner('🦖 GIGANTE!',b.plush.name+' · '+b.plush.cm+' cm',true)}
     else if(b.plush.giant&&!b.plush.won&&b.position.x>=DIV+30&&b.position.y>FLOOR+10){Body.setPosition(b,{x:Math.min(W-90,b.position.x),y:FLOOR-130});Body.setVelocity(b,{x:0,y:0})}}

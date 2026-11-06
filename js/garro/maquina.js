@@ -43,10 +43,7 @@ function fill(n,fromY){
 // ninguém fica acima da linha da divisória: o que assentou lá em cima (parado) sai da máquina com uma nuvenzinha
 const LIM_EXTRA=38;// a área marcada vai um pouco acima do topo da divisória
 function abaixaPilha(mudo){let n=0;for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];if((!mudo&&b===claw.held)||b.plush.won||b.plush.giant||b.plush.leg||b.position.x<DIV)continue;
-    if(b.bounds.min.y<DIVTOP-LIM_EXTRA&&Math.hypot(b.velocity.x,b.velocity.y)<.5){
-      // no jogo: em vez de sumir com uma nuvem (parecia que "explodia"), ele escorrega para o lugar mais baixo da pilha; só sai se não couber mesmo
-      if(!mudo&&(b._desce|0)<3){b._desce=(b._desce|0)+1;Body.setPosition(b,{x:xBaixo(),y:DIVTOP-110});Body.setVelocity(b,{x:0,y:1});continue}
-      Composite.remove(world,b);bodies.splice(i,1);n++}}return n}
+    if(b.bounds.min.y<DIVTOP-LIM_EXTRA&&Math.hypot(b.velocity.x,b.velocity.y)<.5){if(!mudo)puff(b.position.x,b.position.y,10,['#fff','#ffd7ef'],true);Composite.remove(world,b);bodies.splice(i,1);n++}}return n}
 function settlePile(){// enche até a linha da divisória: cai um por vez em cima da pilha; quando um assenta acima da linha, está cheio
   for(let r=0,fora=0;r<70&&bodies.length<30&&fora<6;r++){fill(1,DIVTOP-130);for(let i=0;i<150;i++)Engine.update(engine,1000/60);fora+=abaixaPilha(true)}
   for(let i=0;i<150;i++)Engine.update(engine,1000/60);abaixaPilha(true);
@@ -70,7 +67,15 @@ function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
 function tiraDaBorda(){const lim=DIV+EDGE_FREE+8;for(const b of bodies){if(b===claw.held||b.plush.won||b.plush.giant)continue;const x=b.position.x,e=b.plush.dw*.42;
     if(x>DIV+4&&x-e<lim&&b.position.y<DIVTOP+30){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
-function restock(){if(MACH===4){if(!bodies.length)placeEpic();return}if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60)}
+// reposição: o bichinho que cai de cima (_repo) não pode ficar acima da linha nem cair no buraco do prêmio.
+// O que o jogador tirou do lugar com a garra pode ficar onde parar (a garra limpa a marca _repo).
+function cuidaReposicao(){for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];if(!b._repo||b===claw.held)continue;
+    if(b.position.x<DIV-4){Composite.remove(world,b);bodies.splice(i,1);continue}// passou para o lado do prêmio: sai sem contar
+    if(Math.hypot(b.velocity.x,b.velocity.y)<.3&&(b._parado=(b._parado|0)+1)>20){
+      if(b.bounds.min.y<DIVTOP-LIM_EXTRA){if((b._desce|0)<3){b._desce=(b._desce|0)+1;b._parado=0;Body.setPosition(b,{x:xBaixo(),y:-40});Body.setVelocity(b,{x:0,y:1})}else{Composite.remove(world,b);bodies.splice(i,1)}}
+      else b._repo=0}
+    else if(Math.hypot(b.velocity.x,b.velocity.y)>=.3)b._parado=0}}
+function restock(){if(MACH===4){if(!bodies.length)placeEpic();return}if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}const n0=bodies.length;const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60);for(let k=n0;k<bodies.length;k++)bodies[k]._repo=1}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
 /* ---------- segunda máquina: um bichinho gigante ---------- */
 let MACH=1;const GCOST=50,GK=2.4;
