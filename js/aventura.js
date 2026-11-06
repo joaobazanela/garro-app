@@ -130,7 +130,7 @@ function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('a
   const coll=G.coll(),meus=Object.keys(coll).map(Number).filter(i=>coll[i]>0).sort((a,b)=>G.lvOf(b)-G.lvOf(a));
   if(SEL===null||!meus.includes(SEL))SEL=meus[0]??null;
   const LG=f.desafio&&window.GARRO_LEND?window.GARRO_LEND.porId(f.chefe[0]):null;
-  let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b>'+(!f.desafio&&vezesDe(f.id)?'<small class="advvez">🔁 '+vezesDe(f.id)+(vezesDe(f.id)===1?' vitória':' vitórias')+' · cada vitória muda o mapa e a quantidade de inimigos</small>':'')+'<small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
+  let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b>'+(!f.desafio&&vezesDe(f.id)?'<small class="advvez">🔁 '+vezesDe(f.id)+(vezesDe(f.id)===1?' vez jogada':' vezes jogadas')+' · cada vez muda o mapa e a quantidade de inimigos</small>':'')+'<small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
   const meuLv=SEL!==null?G.lvOf(SEL):1,tps=tiposDa(f);
   h+='<div class="advdif"><span class="cav">'+caveiras(f)+'</span>'+Object.keys(tps).map(t=>TP[t]?'<span class="tp">'+TP[t].icone+' '+TP[t].nome+(tps[t]>1?' ×'+tps[t]:'')+'</span>':'').join('')+'</div>';
   h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+sprDe(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+(ehCri(f.chefe[0])?sprDe(f.chefe[0]):G.sprite(f.chefe[0],G.EVO_LV,1))+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
@@ -160,13 +160,14 @@ async function descansar(i){if(G.coins()<EN.descanso_preco){msg('Faltam moedas p
 const ERROS={sem_moedas:'Faltam moedas para jogar.',cansado:'Seu bichinho está cansado. Descanse ou espere a energia voltar.',fase_bloqueada:'Vença a fase anterior primeiro.',nao_tem:'Você não tem esse bichinho.'};
 // cada partida custa moedas (data/aventura.json → custo_moedas); o servidor cobra no adv_start; admin (dev) joga de graça
 const CUSTO=D.custo_moedas||0;
-// cada vez que você vence a mesma fase, ela muda inteira (data/aventura.json → repeticao): semente nova a partir do número de vitórias
+// cada vez que você entra na mesma fase (ganhando ou perdendo), ela muda inteira (data/aventura.json → repeticao): semente nova pelo número de vezes
 // e a quantidade de inimigos segue a lista repeticao.extra. O nível dos inimigos continua o da fase (sobe de uma fase para a outra).
 function vezesDe(id){return (L.vezes&&L.vezes[id])|0}
 function mapaDaVez(f){const n=f.desafio?11:f.mundo.fases.findIndex(x=>x.id===f.id)+1,W=f.desafio?{}:(f.mundo.dif||{});
   if(f.desafio)return GARRO_MAPAS.novo(n,{inimigos:f.inimigos,chefe:f.chefe},true,D.mapa_variacao,null);
   const RP=D.repeticao||{},v=vezesDe(f.id),lista=RP.extra||[0],ex=Math.min(RP.extra_max??4,lista[v%lista.length]|0);
-  let h=7;for(const ch of f.id)h=(h*31+ch.charCodeAt(0))>>>0;const seed=(h+v*7919)>>>0||1;
+  let h=7;for(const ch of f.id)h=(h*31+ch.charCodeAt(0))>>>0;const seed=(Math.imul(h^Math.imul(v+1,0x9E3779B1),0x85EBCA6B)^(v*40503))>>>0||1;// bem espalhada: cada vez um percurso bem diferente
+  L.vezes=L.vezes||{};L.vezes[f.id]=v+1;saveL();// cada vez que entra (ganhando ou não) a próxima vem com outro mapa
   return GARRO_MAPAS.gera(n,{inimigos:f.inimigos,chefe:f.chefe},seed,false,ex+(W.extra|0),W)}
 async function comecar(k,i,gig){const f=FASES[k];if(!liberada(k))return;
   if(gig===undefined&&G.copias){const c=G.copias(i);if(c.n+c.g>1){G.escolheCopia(i,'Levar qual para a aventura?',g=>comecar(k,i,g));return}gig=c.g>0&&!c.n}const E=energia(i);if(E.e<1||G.lvOf(i)<nivelMin(f)){escolha(k);return}
@@ -703,7 +704,6 @@ function minimapa(){const R=RUN,c=$('advMini');if(!c)return;const x=c.getContext
 
 async function terminar(win){const R=RUN;if(!R||R.salvo)return;R.salvo=1;R.fim=true;
   const f=R.f,id=f.id,st=win?Math.min(3,R.leaves):0;
-  if(win&&!f.desafio){L.vezes=L.vezes||{};L.vezes[id]=(L.vezes[id]|0)+1;saveL()}// a próxima vez nesta fase vem com outro mapa
   // XP como no Pokémon (5ª geração): por bichinho derrotado, mais forte quanto maior o nível do inimigo; chefão vale mais. O servidor refaz a conta.
   const lvMax=Math.max(1,...f.inimigos.map(x=>x[1]),f.chefe?f.chefe[1]:1),xk=(D.xp.por_inimigo||0),kx=Math.floor(xk*lvMax/5*Math.pow((2*lvMax+10)/(lvMax+R.hero.lv+10),2.5)+1);
   const nk=R.kills||0,xpK=nk*kx+(R.chefeMorto&&win?Math.round((D.xp.chefe||1)*kx):0);
