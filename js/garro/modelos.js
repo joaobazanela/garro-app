@@ -94,7 +94,7 @@ const SKIN={};
 const LEVES=new Set(GD.modelos.LEVES||[]);
 const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
 // lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
-for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
+for(const L of LEGS.concat(EPS,DRS)){if(!L.modelo)continue;
   MODELS[L.id]={file:L.modelo,skin:null,evoM:1,noDeform:1,wing:null,notail:false,hc:[0,.62,.3],hr:.16,hp:[0,.5,.2],tz:-.3,tp:[0,.3,-.3],spd:.8,wag:.25,
     glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null,vista:L.vista??-.62,desliza:L.anda==='desliza',fileAnda:L.modelo_anda||null};NOEXTRA.add(L.id)}
 // ângulo em que o lendário aparece no visualizador (data/lendarios.json → vista; os da folha nova olham para outro lado)
@@ -159,6 +159,7 @@ function attachParts(obj,i,m){const sp0=SPEC[i],sp=Object.assign({},sp0,{x:sp0.x
 // modelo 3D pronto para outras telas (Aventura): grandes = GLB (o evoluído quando houver), redondos = montados em código.
 // Volta um grupo com altura 1, pés em y=0 e olhando para +z. Não mexe no visualizador.
 async function montaModelo(i,evo){
+  if(isDrag(i)&&MODELS[i]){const f=formaDe(i,lvOf(i));if(f&&MODELS[i].file!==f.modelo)MODELS[i]=Object.assign({},MODELS[i],{file:f.modelo,key:'D'+f.slug})}// dragão: o modelo da forma do nível atual
   if(i>=CH0&&!isLeg(i)&&!MODELS[i]){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
     const b=new THREE.Box3().setFromObject(C.root),h=b.max.y-b.min.y||1;C.root.scale.setScalar(1/h);C.root.position.y=-b.min.y/h;return g}
   let m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
@@ -381,7 +382,7 @@ function openFoxViewer(i){if(!openFox(i)){detail(i);return}const p=PLUSH[i];$('g
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
 function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
-function openViewer(i){
+function openViewer(i){atualizaDragoes();
   vTags(i);if(i>=CH0&&!isLeg(i)&&!MODELS[i]){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
   if(MODELS[i]){const rq=V.rq=(V.rq|0)+1;// o corpo antigo (em código) nunca aparece: se o modelo 3D não carregar, tenta de novo e avisa
     const tenta=n=>openGLB(i,'leve').then(ok=>{if(V.rq!==rq)return;if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;

@@ -98,7 +98,15 @@ farrapo(g){const pano=M(0x6a5a46,{flat:false,dupla:true}),escuro=M(0x15101a,{fla
   P(g,new (T().SphereGeometry)(.2,14,10,0,Math.PI*2,0,Math.PI*.7),pano,[0,1.15,0],[-.25,0,0]);P(g,new (T().SphereGeometry)(.15,10,8),escuro,[0,1.1,.06]);
   P(g,new (T().ConeGeometry)(.08,.25,6),pano,[0,1.38,-.08],[-.6,0,0]);olhos(g,.055,1.12,.18,0,.03,olho,null);
   for(const s of[-1,1]){const b=P(g,new (T().ConeGeometry)(.12,.6,8,3,true),pano,[s*.38,.85,.05],[0,0,s*1.2]);
-    for(let k=0;k<4;k++)tubo(g,[[s*.62,.72,.08],[s*(.72+k*.02),.6-k*.04,.12+k*.03],[s*(.78+k*.03),.5-k*.06,.15+k*.04]],.012,escuro,6,.5)}}
+    for(let k=0;k<4;k++)tubo(g,[[s*.62,.72,.08],[s*(.72+k*.02),.6-k*.04,.12+k*.03],[s*(.78+k*.03),.5-k*.06,.15+k*.04]],.012,escuro,6,.5)}},
+// ---- chefão da Luz (não veio no arquivo 3D): sol de cristal com rosto, anel e raios ----
+ofuscor(g){const ouro=M(0xf0c850,{m:.55,r:.3,em:0x5a3a00}),claro=M(0xfff2b0,{em:0xffd060,m:.4,r:.3}),branco=M(0xfff8e0,{flat:false}),pup=M(0x3a2000,{flat:false});
+  P(g,new (T().OctahedronGeometry)(.32,0),ouro,[0,.95,0],null,[1.1,1.25,.7]);P(g,new (T().ConeGeometry)(.12,.45,4),claro,[0,1.45,0]);P(g,new (T().ConeGeometry)(.1,.4,4),claro,[0,.45,0],[Math.PI,0,0]);
+  for(const s of[-1,1]){P(g,new (T().SphereGeometry)(.06,10,8),branco,[s*.1,1.0,.21],null,[1.3,.7,.5]);P(g,new (T().SphereGeometry)(.03,8,6),pup,[s*.1,1.0,.25])}
+  P(g,new (T().BoxGeometry)(.18,.03,.03),M(0x3a2000),[0,.86,.22]);
+  P(g,new (T().TorusGeometry)(.62,.035,6,40),ouro,[0,.95,-.05]);P(g,new (T().TorusGeometry)(.78,.02,6,40),claro,[0,.95,-.08]);
+  for(let k=0;k<8;k++){const a=k/8*Math.PI*2;const c=P(g,new (T().ConeGeometry)(.07,.42,4),k%2?claro:ouro,[Math.sin(a)*.98,.95+Math.cos(a)*.98,-.06],[0,0,-a])}
+  for(let k=0;k<6;k++){const a=k/6*Math.PI*2+.3;P(g,new (T().OctahedronGeometry)(.05,0),claro,[Math.sin(a)*1.25,.95+Math.cos(a)*1.25,0],null,[.6,1.4,.6])}}
 };
 // junta as peças de mesmo material numa malha só (menos chamadas de desenho: o celular agradece)
 function junta(g){g.updateMatrixWorld(true);const por=new Map();g.traverse(o=>{if(o.isMesh){if(!por.has(o.material))por.set(o.material,[]);por.get(o.material).push(o)}});

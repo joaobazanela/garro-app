@@ -13,8 +13,8 @@ const GROW=GD.regras.GROW;
 const EVO=Object.assign({nivel:100,pedras:5,renascer_nivel:100,bonus_por_renascimento:.1},GD.regras.EVOLUCAO||{});
 const EVO_LV=EVO.nivel,PEDRAS=EVO.pedras,REB_B=EVO.bonus_por_renascimento;
 // força por classe (data/regras.json → FORCA): a classe pesa mais que o nível
-const FORCA=Object.assign({redondo:19,grande:40,lendario:90,epico:400,gigante:1.2,gigante_evoluido:1.35,evoluido:1.35,nivel_max_bonus:.5},GD.regras.FORCA||{});
-const classeDe=i=>isEpic(i)?'epico':isLeg(i)?'lendario':i<CH0?'grande':'redondo',MEDIA_CL={};
+const FORCA=Object.assign({redondo:19,grande:40,lendario:90,dragao:200,forma:[1,1.2,1.45],epico:400,gigante:1.2,gigante_evoluido:1.35,evoluido:1.35,nivel_max_bonus:.5},GD.regras.FORCA||{});
+const classeDe=i=>isEpic(i)?'epico':isDrag(i)?'dragao':isLeg(i)?'lendario':i<CH0?'grande':'redondo',MEDIA_CL={};
 // ataque e defesa no nível 1: os grandes são bem mais fortes que os redondos (cada um tem seu jeito)
 const STAT=GD.pelucias.STAT;
 // curva de níveis (data/regras.json → NIVEL): XP total para o nível N = linear×(N−1) + cubo×(N−1)³ (como as curvas cúbicas do Pokémon)
@@ -30,7 +30,7 @@ function rbOf(i){return CARE[i]?CARE[i].rb|0:0}
 // evoluído: os seus usam a marca de evolução (pedras no Nv 100); inimigos da Aventura (outro nível) contam evoluídos no Nv da evolução
 function isEvo(i,lv,rb){if(i>=CH0)return false;const c=CARE[i];if(c&&(coll[i]||0)>0&&lvOf(i)===lv&&(c.rb|0)===(rb|0))return !!c.ev;return lv>=EVO_LV}
 function mediaClasse(k){if(MEDIA_CL[k])return MEDIA_CL[k];let t=0,n=0;STAT.forEach((b,i)=>{if(b&&classeDe(i)===k){t+=(b[0]+b[1])/2;n++}});return MEDIA_CL[k]=n?t/n:1}
-function statsAt(i,lv,rb){rb=rb|0;const b=STAT[i],k=classeDe(i),esc=FORCA[k]/mediaClasse(k),ev=(isEvo(i,lv,rb)?FORCA.evoluido:1)*(1+REB_B*rb),nv=1+(lv-1)*FORCA.nivel_max_bonus/99;
+function statsAt(i,lv,rb){rb=rb|0;const b=STAT[i],k=classeDe(i),esc=FORCA[k]/mediaClasse(k),ev=(isEvo(i,lv,rb)?FORCA.evoluido:1)*(isDrag(i)?(FORCA.forma[formaIdx(lv)]||1):1)*(1+REB_B*rb),nv=1+(lv-1)*FORCA.nivel_max_bonus/99;
   const atk=Math.round(b[0]*esc*nv*ev),df=Math.round(b[1]*esc*nv*ev);return{lv,atk,def:df,hp:Math.round((atk+df)*2+lv*5)}}
 function renderPow(i){const e=$('vPow');if(!e)return;const S=statsAt(i,lvOf(i),rbOf(i));e.innerHTML=(rbOf(i)?'<span>🔄 <b>'+rbOf(i)+'</b></span>':'')+'<span>Nv <b>'+S.lv+'</b></span><span>⚔️ <b>'+S.atk+'</b></span><span>🛡️ <b>'+S.def+'</b></span><span>❤️ <b>'+S.hp+'</b></span>'}
 const EVN=GD.pelucias.EVN;
@@ -50,7 +50,7 @@ function refreshVStats(i){const p=PLUSH[i],st=careStage(i);$('vStats').textConte
 function renderCare(){
   if(!V.open||V.cur===undefined)return;const i=V.cur;renderSell(i);renderPow(i);
   const c=careOf(i),lv=lvOf(i),cap=capOf(i),st=careStage(i),m=(c.f+c.l+c.p)/3;
-  if(isLeg(i)){$('cStage').textContent=(isEpic(i)?'🔥 Épico · ':'✦ Lendário · ')+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(isEpic(i)?' · o mais forte de todos':' · mais forte que as pelúcias grandes')+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
+  if(isLeg(i)){$('cStage').textContent=(isEpic(i)?'🔥 Épico · ':isDrag(i)?'🐉 Dragão · forma '+(formaIdx(lv)+1)+'/3 · ':'✦ Lendário · ')+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(isEpic(i)?' · o mais forte de todos':' · mais forte que as pelúcias grandes')+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
   else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(ehBolinha(i)?' · '+Math.min(coll[i]||0,BOL_N)+'/'+BOL_N+' para evoluir':' · 2 repetidas = 1 moeda')+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
   else{$('cStage').textContent=st?'★ '+evName(i,1):PLUSH[i].name;
     $('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(st?' · forma evoluída!':' · evolui no Nv '+EVO_LV+' com '+PEDRAS+' pedras')+' · cuidar hoje '+xpHoje(i)+'/'+XPDIA+' XP'+(rbOf(i)?' · 🔄 '+rbOf(i)+'× (+'+Math.round(REB_B*rbOf(i)*100)+'% força)':'');

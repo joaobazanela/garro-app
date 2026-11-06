@@ -273,9 +273,11 @@ async function handle(req: Request): Promise<Response> {
       return call("rpc_egg_capture", { p_real: body.real === true, p_leg: legDoDia(hojeBR()), p_fake: L.maquina.ovo_falso_moedas, p_min: ch.dias_min, p_max: ch.dias_max }, "egg_capture_rejected");
     }
     if (body.action === "egg_buy") {
-      const leg = int(body.leg, 0, 9);
-      if (leg === null) return json({ error: "bad_leg" }, 400);
-      return call("rpc_egg_buy", { p_leg: leg, p_price: L.loja.preco_ovo_diamantes, p_min: ch.dias_min, p_max: ch.dias_max }, "egg_buy_rejected");
+      // loja: lendários 0..9 e dragões 14..18 (migração 0018); épicos 10..13 só pela máquina do épico
+      const leg = int(body.leg, 0, 18);
+      if (leg === null || (leg >= 10 && leg <= 13) || (leg >= 14 && !(L.dragoes?.length > leg - 14))) return json({ error: "bad_leg" }, 400);
+      const preco = leg >= 14 ? (L.loja.preco_ovo_dragao ?? 120) : L.loja.preco_ovo_diamantes;
+      return call("rpc_egg_buy", { p_leg: leg, p_price: preco, p_min: ch.dias_min, p_max: ch.dias_max }, "egg_buy_rejected");
     }
     const egg = Number(body.eggId);
     if (!Number.isSafeInteger(egg) || egg < 1) return json({ error: "bad_egg" }, 400);
@@ -374,7 +376,8 @@ function legDoDia(dia: string): number {
 type Lendarios = {
   diamantes: { chefe_do_mundo: number; mundo_3_estrelas: number; gigante_chance: number };
   maquina: { preco: number; segurar_lendario: number; ovo_falso_moedas: number };
-  loja: { preco_ovo_diamantes: number };
+  loja: { preco_ovo_diamantes: number; preco_ovo_dragao?: number };
+  dragoes?: { id: number }[];
   epico_maquina?: { preco: number; segurar: number };
   epicos?: { id: number }[];
   chocar: { dias_min: number; dias_max: number; nivel_ao_nascer: number };

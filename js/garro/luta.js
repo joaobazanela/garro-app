@@ -232,7 +232,7 @@ const MOODS=GD.textos.MOODS;
 let moodT=0;
 function mood(txt){const el=$('vMood');if(!el)return;if(!txt){el.classList.remove('on');return}el.textContent=txt;el.classList.add('on');clearTimeout(moodT);moodT=setTimeout(()=>el.classList.remove('on'),2200)}
 function vTags(i){const p=PLUSH[i],r=p.rare<=2?3:p.rare<=4?2:1;
-  $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span>'+(p.leg?(isEpic(i)?'<span class="rL">🔥 Épico</span>':'<span class="rL">✦ Lendário</span>'):'<span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>');
+  $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span>'+(p.leg?(isEpic(i)?'<span class="rL">🔥 Épico</span>':isDrag(i)?'<span class="rL">🐉 Dragão · forma '+(formaIdx(lvOf(i))+1)+'/3</span>':'<span class="rL">✦ Lendário</span>'):'<span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>');
   const own=PLUSH.filter(q=>coll[q.i]&&!q.fora).map(q=>q.i);V.cur=i;V.own=own;const many=own.length>1;$('vPrev').hidden=$('vNext').hidden=!many;
   if(many&&typeof preCarrega==='function'){const k=own.indexOf(i);preCarrega([own[(k+1)%own.length],own[(k-1+own.length)%own.length]],true)}}// os vizinhos já vão carregando
 function vStep(d){const o=V.own||[];if(o.length<2)return;let k=o.indexOf(V.cur);k=(k+d+o.length)%o.length;audio();click(700);openViewer(o[k])}

@@ -16,6 +16,12 @@ for(const L of LEGS){const sp=L.sprite||{w:200,h:200,hull:[[.15,.1],[.85,.1],[.9
 const EPS=LEGD.epicos||[],EPM=LEGD.epico_maquina||{preco:500,segurar:.05},EPIC0=EPS.length?EPS[0].id:999,isEpic=i=>i>=EPIC0&&i<EPIC0+EPS.length;
 for(const E of EPS){const sp=Object.assign({w:200,h:200,hull:[[.12,.08],[.88,.08],[.96,.92],[.04,.92]]},E.sprite||{});
   PLUSH[E.id]={i:E.id,leg:1,epic:1,slug:E.slug,name:E.nome,cm:E.cm,g:E.g,tex:.9,rare:0,desc:E.desc,...sp};GD.pelucias.STAT[E.id]=E.stat;GD.pelucias.ELEM[E.id]=E.elemento}
+// dragões (data/lendarios.json → dragoes, ids 57 a 61): entre os lendários e os épicos; nascem de ovo e têm 3 formas (mudam pelo nível)
+const DRS=LEGD.dragoes||[],DRF=LEGD.dragao_formas||[50,80],DRAG0=DRS.length?DRS[0].id:999,isDrag=i=>i>=DRAG0&&i<DRAG0+DRS.length;
+for(const Dg of DRS){PLUSH[Dg.id]={i:Dg.id,leg:1,drag:1,slug:Dg.slug,name:Dg.nome,cm:Dg.cm,g:Dg.g,tex:.9,rare:0,desc:Dg.desc,...Dg.sprite};GD.pelucias.STAT[Dg.id]=Dg.stat;GD.pelucias.ELEM[Dg.id]=Dg.elemento}
+const formaIdx=lv=>lv>=DRF[1]?2:lv>=DRF[0]?1:0,formaDe=(i,lv)=>{const Dg=DRS[i-DRAG0];return Dg?Dg.formas[formaIdx(lv)]:null};
+// nome e imagem do dragão acompanham a forma do nível atual
+function atualizaDragoes(){if(typeof lvOf!=='function')return;for(const Dg of DRS){const f=formaDe(Dg.id,lvOf(Dg.id)),p=PLUSH[Dg.id];if(f&&p.img!==f.sprite.img){Object.assign(p,f.sprite,{name:f.nome});try{bakeP(p)}catch(e){}}}}
 function epicDia(){const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return EPS.length?EPS[Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%EPS.length].id:-1}
 
 const {Engine,Bodies,Body,Composite,Constraint,Query,Vertices}=Matter;

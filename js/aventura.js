@@ -13,10 +13,16 @@ const FASES=[];D.mundos.forEach(m=>m.fases.forEach(f=>FASES.push(Object.assign({
 // lendários (js/lendarios.js, ids a partir de G.LEG0): contam como bichinhos grandes
 // criaturas da Aventura (data/aventura.json → criaturas; modelos em js/criaturas.js): ids 1000+, não são bichinhos da coleção
 const CRI={};for(const c of (D.criaturas||[]))CRI[c.id]=c;const ehCri=i=>!!CRI[i];
-const LEG0=G.LEG0||43,NLEG=((GD.lendarios||{}).lendarios||[]).length,grande=i=>ehCri(i)?CRI[i].tipo==='evoluido':i<G.CH0||(NLEG>0&&i>=LEG0),redondo=i=>!grande(i);
+const LEG0=G.LEG0||43,NLEG=((GD.lendarios||{}).lendarios||[]).length,grande=i=>ehCri(i)?CRI[i].tipo!=='basico':i<G.CH0||(NLEG>0&&i>=LEG0),redondo=i=>!grande(i);
 const statDe=i=>ehCri(i)?CRI[i].stat:STAT[i],elemDe=i=>ehCri(i)?CRI[i].elemento:ELEM[i];
 const sprDe=(j,lv)=>ehCri(j)?'img/criaturas/'+CRI[j].slug+'.webp':G.sprite(j,lv),nomeInim=(j,chefe)=>ehCri(j)?CRI[j].nome:chefe?G.evName(j):G.name(j);
-async function modeloDe(j,chefe){if(ehCri(j)&&window.GARRO_CRIATURAS){const m=GARRO_CRIATURAS.modelo(CRI[j].slug);if(m)return m}return G.modelo(ehCri(j)?(CRI[j].tipo==='evoluido'?0:22):j,chefe)}
+// modelo 3D da criatura: o arquivo do Tripo (criaturas[].modelo) ou, sem arquivo, a forma montada em js/criaturas.js; 1 de altura, olhando para +z
+async function modeloDe(j,chefe){if(ehCri(j)){const C=CRI[j];
+    if(C.modelo){try{const o=await G.glb(C.modelo),T=G.THREE();o.traverse(m=>{if(m.isMesh&&m.material){m.material=m.material.clone();m.material.roughness=.85;m.material.metalness=0;if(m.material.map)m.material.map.encoding=T.sRGBEncoding}});
+        o.updateMatrixWorld(true);const b=new T.Box3().setFromObject(o),h=Math.max(b.max.y-b.min.y,(b.max.x-b.min.x)*.6,(b.max.z-b.min.z)*.6)||1,g=new T.Group();
+        o.scale.setScalar(1/h);o.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(o);return g}catch(e){console.warn('criatura',C.slug,e)}}
+    if(window.GARRO_CRIATURAS){const m=GARRO_CRIATURAS.modelo(C.slug);if(m)return m}}
+  return G.modelo(ehCri(j)?(CRI[j].tipo==='basico'?22:0):j,chefe)}
 const DESLIZA=new Set(((GD.lendarios||{}).lendarios||[]).concat((GD.lendarios||{}).epicos||[]).filter(L=>L.anda==='desliza').map(L=>+L.id)),cobra=i=>DESLIZA.has(i);
 // Desafio Lendário: fase extra depois do chefão do mundo; o chefão é o lendário do dia (troca à meia-noite de Brasília, igual ao servidor)
 function legDoDia(){const h=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);return Math.floor(Date.parse(h+'T00:00:00Z')/864e5)%10}
@@ -109,7 +115,7 @@ function mapa(){limpa3D();TELA='mapa';RUN=null;moedas();$('advTitle').textConten
     for(let q=0;q<10;q++)h+='<span class="advdeco" style="left:'+((q*37+9)%90+5)+'%;top:'+((q*71+30)%(H-30))+'px">'+dc[q%dc.length]+'</span>';
     o.ks.forEach((k,q)=>{const f=FASES[k],P=PJ(q),ok=liberada(k),st=pr[f.id]||0,cls=st?'feita':ok?'atual':'bloq';
       h+='<button type="button" class="advnode '+cls+(f.chefe?' chefe':'')+(f.desafio?' lenda':'')+'" data-k="'+k+'" style="left:'+P.x+'%;top:'+P.y+'px"'+(ok?'':' disabled')+'>'+
-        (f.chefe?'<img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt="">':'<b>'+numDe(k)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(f.desafio?'👑 '+f.nome:st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>'});
+        (f.chefe?'<img src="'+(ehCri(f.chefe[0])?sprDe(f.chefe[0]):G.sprite(f.chefe[0],G.EVO_LV,1))+'" alt="">':'<b>'+numDe(k)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(f.desafio?'👑 '+f.nome:st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>'});
     h+='</div>'+(o.ok?'':'<p class="advjbloq">Vença o chefão do mundo anterior para abrir.</p>')+'</section>'});
   h+='</div>'+(G.dev()?'<p class="advnote">🛠 Modo teste (admin): todas as fases liberadas, sem cansaço e sem nível mínimo.</p>':'')+'<p class="advnote">Arraste para o lado ou toque numa ilha do mapa para trocar de mundo. Cada fase cansa um pouco o bichinho (⚡).</p>';
   $('advBody').innerHTML=h;$('advBody').scrollTop=0;
@@ -127,7 +133,7 @@ function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('a
   let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b>'+(!f.desafio&&vezesDe(f.id)?'<small class="advvez">🔁 '+vezesDe(f.id)+(vezesDe(f.id)===1?' vitória':' vitórias')+' · cada vitória muda o mapa e a quantidade de inimigos</small>':'')+'<small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
   const meuLv=SEL!==null?G.lvOf(SEL):1,tps=tiposDa(f);
   h+='<div class="advdif"><span class="cav">'+caveiras(f)+'</span>'+Object.keys(tps).map(t=>TP[t]?'<span class="tp">'+TP[t].icone+' '+TP[t].nome+(tps[t]>1?' ×'+tps[t]:'')+'</span>':'').join('')+'</div>';
-  h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+sprDe(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
+  h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+sprDe(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+(ehCri(f.chefe[0])?sprDe(f.chefe[0]):G.sprite(f.chefe[0],G.EVO_LV,1))+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
   h+='<small class="advrec">Recomendado: Nv '+recomendado(f)+' ou mais</small></div>';
   if(!meus.length)h+='<p class="advnote">Pegue uma pelúcia na máquina para começar a aventura.</p>';
   h+='<div class="advpets">'+meus.map(i=>{const lv=G.lvOf(i),E=energia(i),el=ELEM[i];return '<button type="button" class="advpet'+(i===SEL?' sel':'')+(lv<recomendado(f)-4?' fraco':'')+'" data-i="'+i+'"><img src="'+G.sprite(i,lv,0,G.rbOf(i))+'" alt=""><b>'+(lv>=G.EVO_LV&&i<G.CH0?G.evName(i):G.name(i))+'</b><small>Nv '+lv+' · '+(ELNAME[el]||'')+'</small>'+pips(E.e)+(E.e<EN.max?'<small class="advwait">+1 ⚡ em '+tempo(E.falta)+'</small>':'')+'</button>'}).join('')+'</div>';
@@ -203,7 +209,7 @@ function luta(){TELA='luta';msg('');const R=RUN,f=R.f,h=R.hero;$('advTitle').tex
     '<div class="advhud"><div class="advme"><span class="foto"><img src="'+G.sprite(R.i,h.lv,0,h.rb)+'" alt=""><small>'+h.lv+'</small></span><div class="info"><b>'+nomeDe(R.i,h.lv,h.rb)+'</b>'+
       '<div class="hp"><i id="advHpMe"></i><span id="advHpTxt"></span></div><div class="advobj"><span id="advObjE"></span><span class="advleaf" id="advLeaf"></span><span class="cav">'+caveiras(f)+'</span></div></div></div>'+
       '<div class="advdir"><canvas class="advmini" id="advMini" width="192" height="192"></canvas><button type="button" class="advpausa" id="advPausa" aria-label="Pausar">⏸</button></div></div>'+
-    '<div class="advboss" id="advBoss" hidden><b>👑 '+(f.chefe?G.evName(f.chefe[0]):'')+' <small>Nv '+(f.chefe?f.chefe[1]:'')+'</small><span id="advHpBossTxt"></span></b><div class="hp"><i id="advHpBoss"></i></div></div>'+
+    '<div class="advboss" id="advBoss" hidden><b>👑 '+(f.chefe?nomeInim(f.chefe[0],true):'')+' <small>Nv '+(f.chefe?f.chefe[1]:'')+'</small><span id="advHpBossTxt"></span></b><div class="hp"><i id="advHpBoss"></i></div></div>'+
     '<div class="advfx" id="advFx"></div><div class="advaviso" id="advAviso"></div><div class="advload" id="advLoad"><i></i>Entrando na floresta…</div>'+
     '<div class="advjoy" id="advJoy"><i id="advJoyK"></i></div>'+
     '<div class="advskills"><button type="button" data-k="A" class="atk">⚔️<span>Atacar</span></button>'+

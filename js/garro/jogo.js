@@ -290,7 +290,7 @@ function detail(i){
   d.innerHTML=n?'<img src="'+p.img+'" alt=""><div><h3>'+p.name+'</h3><p>'+p.desc+'</p><div class="stats">'+p.cm+' cm · '+p.g+' g · pego '+n+'x</div></div>'
     :'<img src="'+p.img+'" alt="" style="filter:brightness(0) opacity(.35)"><div><h3>???</h3><p>Ainda não capturado.</p><div class="stats">'+p.cm+' cm · '+p.g+' g</div></div>';
 }
-function renderShelf(focus){
+function renderShelf(focus){atualizaDragoes();
   const g=$('grid');g.innerHTML='';let got=0;
   let tot=0;PLUSH.forEach(p=>{if(p.leg||p.fora)return;tot++;const n=coll[p.i]||0;if(n)got++;
     const s=document.createElement('button');s.className='slot'+(n?'':' lock');s.setAttribute('aria-label',n?p.name:'Pelúcia não capturada');

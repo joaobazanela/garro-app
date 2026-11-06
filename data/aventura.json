@@ -2616,7 +2616,7 @@
      "nome": "Coração da Floresta",
      "premio": 3,
      "inimigos": [[1001,21]],
-     "chefe": [10,25],
+     "chefe": [1012,25],
      "mapa3d": {
       "largura": 26,
       "comprimento": 96,
@@ -4251,7 +4251,7 @@
      "nome": "Coração do Oceano",
      "premio": 3,
      "inimigos": [[1009,46]],
-     "chefe": [1,50],
+     "chefe": [1016,50],
      "caveiras": 5,
      "mapa3d": {
       "largura": 26,
@@ -5784,7 +5784,7 @@
      "nome": "Coração do Vulcão",
      "premio": 3,
      "inimigos": [[1003,70]],
-     "chefe": [13,74],
+     "chefe": [1013,74],
      "caveiras": 5,
      "mapa3d": {
       "largura": 26,
@@ -7325,7 +7325,7 @@
      "nome": "Trono da Noite",
      "premio": 3,
      "inimigos": [[1011,84]],
-     "chefe": [47,88],
+     "chefe": [1017,88],
      "caveiras": 5,
      "mapa3d": {
       "largura": 26,
@@ -8880,7 +8880,7 @@
      "nome": "Coração da Chama",
      "premio": 3,
      "inimigos": [[1007,94]],
-     "chefe": [45,98],
+     "chefe": [1015,98],
      "caveiras": 5,
      "mapa3d": {
       "largura": 26,
@@ -10452,7 +10452,7 @@
      "nome": "Coração da Luz",
      "premio": 3,
      "inimigos": [[1005,96]],
-     "chefe": [50,100],
+     "chefe": [1014,100],
      "caveiras": 5,
      "mapa3d": {
       "largura": 26,
@@ -10638,20 +10638,26 @@
   "cam_tras": 10.5,
   "cam_frente": 3.2
  },
- "criaturas_nota": "Inimigos da Aventura (arte \"GARRO — Inimigos por ambiente\"): um básico e um evoluído por mundo, modelados em 3D em js/criaturas.js (ícones em img/criaturas/<slug>.webp). Fases 1–4: só básicos; 5–9: básicos e evoluídos (mais evoluídos a cada fase); fase 10: evoluídos + o chefão, que é um bichinho do jogo do elemento do mundo. stat = [ataque, defesa] (básico na escala dos redondos, evoluído na dos grandes).",
+ "criaturas_nota": "Inimigos da Aventura (arte \"GARRO — Inimigos por ambiente\"): um básico e um evoluído por mundo, modelados em 3D em js/criaturas.js (ícones em img/criaturas/<slug>.webp). Fases 1–4: só básicos; 5–9: básicos e evoluídos (mais evoluídos a cada fase); fase 10: evoluídos + o chefão do mundo (Matagor, Abismor, Ofuscor, Calderon, Tentacor, Mortum). modelo = arquivo 3D (Tripo); sem modelo, a forma é montada em js/criaturas.js. stat = [ataque, defesa] (básico na escala dos redondos, evoluído na dos grandes).",
  "criaturas": [
-  {"id": 1000, "slug": "broquim", "nome": "Broquim", "mundo": "floresta", "tipo": "basico", "elemento": "leaves", "stat": [22, 20]},
-  {"id": 1001, "slug": "ciporgo", "nome": "Ciporgo", "mundo": "floresta", "tipo": "evoluido", "elemento": "leaves", "stat": [60, 52]},
-  {"id": 1002, "slug": "grutim", "nome": "Grutim", "mundo": "montanha", "tipo": "basico", "elemento": "stone", "stat": [18, 26]},
-  {"id": 1003, "slug": "grutar", "nome": "Grutar", "mundo": "montanha", "tipo": "evoluido", "elemento": "stone", "stat": [52, 66]},
+  {"id": 1000, "slug": "broquim", "nome": "Broquim", "mundo": "floresta", "tipo": "basico", "elemento": "leaves", "stat": [22, 20], "modelo": "models/criaturas/broquim.glb"},
+  {"id": 1001, "slug": "ciporgo", "nome": "Ciporgo", "mundo": "floresta", "tipo": "evoluido", "elemento": "leaves", "stat": [60, 52], "modelo": "models/criaturas/ciporgo.glb"},
+  {"id": 1002, "slug": "grutim", "nome": "Grutim", "mundo": "montanha", "tipo": "basico", "elemento": "stone", "stat": [18, 26], "modelo": "models/criaturas/grutim.glb"},
+  {"id": 1003, "slug": "grutar", "nome": "Grutar", "mundo": "montanha", "tipo": "evoluido", "elemento": "stone", "stat": [52, 66], "modelo": "models/criaturas/grutar.glb"},
   {"id": 1004, "slug": "lumisco", "nome": "Lumisco", "mundo": "luz", "tipo": "basico", "elemento": "gold", "stat": [24, 16]},
   {"id": 1005, "slug": "prismar", "nome": "Prismar", "mundo": "luz", "tipo": "evoluido", "elemento": "gold", "stat": [66, 48]},
-  {"id": 1006, "slug": "fagulho", "nome": "Fagulho", "mundo": "fogo", "tipo": "basico", "elemento": "embers", "stat": [25, 17]},
-  {"id": 1007, "slug": "brasgor", "nome": "Brasgor", "mundo": "fogo", "tipo": "evoluido", "elemento": "lava", "stat": [66, 52]},
-  {"id": 1008, "slug": "bolhim", "nome": "Bolhim", "mundo": "mar", "tipo": "basico", "elemento": "water", "stat": [20, 22]},
-  {"id": 1009, "slug": "urtigor", "nome": "Urtigor", "mundo": "mar", "tipo": "evoluido", "elemento": "water", "stat": [58, 56]},
-  {"id": 1010, "slug": "trapim", "nome": "Trapim", "mundo": "trevas", "tipo": "basico", "elemento": "shadow", "stat": [23, 19]},
-  {"id": 1011, "slug": "farrapo", "nome": "Farrapo", "mundo": "trevas", "tipo": "evoluido", "elemento": "shadow", "stat": [64, 50]}
+  {"id": 1006, "slug": "fagulho", "nome": "Fagulho", "mundo": "fogo", "tipo": "basico", "elemento": "embers", "stat": [25, 17], "modelo": "models/criaturas/fagulho.glb"},
+  {"id": 1007, "slug": "brasgor", "nome": "Brasgor", "mundo": "fogo", "tipo": "evoluido", "elemento": "lava", "stat": [66, 52], "modelo": "models/criaturas/brasgor.glb"},
+  {"id": 1008, "slug": "bolhim", "nome": "Bolhim", "mundo": "mar", "tipo": "basico", "elemento": "water", "stat": [20, 22], "modelo": "models/criaturas/bolhim.glb"},
+  {"id": 1009, "slug": "urtigor", "nome": "Urtigor", "mundo": "mar", "tipo": "evoluido", "elemento": "water", "stat": [58, 56], "modelo": "models/criaturas/urtigor.glb"},
+  {"id": 1010, "slug": "trapim", "nome": "Trapim", "mundo": "trevas", "tipo": "basico", "elemento": "shadow", "stat": [23, 19], "modelo": "models/criaturas/trapim.glb"},
+  {"id": 1011, "slug": "farrapo", "nome": "Farrapo", "mundo": "trevas", "tipo": "evoluido", "elemento": "shadow", "stat": [64, 50], "modelo": "models/criaturas/farrapo.glb"},
+  {"id": 1012, "slug": "matagor", "nome": "Matagor", "mundo": "floresta", "tipo": "chefe", "elemento": "leaves", "stat": [92, 84], "modelo": "models/criaturas/matagor.glb"},
+  {"id": 1013, "slug": "abismor", "nome": "Abismor", "mundo": "montanha", "tipo": "chefe", "elemento": "stone", "stat": [84, 98], "modelo": "models/criaturas/abismor.glb"},
+  {"id": 1014, "slug": "ofuscor", "nome": "Ofuscor", "mundo": "luz", "tipo": "chefe", "elemento": "gold", "stat": [98, 80]},
+  {"id": 1015, "slug": "calderon", "nome": "Calderon", "mundo": "fogo", "tipo": "chefe", "elemento": "lava", "stat": [98, 86], "modelo": "models/criaturas/calderon.glb"},
+  {"id": 1016, "slug": "tentacor", "nome": "Tentacor", "mundo": "mar", "tipo": "chefe", "elemento": "water", "stat": [88, 90], "modelo": "models/criaturas/tentacor.glb"},
+  {"id": 1017, "slug": "mortum", "nome": "Mortum", "mundo": "trevas", "tipo": "chefe", "elemento": "shadow", "stat": [96, 82], "modelo": "models/criaturas/mortum.glb"}
  ],
  "repeticao": {"extra": [0, 1, -1, 2, 1, 3, 2, 4], "extra_max": 4, "_nota": "Cada vez que você vence a mesma fase de novo, ela muda inteira: percurso, acampamentos e itens (semente nova a partir do número de vitórias) e a quantidade de inimigos segue esta lista (bichinhos a mais ou a menos que o normal; volta ao começo depois do fim). O nível dos inimigos NÃO muda: ele sobe de uma fase para a outra. O servidor aceita até extra_max a mais."},
  "curva": {
@@ -10698,7 +10704,11 @@
   "nivel": 42,
   "chance_ovo": 0.05,
   "premio": 0,
-  "inimigos": [[1004,36],[1004,36],[1005,37]],
+  "inimigos": [
+   [18,36],
+   [13,36],
+   [4,37]
+  ],
   "caveiras": 5,
   "mapa3d": {
    "largura": 26,
@@ -10722,12 +10732,17 @@
     {
      "x": -2.78,
      "z": 14.0,
-     "inimigos": [[1004,36,-1.43,14.86,"elite"],[1004,36,-4.17,13.22,"elite"]]
+     "inimigos": [
+      [18,36,-1.43,14.86,"elite"],
+      [13,36,-4.17,13.22,"elite"]
+     ]
     },
     {
      "x": -2.58,
      "z": 34.0,
-     "inimigos": [[1005,37,-1.01,34.3,"elite"]]
+     "inimigos": [
+      [4,37,-1.01,34.3,"elite"]
+     ]
     }
    ],
    "folhas": [
