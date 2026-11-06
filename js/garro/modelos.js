@@ -126,7 +126,7 @@ function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img
     d[p]=Math.max(0,Math.min(255,r*255));d[p+1]=Math.max(0,Math.min(255,g*255));d[p+2]=Math.max(0,Math.min(255,b*255))}
   x.putImageData(D,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=map.flipY;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t.wrapS=map.wrapS;t.wrapT=map.wrapT;return EVT[i]=t}
 function applyEvoTex(i){const C=V.C;if(!C||!C.obj)return;C.obj.traverse(o=>{if(o.isMesh&&!o.userData.keep&&o.userData.baseMap){o.material.map=evoTex(i,o.userData.baseMap);o.material.needsUpdate=true}})}
-const ASSETV='80';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
+const ASSETV='81';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
 // lendários: mapa de brilho (partes que acendem: veias, runas, estrelas)
 // enfeite próprio de alguns lendários (auréola de ouro do Solaris), preso na cabeça do modelo
 function enfeiteLeg(obj,m){if(m.extraLeg!=='aureola')return;
