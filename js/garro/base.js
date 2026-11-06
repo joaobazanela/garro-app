@@ -21,7 +21,8 @@ const DRS=LEGD.dragoes||[],DRF=LEGD.dragao_formas||[50,80],DRAG0=DRS.length?DRS[
 for(const Dg of DRS){PLUSH[Dg.id]={i:Dg.id,leg:1,drag:1,slug:Dg.slug,name:Dg.nome,cm:Dg.cm,g:Dg.g,tex:.9,rare:0,desc:Dg.desc,...Dg.sprite};GD.pelucias.STAT[Dg.id]=Dg.stat;GD.pelucias.ELEM[Dg.id]=Dg.elemento}
 const formaIdx=lv=>lv>=DRF[1]?2:lv>=DRF[0]?1:0,formaDe=(i,lv)=>{const Dg=DRS[i-DRAG0];return Dg?Dg.formas[formaIdx(lv)]:null};
 // nome e imagem do dragão acompanham a forma do nível atual
-function atualizaDragoes(){if(typeof lvOf!=='function')return;for(const Dg of DRS){const f=formaDe(Dg.id,lvOf(Dg.id)),p=PLUSH[Dg.id];if(f&&p.img!==f.sprite.img){Object.assign(p,f.sprite,{name:f.nome});try{bakeP(p)}catch(e){}}}}
+function atualizaDragoes(){if(typeof lvOf!=='function')return;for(const Dg of DRS){const f=formaDe(Dg.id,lvOf(Dg.id)),p=PLUSH[Dg.id];if(f&&p.img!==f.sprite.img){Object.assign(p,f.sprite,{name:f.nome});try{bakeP(p)}catch(e){}}
+    try{const M=MODELS[Dg.id];if(f&&M&&M.file!==f.modelo)MODELS[Dg.id]=Object.assign({},M,{file:f.modelo,key:'D'+f.slug})}catch(e){}}}// modelo 3D da forma atual (coleção, visualizador e Aventura)
 function epicDia(){const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return EPS.length?EPS[Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%EPS.length].id:-1}
 
 const {Engine,Bodies,Body,Composite,Constraint,Query,Vertices}=Matter;

@@ -35,3 +35,4 @@ yarn-error.log*
 *.key
 *.mobileprovision
 __pycache__/
+ferramentas/tripo/libmeshopt.so

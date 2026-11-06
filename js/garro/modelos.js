@@ -159,7 +159,7 @@ function attachParts(obj,i,m){const sp0=SPEC[i],sp=Object.assign({},sp0,{x:sp0.x
 // modelo 3D pronto para outras telas (Aventura): grandes = GLB (o evoluído quando houver), redondos = montados em código.
 // Volta um grupo com altura 1, pés em y=0 e olhando para +z. Não mexe no visualizador.
 async function montaModelo(i,evo){
-  if(isDrag(i)&&MODELS[i]){const f=formaDe(i,lvOf(i));if(f&&MODELS[i].file!==f.modelo)MODELS[i]=Object.assign({},MODELS[i],{file:f.modelo,key:'D'+f.slug})}// dragão: o modelo da forma do nível atual
+  if(isDrag(i))atualizaDragoes();// dragão: o modelo da forma do nível atual
   if(i>=CH0&&!isLeg(i)&&!MODELS[i]){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
     const b=new THREE.Box3().setFromObject(C.root),h=b.max.y-b.min.y||1;C.root.scale.setScalar(1/h);C.root.position.y=-b.min.y/h;return g}
   let m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
