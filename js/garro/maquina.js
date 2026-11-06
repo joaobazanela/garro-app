@@ -43,7 +43,10 @@ function fill(n,fromY){
 // ninguém fica acima da linha da divisória: o que assentou lá em cima (parado) sai da máquina com uma nuvenzinha
 const LIM_EXTRA=38;// a área marcada vai um pouco acima do topo da divisória
 function abaixaPilha(mudo){let n=0;for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];if((!mudo&&b===claw.held)||b.plush.won||b.plush.giant||b.plush.leg||b.position.x<DIV)continue;
-    if(b.bounds.min.y<DIVTOP-LIM_EXTRA&&Math.hypot(b.velocity.x,b.velocity.y)<.5){if(!mudo)puff(b.position.x,b.position.y,10,['#fff','#ffd7ef'],true);Composite.remove(world,b);bodies.splice(i,1);n++}}return n}
+    if(b.bounds.min.y<DIVTOP-LIM_EXTRA&&Math.hypot(b.velocity.x,b.velocity.y)<.5){
+      // no jogo: em vez de sumir com uma nuvem (parecia que "explodia"), ele escorrega para o lugar mais baixo da pilha; só sai se não couber mesmo
+      if(!mudo&&(b._desce|0)<3){b._desce=(b._desce|0)+1;Body.setPosition(b,{x:xBaixo(),y:DIVTOP-110});Body.setVelocity(b,{x:0,y:1});continue}
+      Composite.remove(world,b);bodies.splice(i,1);n++}}return n}
 function settlePile(){// enche até a linha da divisória: cai um por vez em cima da pilha; quando um assenta acima da linha, está cheio
   for(let r=0,fora=0;r<70&&bodies.length<30&&fora<6;r++){fill(1,DIVTOP-130);for(let i=0;i<150;i++)Engine.update(engine,1000/60);fora+=abaixaPilha(true)}
   for(let i=0;i<150;i++)Engine.update(engine,1000/60);abaixaPilha(true);
