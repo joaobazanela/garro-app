@@ -222,7 +222,7 @@ window.GARRO={
   stoneLocal:k=>{INV.st[k]=(INV.st[k]||0)+1;saveInv()},stone:k=>STONES[k],
   tone:(f,d,t,v)=>{audio();tone(f,d,t,v)},evento:(k,n)=>evento(k,n),hint:t=>{$('hint').textContent=t},
   // usados pelos Lendários (js/lendarios.js)
-  LEG0,isLeg:i=>isLeg(i),isDrag:i=>isDrag(i),atualizaDragoes:()=>atualizaDragoes(),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i),rbOf(i)),rbOf:i=>rbOf(i),isEvo,REB_B,
+  LEG0,fora:i=>FORA.has(i),isLeg:i=>isLeg(i),isDrag:i=>isDrag(i),atualizaDragoes:()=>atualizaDragoes(),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i),rbOf(i)),rbOf:i=>rbOf(i),isEvo,REB_B,
   abrir:i=>openViewer(i),estante:()=>renderShelf(),collAdd:(i,n)=>{coll[i]=(coll[i]||0)+(n||1);saveX();renderShelf()},collSet:(i,n)=>{coll[i]=n;saveX()},
   hud:()=>hud(),maquina:()=>MACH,
   glb:f=>loadGLB({file:f}).then(g=>g.clone(true))
@@ -242,5 +242,6 @@ $('btnRetryLogin').addEventListener('click',()=>showAuthState('Default'));
   if(s)await iniciarAposLogin();
 })();
 /* admin (DEV): já começa com um bichinho de cada, só na memória do jogo (não vai para o servidor) */
-function devTudo(){if(!DEV)return;for(const p of PLUSH)if(!(coll[p.i]>0))coll[p.i]=1;try{renderShelf();hud()}catch(e){}}
+function devTudo(){if(!DEV)return;for(const p of PLUSH)if(p&&!p.fora&&!(coll[p.i]>0))coll[p.i]=1;// (os redondos antigos aposentados não entram)
+ try{renderShelf();hud()}catch(e){}}
 setTimeout(devTudo,150);

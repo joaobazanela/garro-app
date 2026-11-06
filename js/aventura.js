@@ -127,7 +127,7 @@ function irJan(k){const J=$('advJan');if(!J)return;JAN=Math.max(0,Math.min(D.mun
 // escolher o bichinho
 function pips(e){let s='';for(let k=0;k<EN.max;k++)s+='<i class="'+(k<e?'on':'')+'"></i>';return '<span class="advpips">'+s+'</span>'}
 function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('advTitle').textContent=f.desafio?f.nome:(D.mundos.length>1?f.mundo.nome+' · ':'')+'Fase '+numDe(k);
-  const coll=G.coll(),meus=Object.keys(coll).map(Number).filter(i=>coll[i]>0).sort((a,b)=>G.lvOf(b)-G.lvOf(a));
+  const coll=G.coll(),meus=Object.keys(coll).map(Number).filter(i=>coll[i]>0&&!(G.fora&&G.fora(i))).sort((a,b)=>G.lvOf(b)-G.lvOf(a));
   if(SEL===null||!meus.includes(SEL))SEL=meus[0]??null;
   const LG=f.desafio&&window.GARRO_LEND?window.GARRO_LEND.porId(f.chefe[0]):null;
   let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b>'+(!f.desafio&&vezesDe(f.id)?'<small class="advvez">🔁 '+vezesDe(f.id)+(vezesDe(f.id)===1?' vez jogada':' vezes jogadas')+' · cada vez muda o mapa e a quantidade de inimigos</small>':'')+'<small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
