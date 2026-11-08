@@ -19,10 +19,11 @@ for(const E of EPS){const sp=Object.assign({w:200,h:200,hull:[[.12,.08],[.88,.08
 // dragões (data/lendarios.json → dragoes, ids 57 a 61): entre os lendários e os épicos; nascem de ovo e têm 3 formas (mudam pelo nível)
 const DRS=LEGD.dragoes||[],DRF=LEGD.dragao_formas||[50,80],DRAG0=DRS.length?DRS[0].id:999,isDrag=i=>i>=DRAG0&&i<DRAG0+DRS.length;
 for(const Dg of DRS){PLUSH[Dg.id]={i:Dg.id,leg:1,drag:1,slug:Dg.slug,name:Dg.nome,cm:Dg.cm,g:Dg.g,tex:.9,rare:0,desc:Dg.desc,...Dg.sprite};GD.pelucias.STAT[Dg.id]=Dg.stat;GD.pelucias.ELEM[Dg.id]=Dg.elemento}
+const DRESC=LEGD.dragao_tamanho||[.62,.8,1];// tamanho de cada forma (o filhote é menor, como na arte)
 const formaIdx=lv=>lv>=DRF[1]?2:lv>=DRF[0]?1:0,formaDe=(i,lv)=>{const Dg=DRS[i-DRAG0];return Dg?Dg.formas[formaIdx(lv)]:null};
 // nome e imagem do dragão acompanham a forma do nível atual
 function atualizaDragoes(){if(typeof lvOf!=='function')return;for(const Dg of DRS){const f=formaDe(Dg.id,lvOf(Dg.id)),p=PLUSH[Dg.id];if(f&&p.img!==f.sprite.img){Object.assign(p,f.sprite,{name:f.nome});try{bakeP(p)}catch(e){}}
-    try{const M=MODELS[Dg.id];if(f&&M&&M.file!==f.modelo)MODELS[Dg.id]=Object.assign({},M,{file:f.modelo,key:'D'+f.slug})}catch(e){}}}// modelo 3D da forma atual (coleção, visualizador e Aventura)
+    try{const M=MODELS[Dg.id],esc=(Dg.tamanho||1.15)*(DRESC[formaIdx(lvOf(Dg.id))]||1);if(f&&M&&(M.file!==f.modelo||M.escala!==esc))MODELS[Dg.id]=Object.assign({},M,{file:f.modelo,key:'D'+f.slug,escala:esc})}catch(e){}}}// modelo 3D da forma atual (coleção, visualizador e Aventura)
 function epicDia(){const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return EPS.length?EPS[Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%EPS.length].id:-1}
 
 const {Engine,Bodies,Body,Composite,Constraint,Query,Vertices}=Matter;

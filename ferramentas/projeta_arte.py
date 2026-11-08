@@ -19,10 +19,21 @@ def projeta(P, UV, I, tex, arte, lado):
     rgb = A[..., :3]; sat = rgb.max(2)-rgb.min(2); claro = (rgb.mean(2) > 175) & (sat < 40)
     bom = ndi.binary_erosion(A[..., 3] > 128, iterations=2) & ~claro
     U = -P[:, 2] if lado == 'lado' else P[:, 2] if lado == 'lado_d' else P[:, 0]; V = P[:, 1]
+    if lado == 'eixo':  # vista de lado ao longo do eixo comprido do corpo (para modelos virados de 3/4); a cabeça (+z) fica à esquerda
+        c = P[:, [0, 2]]-P[:, [0, 2]].mean(0); w, vv = np.linalg.eigh(np.cov(c.T)); ax = vv[:, np.argmax(w)]
+        if ax[1] < 0: ax = -ax
+        U = -(c@ax)
     # silhueta do modelo nessa vista: ajusta para a caixa do desenho
     pu = x0+(U-U.min())/(U.max()-U.min())*(x1-x0); pv = y1-(V-V.min())/(V.max()-V.min())*(y1-y0)
     out = T.copy(); feito = np.zeros((S, S), bool)
     uv = UV*[S, S]; uv[:, 1] = uv[:, 1]  # glTF: v para baixo na imagem
+    # só pinta as faces viradas para o lado da vista (de frente para a câmera do desenho); as viradas para a frente/topo
+    # ficariam com a arte esticada em listras
+    tri = P[I]; fn = np.cross(tri[:, 1]-tri[:, 0], tri[:, 2]-tri[:, 0]); fn /= np.linalg.norm(fn, axis=1, keepdims=True)+1e-12
+    if lado == 'frente': vis = np.abs(fn[:, 2])
+    elif lado == 'eixo': perp = np.array([ax[1], 0, -ax[0]]); vis = np.abs(fn@perp)
+    else: vis = np.abs(fn[:, 0])
+    I = I[vis > .55]
     for t in I:
         a, b, c = uv[t]; mn = np.floor(np.minimum(np.minimum(a, b), c)).astype(int); mx = np.ceil(np.maximum(np.maximum(a, b), c)).astype(int)
         mn = np.clip(mn, 0, S-1); mx = np.clip(mx, 0, S-1)
