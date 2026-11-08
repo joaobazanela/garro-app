@@ -260,6 +260,7 @@ function gloop(now){
   V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
   if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
   else{C.root.position.x*=.8;C.root.position.z+=(-G.back-C.root.position.z)*.25;C.root.rotation.y*=.8}
+  pisaNoChao(C,hopY+(st==='run'?Math.abs(Math.sin(t*14))*.1:0)+(st==='belly'?.04:0));
   popTick(C);stage(t);
   V.renderer.render(V.scene,V.cam);
   if(V.open&&V.mode==='glb')V.raf=requestAnimationFrame(gloop);
@@ -382,6 +383,15 @@ function openFoxViewer(i){if(!openFox(i)){detail(i);return}const p=PLUSH[i];$('g
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
 function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
+// lendários, épicos e dragões são compridos: ao inclinar/rolar, a conta de altura (feita para os bichinhos redondinhos)
+// levantava ou afundava as patas. Aqui o ponto mais baixo do modelo é medido de verdade e encostado no chão (+ pulinho).
+function pisaNoChao(C,alvo){const m=MODELS[V.cur];if(!m||!m.leg||!C.roll)return;
+  if(!C._pts){const pts=[],inv=new THREE.Matrix4();C.roll.updateMatrixWorld(true);inv.copy(C.roll.matrixWorld).invert();const v=new THREE.Vector3();
+    C.roll.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const pa=o.geometry.attributes.position,M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld),st=Math.max(1,Math.floor(pa.count/400));
+      for(let k=0;k<pa.count;k+=st){v.fromBufferAttribute(pa,k).applyMatrix4(M);pts.push(v.x,v.y,v.z)}});C._pts=new Float32Array(pts)}
+  C.roll.updateMatrix();const e=C.roll.matrix.elements,P=C._pts;let mn=1e9;
+  for(let k=0;k<P.length;k+=3){const y=e[1]*P[k]+e[5]*P[k+1]+e[9]*P[k+2]+e[13];if(y<mn)mn=y}
+  if(mn<1e8)C.roll.position.y+=alvo-mn}
 function openViewer(i){atualizaDragoes();
   vTags(i);if(i>=CH0&&!isLeg(i)&&!MODELS[i]){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
   if(MODELS[i]){const rq=V.rq=(V.rq|0)+1;// o corpo antigo (em código) nunca aparece: se o modelo 3D não carregar, tenta de novo e avisa
