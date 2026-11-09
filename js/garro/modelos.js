@@ -126,7 +126,7 @@ function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img
     d[p]=Math.max(0,Math.min(255,r*255));d[p+1]=Math.max(0,Math.min(255,g*255));d[p+2]=Math.max(0,Math.min(255,b*255))}
   x.putImageData(D,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=map.flipY;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t.wrapS=map.wrapS;t.wrapT=map.wrapT;return EVT[i]=t}
 function applyEvoTex(i){const C=V.C;if(!C||!C.obj)return;C.obj.traverse(o=>{if(o.isMesh&&!o.userData.keep&&o.userData.baseMap){o.material.map=evoTex(i,o.userData.baseMap);o.material.needsUpdate=true}})}
-const ASSETV='82';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
+const ASSETV='83';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
 // lendários: mapa de brilho (partes que acendem: veias, runas, estrelas)
 // enfeite próprio de alguns lendários (auréola de ouro do Solaris), preso na cabeça do modelo
 function enfeiteLeg(obj,m){if(m.extraLeg!=='aureola')return;
@@ -387,11 +387,13 @@ function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}cons
 // levantava ou afundava as patas. Aqui o ponto mais baixo do modelo é medido de verdade e encostado no chão (+ pulinho).
 function pisaNoChao(C,alvo){const m=MODELS[V.cur];if(!m||!m.leg||!C.roll)return;
   if(!C._pts){const pts=[],inv=new THREE.Matrix4();C.roll.updateMatrixWorld(true);inv.copy(C.roll.matrixWorld).invert();const v=new THREE.Vector3();
-    C.roll.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const pa=o.geometry.attributes.position,M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld),st=Math.max(1,Math.floor(pa.count/400));
+    C.roll.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const pa=o.geometry.attributes.position,M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld),st=Math.max(1,Math.floor(pa.count/1500));
       for(let k=0;k<pa.count;k+=st){v.fromBufferAttribute(pa,k).applyMatrix4(M);pts.push(v.x,v.y,v.z)}});C._pts=new Float32Array(pts)}
-  C.roll.updateMatrix();const e=C.roll.matrix.elements,P=C._pts;let mn=1e9;
+  // mede no mundo (o palco inclina quando o jogador arrasta para cima/baixo, o chão não): encosta o ponto mais baixo no chão
+  if(V.ground===undefined)return;V.spin.updateMatrixWorld(true);const e=C.roll.matrixWorld.elements,P=C._pts;let mn=1e9;
   for(let k=0;k<P.length;k+=3){const y=e[1]*P[k]+e[5]*P[k+1]+e[9]*P[k+2]+e[13];if(y<mn)mn=y}
-  if(mn<1e8)C.roll.position.y+=alvo-mn}
+  const esc=(V.k||1)*(V.spin.scale.y/(V.k||1))*(C.root.scale.y||1);// unidades do mundo por unidade do 'roll'
+  if(mn<1e8&&esc>0)C.roll.position.y+=(V.ground+alvo*esc-mn)/esc}
 function openViewer(i){atualizaDragoes();
   vTags(i);if(i>=CH0&&!isLeg(i)&&!MODELS[i]){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
   if(MODELS[i]){const rq=V.rq=(V.rq|0)+1;// o corpo antigo (em código) nunca aparece: se o modelo 3D não carregar, tenta de novo e avisa
