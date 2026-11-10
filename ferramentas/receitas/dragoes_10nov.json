@@ -58,10 +58,6 @@
    -0.12,
    0.27
   ],
-  "venturi": [
-   -0.18,
-   0.17
-  ],
   "tempestral": [
    -0.2,
    0.22
@@ -92,20 +88,26 @@
   ],
   "ondar": [
    -0.2,
-   1
+   1,
+   "K=1.1"
   ],
   "abissor": [
    -0.22,
-   1
-  ],
-  "pedrim": [
-   -0.3,
-   0.2
+   1,
+   "K=1.0"
   ],
   "terrabruto": [
    -0.3,
-   0.2
+   1
+  ],
+  "rochedo": [
+   -0.32,
+   1
+  ],
+  "soprim": [
+   -0.25,
+   0.3
   ]
  },
- "_nota_cauda": "No jogo: figura de FRENTE (corpo e cabeça como a arte, chibi) + a cauda da figura de lado (ferramentas/junta_cauda.py, CAIXA=zmax,ymax da cauda na figura de lado). Exceções: rochedo usa só a figura de lado (a de frente é muito diferente) e soprim só a de frente."
+ "_nota_cauda": "No jogo: figura de FRENTE (corpo e cabeça como a arte) + a cauda da figura de lado (ferramentas/junta_cauda.py com CAIXA=zmax,ymax da cauda na figura de lado; a cauda vai para o meio do corpo, na altura do quadril, com a base enterrada). Só a figura de frente: pedrim (já tem cauda) e venturi (a cauda de lado não presta)."
 }

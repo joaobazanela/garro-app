@@ -62,7 +62,7 @@ def fatia(P, z, larg, H, xlim=None):
 def pe_tras(P):
     H = P[:, 1].max(); Q = P[P[:, 1] < .05*H]; return np.percentile(Q[:, 2], 4), np.percentile(Q[:, 2], 96), H
 
-TETO = float(os.environ.get('TETO', '1.1')); FINO = float(os.environ.get('FINO', '.035'))
+ENTRA = float(os.environ.get('ENTRA', '.6')); RAIO = float(os.environ.get('RAIO', '.06')); ALT = float(os.environ.get('ALT', '.45')); TETO = float(os.environ.get('TETO', '1.1')); FINO = float(os.environ.get('FINO', '.035'))
 def junta(fF, fL, out, dentro=.06, caixa=None):
     PF, UVF, IF, imF = le(fF); PL, UVL, IL, imL = le(fL); PL0 = PL.copy()
     HF = PF[:, 1].max()
@@ -111,16 +111,32 @@ def junta(fF, fL, out, dentro=.06, caixa=None):
         print('fino tirado:', int(tf.sum()), 'de', len(tf))
     used = np.unique(T); rm = -np.ones(len(PL), np.int64); rm[used] = np.arange(len(used))
     PT, UVT, IT = PL[used].copy(), UVL[used].copy(), rm[T]
-    # 3) a base da cauda fica DENTRO do quadril: se ficou longe do corpo da de frente, aproxima
-    base = PT[PT[:, 2] > PT[:, 2].max()-.04*spF].mean(0)
+    # 3) coloca a cauda: no plano do meio do corpo (x), na altura do quadril, com a base enterrada no quadril
     from scipy.spatial import cKDTree
-    d, j = cKDTree(PF[corpo]).query(base)
-    if caixa:   # alvo: o fim do quadril da de frente, na altura do quadril, no meio do corpo; a base entra um pouco nele
-        yq = np.percentile(sF[:, 1], 60) if len(sF) else HF*.3
-        rab = PF[corpo & (np.abs(PF[:, 1]-yq) < .12*HF)]
-        alvo = np.array([np.median(rab[:, 0]), yq, np.percentile(rab[:, 2], 1)+dentro*spF])
-        PT += alvo-np.array([base[0], base[1], PT[:, 2].max()])
-    elif d > .02: PT += (PF[corpo][j]-base)+np.array([0, 0, dentro*spF*.5])
+    d = 0.
+    if caixa:
+        PT = PL0[used].copy()                                   # volta às medidas da figura de lado
+        zL0, zL1, HL = pe_tras(PL0); slL = fatia(PL0, zL0, .06*(zL1-zL0), HL, xlim=.15)
+        hipL = np.percentile(slL[:, 1], 90) if len(slL) else HL*.5
+        hipF = np.percentile(sF[:, 1], 90) if len(sF) else HF*.5
+        # a cauda fica num plano vertical: gira em torno de y até esse plano ser o x = constante
+        c = PT[:, [0, 2]]-PT[:, [0, 2]].mean(0); w, vv = np.linalg.eigh(np.cov(c.T)); v = vv[:, np.argmax(w)]
+        if v[1] < 0: v = -v
+        a = np.arctan2(v[0], v[1]); ca, sa = np.cos(a), np.sin(a)
+        PT = np.c_[PT[:, 0]*ca-PT[:, 2]*sa, PT[:, 1], PT[:, 0]*sa+PT[:, 2]*ca]
+        # base = a fatia do corte (o maior z da cauda): centro e raio dela
+        zt = PT[:, 2].max(); B = PT[PT[:, 2] > zt-.025]
+        y0, y1 = np.percentile(B[:, 1], 5), np.percentile(B[:, 1], 95)
+        bc = np.array([np.median(B[:, 0]), (y0+y1)/2, zt]); raio = float((y1-y0)/2)
+        k = float(os.environ['K']) if os.environ.get('K') else float(np.clip(RAIO/max(raio, 1e-3), .6, 1.7)); PT = (PT-bc)*k; raio *= k   # grossura da base parecida em todos
+        x0 = 0.                                                 # o modelo de frente é simétrico e centrado
+        col = PF[np.abs(PF[:, 0]) < .06]; ztras = np.percentile(col[:, 2], 2); tras = col[col[:, 2] < ztras+.08]
+        yt = float(max(ALT*np.percentile(tras[:, 1], 95), raio+.01))
+        perto = PF[(np.abs(PF[:, 0]) < max(raio, .03)) & (np.abs(PF[:, 1]-yt) < max(raio, .03))]
+        zs = perto[:, 2].min() if len(perto) else ztras         # superfície de trás do quadril nesse ponto
+        PT += np.array([x0, yt, zs+ENTRA*raio])
+        if PT[:, 1].min() < 0: PT[:, 1] -= PT[:, 1].min()       # a cauda não fura o chão
+        d = raio
     # 4) cor: a cauda puxa para a cor do quadril da de frente
     qF = np.nonzero((np.abs(PF[:, 2]-zr) < .1*spF) & corpo)[0]; qL = np.nonzero((np.abs(PL[:, 2]-zr) < .1*spF) & (PL[:, 1] > .1*HF))[0]
     ganho = np.clip(cor_media(imF, UVF, qF)/np.maximum(cor_media(imL, UVL, qL), 1), .8, 1.25) if len(qF) and len(qL) else np.ones(3)
@@ -129,11 +145,10 @@ def junta(fF, fL, out, dentro=.06, caixa=None):
     at = Image.new('RGB', (W*2, Hh)); at.paste(imF.resize((W, Hh)), (0, 0)); at.paste(imL2.resize((W, Hh)), (W, 0))
     UVa = np.c_[UVF[:, 0]*.5, UVF[:, 1]]; UVb = np.c_[UVT[:, 0]*.5+.5, UVT[:, 1]]
     P = np.concatenate([PF, PT]); UV = np.concatenate([UVa, UVb]); I = np.concatenate([IF, IT+len(PF)])
-    P[:, 1] -= P[:, 1].min()
     mn, mx = P.min(0), P.max(0); kk = .98/max(mx-mn); P = (P-np.array([(mn[0]+mx[0])/2, mn[1], (mn[2]+mx[2])/2]))*kk
     if os.environ.get('SO_CAUDA'): P, UV, I = P[len(PF):], UV[len(PF):], I[len(IF):]-len(PF)
     grava(out, P, normais(P, I), UV, I, at, q=86)
-    print(os.path.basename(out), 'cauda', len(IT), 'tri; escala', round(s, 2), 'base longe', round(float(d), 3), 'pedaços', [(x[1], 'perna' if x[2] else 'asa' if x[3] else 'ok', bool(x[4])) for x in sorted(info, key=lambda x: -x[1])[:5]])
+    print(os.path.basename(out), 'cauda', len(IT), 'tri; escala', round(s, 2), 'raio da base', round(float(d), 3), 'k', round(float(k), 2) if caixa else '', 'yt', round(float(yt), 2) if caixa else '', 'pedaços', [(x[1], 'perna' if x[2] else 'asa' if x[3] else 'ok', bool(x[4])) for x in sorted(info, key=lambda x: -x[1])[:5]])
 
 if __name__ == '__main__':
     a = [x for x in sys.argv[1:] if not x.startswith('--')]; d = float(sys.argv[sys.argv.index('--dentro')+1]) if '--dentro' in sys.argv else .06
