@@ -86,8 +86,8 @@ def junta(fF, fL, out, dentro=.06, caixa=None):
         toca = Pc[:, 2].max() > zc-.03*spF
         info.append((k, len(tri), perna, asa, toca))
     boas = [x for x in info if not x[2] and not x[3] and x[4]] or [x for x in info if not x[2] and not x[3]]
-    if not boas: raise SystemExit('sem cauda em '+fL)
-    k = max(boas, key=lambda x: x[1])[0]; T = T[lab[T[:, 0]] == k]
+    if not boas and not caixa: raise SystemExit('sem cauda em '+fL)
+    if boas: k = max(boas, key=lambda x: x[1])[0]; T = T[lab[T[:, 0]] == k]
     if caixa:   # caixa da cauda dada à mão (coordenadas da figura de lado: z < zmax e y < ymax), abaixo da asa
         zmax, ymax = caixa; dentro_cx = (PL0[IL][:, :, 2] < zmax).all(1) & (PL0[IL][:, :, 1] < ymax).all(1); T = IL[dentro_cx]
         lc = comp(T, len(PL), PL); idc, nc_ = np.unique(lc[T[:, 0]], return_counts=True); T = T[lc[T[:, 0]] == idc[nc_.argmax()]]

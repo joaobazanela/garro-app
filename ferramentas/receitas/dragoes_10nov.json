@@ -77,7 +77,35 @@
   "noctarion": [
    -0.18,
    0.27
+  ],
+  "brasin": [
+   -0.2,
+   1
+  ],
+  "brasor": [
+   -0.2,
+   1
+  ],
+  "gotim": [
+   -0.2,
+   1
+  ],
+  "ondar": [
+   -0.2,
+   1
+  ],
+  "abissor": [
+   -0.22,
+   1
+  ],
+  "pedrim": [
+   -0.3,
+   0.2
+  ],
+  "terrabruto": [
+   -0.3,
+   0.2
   ]
  },
- "_nota_cauda": "Os com asas: figura de frente + cauda da figura de lado (ferramentas/junta_cauda.py, CAIXA=zmax,ymax da cauda na figura de lado)."
+ "_nota_cauda": "No jogo: figura de FRENTE (corpo e cabeça como a arte, chibi) + a cauda da figura de lado (ferramentas/junta_cauda.py, CAIXA=zmax,ymax da cauda na figura de lado). Exceções: rochedo usa só a figura de lado (a de frente é muito diferente) e soprim só a de frente."
 }
