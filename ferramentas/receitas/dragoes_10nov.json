@@ -1,5 +1,5 @@
 {
- "_nota": "Folha do Tripo enviada em 10/11 (dragon_3d_model__1__1.glb): 5 linhas (fogo, água, terra, céu, sombra) x 6 colunas = cada dragão (inicial, evolução 2, final) aparece de frente e de lado. As de lado (com a cauda inteira) entram no jogo, viradas para +z pelo giro_auto.",
+ "_nota": "Folha do Tripo enviada em 10/11 (dragon_3d_model__1__1.glb): 5 linhas (fogo, água, terra, céu, sombra) x 6 colunas = cada dragão (inicial, evolução 2, final) aparece de frente e de lado. No jogo: os sem asas usam a figura de lado (cauda inteira, virada para +z pelo giro_auto); os com asas (brasarok, venturi, tempestral, breumin, umbraz, noctarion) usam a de frente, porque na de lado a asa vira uma folha só.",
  "colunas": 6,
  "linhas": 5,
  "nomes": [
