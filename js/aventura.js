@@ -460,8 +460,10 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
   const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=(redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1))*(R.gig?1.3:1)*(G.tamForma?G.tamForma(R.i):1);// gigante fica maiorhg.scale.setScalar(Hs);
-  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
-  R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
+  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));const hroot=new T.Group();let yg=null;
+  if(hg.userData.plano){const tilt=new T.Group();yg=new T.Group();yg.add(hg);tilt.add(yg);tilt.rotation.x=AR.tilt_plano||.6;hroot.add(tilt)}// dragão em relevo: deita um pouco para trás, de frente para a câmera alta (a sombra fica no chão)
+  else hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
+  R.p={g:hroot,m:hg,yg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);
   R.minMobs=((M.acampamentos[0]&&M.acampamentos[0].inimigos.length)||0)+5;// portal só abre depois de matar pelo menos os bichinhos do acampamento inicial (+5)
   if(f.chefe&&M.arena){const b=await novoInimigo(f.chefe[0],f.chefe[1],M.arena.x,M.arena.z+2,{x:M.arena.x,z:M.arena.z},true);R.w.ents.push(b);R.w.boss=b}
@@ -665,11 +667,14 @@ function desistir(){const R=RUN;if(!R||(R.fim&&!R.fimPend)){limpa3D();mapa();ret
 
 // ---- desenho ----
 const V3=()=>new (G.THREE().Vector3)();
+// dragão 'plano' (arte em relevo): a câmera vem de trás, então ele fica de costas para ela (0) ou de frente (π),
+// virando para o lado em que anda (a cabeça da arte aponta para -x); a virada é rápida, como uma carta
+function viraPlano(p){const sx=Math.sin(p.ang);if(sx<-.2)p.lado=0;else if(sx>.2)p.lado=Math.PI;if(p.lado==null)p.lado=Math.PI;p.yv=(p.yv==null?p.lado:p.yv)+(p.lado-(p.yv==null?p.lado:p.yv))*.4;return p.yv}
 function desenha(){const R=RUN;if(!R||!R.r3||!R.p)return;const {rd,S,cam}=R.r3,p=R.p,w=R.w;
   // resolução que se ajusta: se o aparelho não dá conta (quadro > 24 ms), baixa a resolução; se sobra, sobe de volta
   {const q=R.r3,ag=performance.now(),dq=ag-(q.tl||ag);q.tl=ag;if(dq>0&&dq<250)q.ema=(q.ema||16)*.94+dq*.06;q.prMax=q.prMax||rd.getPixelRatio();
     if(!q.tq)q.tq=ag;else if(ag-q.tq>1500){q.tq=ag;const pr=rd.getPixelRatio();if(q.ema>24&&pr>1)rd.setPixelRatio(Math.max(1,pr-.25));else if(q.ema<15&&pr<q.prMax)rd.setPixelRatio(Math.min(q.prMax,pr+.25))}}
-  p.g.position.set(p.x+Math.sin(p.ang)*p.lunge*1.5,0,p.z+Math.cos(p.ang)*p.lunge*1.5);p.g.rotation.y=p.ang;p.g.visible=!(p.inv>0&&!p.dash&&Math.floor(p.inv*16)%2);
+  p.g.position.set(p.x+Math.sin(p.ang)*p.lunge*1.5,0,p.z+Math.cos(p.ang)*p.lunge*1.5);if(p.yg){p.g.rotation.y=0;p.yg.rotation.y=viraPlano(p)}else p.g.rotation.y=p.ang;p.g.visible=!(p.inv>0&&!p.dash&&Math.floor(p.inv*16)%2);
   for(const e of w.ents){if(!e.g.visible)continue;e.lunge=Math.max(0,(e.lunge||0)-1/60);e.g.position.x=e.x+Math.sin(e.ang)*e.lunge*1.2;e.g.position.z=e.z+Math.cos(e.ang)*e.lunge*1.2;e.g.rotation.y=e.ang;
     const tr=e.aviso>0&&!e.chefe?1+Math.sin(R.t*40)*.06:1;e.m.scale.setScalar(e.s*tr);e.pisca=Math.max(0,(e.pisca||0)-1/60);e.m.position.y=e.pisca>0?.08:0}
   for(const it of w.itens)if(!it.ok)it.g.rotation.y+=.03;

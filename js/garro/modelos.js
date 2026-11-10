@@ -126,7 +126,7 @@ function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img
     d[p]=Math.max(0,Math.min(255,r*255));d[p+1]=Math.max(0,Math.min(255,g*255));d[p+2]=Math.max(0,Math.min(255,b*255))}
   x.putImageData(D,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=map.flipY;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t.wrapS=map.wrapS;t.wrapT=map.wrapT;return EVT[i]=t}
 function applyEvoTex(i){const C=V.C;if(!C||!C.obj)return;C.obj.traverse(o=>{if(o.isMesh&&!o.userData.keep&&o.userData.baseMap){o.material.map=evoTex(i,o.userData.baseMap);o.material.needsUpdate=true}})}
-const ASSETV='83';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
+const ASSETV='84';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
 // lendários: mapa de brilho (partes que acendem: veias, runas, estrelas)
 // enfeite próprio de alguns lendários (auréola de ouro do Solaris), preso na cabeça do modelo
 function enfeiteLeg(obj,m){if(m.extraLeg!=='aureola')return;
@@ -172,7 +172,7 @@ async function montaModelo(i,evo){
     const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;mm.roughness=.92;mm.metalness=0;brilhoLeg(mm,m,glow);o.material=mm}});
   if(!m.evoM){try{if(m.HC)attachParts(obj,i,m);else attachExtras(obj,i,m)}catch(e){}}enfeiteLeg(obj,m);
   obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=Math.max(b.max.y-b.min.y,m.desliza?Math.max(b.max.z-b.min.z,b.max.x-b.min.x)*.45:0)||1,g=new THREE.Group();// serpente deitada: escala pelo comprimento, não pela altura
-  obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);g.userData.bol=!!m.bol;return g}
+  obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);g.userData.bol=!!m.bol;g.userData.plano=ehPlano(obj);return g}
 // tira da cena qualquer modelo que tenha ficado de uma abertura anterior (evita dois bichinhos na tela)
 function tiraModelos(){if(!V.spin)return;for(const c of V.spin.children.slice())if(c.userData.modelo)V.spin.remove(c)}
 // modo 'leve': se o modelo detalhado ainda não chegou, abre na hora com a versão leve (_lo) e troca pela detalhada quando ela carregar
@@ -196,7 +196,7 @@ async function openGLB(i,modo){setDet(i);const tok=V.abre=(V.abre||0)+1;// se ab
   const roll=new THREE.Group(),root=new THREE.Group();obj.scale.setScalar(k);obj.position.y=-sz.y*k/2;roll.add(obj);roll.position.y=sz.y*k/2;root.add(roll);
   root.position.y=-1;tiraModelos();root.userData.modelo=1;V.spin.add(root);
   setFloor(i);castAll(root);
-  V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts};V.mode='glb';V.chibi=false;V.sp={};
+  V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts,plano:ehPlano(obj)};V.mode='glb';V.chibi=false;V.sp={};
   {const st=careStage(i);V.C.gs=m.leg?GROW[1].gs*(m.escala||1):m.bol?.85:GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
   V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(careStage(i)||m.leg)makeAura(i);
   if(modo!=='troca')Object.assign(V,{ry:temVista(i)?vistaLeg(i):-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
@@ -254,11 +254,12 @@ function gloop(now){
   // squash keeps the feet on the floor (scale is taken around the middle of the body)
   const br=Math.sin(t*2.2*sp)*.015,sy=1+br-G.crouch*.1;
   C.roll.scale.set(1+G.crouch*.05,sy,1+G.crouch*.03);
-  C.roll.rotation.z=G.roll+shk+G.lean*(1-G.roll/Math.PI);C.roll.rotation.x=G.pitch;C.roll.rotation.y=G.byaw*(1-G.roll/Math.PI);
+  C.roll.rotation.z=G.roll+shk+G.lean*(1-G.roll/Math.PI);C.roll.rotation.x=G.pitch;C.roll.rotation.y=G.byaw*(1-G.roll/Math.PI)*(C.plano?.4:1);
   const desl=!!(MODELS[V.cur]&&MODELS[V.cur].desliza),hopY=act==='hop'&&!desl?Math.abs(Math.sin(ae*Math.PI*1.6))*.16*G.hop:0;// serpente desliza: sem pulinhos
   C.roll.position.y=C.h/2*sy+(st==='belly'?.04:0)+(desl?0:G.bob*Math.abs(Math.sin(t*7))*.05)+hopY+Math.abs(G.pitch)*C.h*.25+(C.wx?(C.wx/2-C.h/2*sy)*Math.max(0,Math.sin(Math.min(G.roll,Math.PI/2))):0)+(st==='tired'?Math.sin(t*2.4)*.008:0);
-  V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
-  if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
+  V.ry+=V.vy;V.vy*=.92;if(C.plano&&Math.abs(V.vy)<.003){const x=V.ry-Math.round(V.ry/Math.PI)*Math.PI;if(Math.abs(x)>.35)V.ry-=Math.sign(x)*(Math.abs(x)-.35)*.08}
+  V.spin.rotation.y=C.plano?yawPlano(V.ry):V.ry;V.spin.rotation.x=V.rx*.6;
+  if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=C.plano?0:r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
   else{C.root.position.x*=.8;C.root.position.z+=(-G.back-C.root.position.z)*.25;C.root.rotation.y*=.8}
   pisaNoChao(C,hopY+(st==='run'?Math.abs(Math.sin(t*14))*.1:0)+(st==='belly'?.04:0));
   popTick(C);stage(t);
@@ -385,6 +386,10 @@ function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}cons
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
 // lendários, épicos e dragões são compridos: ao inclinar/rolar, a conta de altura (feita para os bichinhos redondinhos)
 // levantava ou afundava as patas. Aqui o ponto mais baixo do modelo é medido de verdade e encostado no chão (+ pulinho).
+// modelo 'plano' (dragões novos: a arte em relevo, frente e costas, quase sem espessura): de lado vira um palito.
+// Então o giro do palco nunca para de lado: perto da frente (0) ou das costas (π) gira normal; passando disso vira rápido para o outro lado.
+function ehPlano(obj){const b=new THREE.Box3().setFromObject(obj),s=b.getSize(new THREE.Vector3());return s.z<Math.max(s.x,s.y)*.25}
+function yawPlano(a){const P=Math.PI,k=Math.round(a/P)*P,x=a-k,ax=Math.abs(x);if(ax<=.35)return a;const q=(ax-.35)/(P/2-.35);return k+Math.sign(x)*(.35+(P/2-.35)*q*q*q*q)}
 function pisaNoChao(C,alvo){const m=MODELS[V.cur];if(!m||!m.leg||!C.roll)return;
   if(!C._pts){const pts=[],inv=new THREE.Matrix4();C.roll.updateMatrixWorld(true);inv.copy(C.roll.matrixWorld).invert();const v=new THREE.Vector3();
     C.roll.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const pa=o.geometry.attributes.position,M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld),st=Math.max(1,Math.floor(pa.count/1500));
