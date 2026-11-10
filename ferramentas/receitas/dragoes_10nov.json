@@ -52,5 +52,32 @@
   "breumin_lado": "-x",
   "umbraz_lado": "-x",
   "noctarion_lado": "-x"
- }
+ },
+ "cauda_caixa": {
+  "brasarok": [
+   -0.12,
+   0.27
+  ],
+  "venturi": [
+   -0.18,
+   0.17
+  ],
+  "tempestral": [
+   -0.2,
+   0.22
+  ],
+  "breumin": [
+   -0.22,
+   0.24
+  ],
+  "umbraz": [
+   -0.22,
+   0.27
+  ],
+  "noctarion": [
+   -0.18,
+   0.27
+  ]
+ },
+ "_nota_cauda": "Os com asas: figura de frente + cauda da figura de lado (ferramentas/junta_cauda.py, CAIXA=zmax,ymax da cauda na figura de lado)."
 }

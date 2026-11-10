@@ -52,12 +52,17 @@ function estante(){if(!sec)return;const coll=G.coll(),ovos=box().ovos.filter(o=>
   // épicos (data/lendarios.json → epicos): aparecem trancados até pegar; a máquina do épico abre com tudo completo
   const EP=D.epicos||[];if(EP.length){h+='</div><div class="leghead"><h3>🔥 Épicos <small>'+EP.filter(x=>coll[x.id]>0).length+' de '+EP.length+'</small></h3></div><div class="leggrid epgrid">';
     for(const x of EP){const n=coll[x.id]||0;h+='<button type="button" class="legslot'+(n?'':' lock')+'" data-i="'+x.id+'"><img src="'+(n||!x.ovo?x.sprite.img:x.ovo.img)+'" alt=""><span>'+(n?x.nome:'???')+'</span>'+(n?'<u>NV '+G.lvOf(x.id)+'</u>':'')+'</button>'}}
-  // dragões (data/lendarios.json → dragoes): mostram a forma do nível atual; sem ele, o ovo
-  if(DRG.length){if(G.atualizaDragoes)G.atualizaDragoes();h+='</div><div class="leghead"><h3>🐉 Dragões <small>'+DRG.filter(x=>coll[x.id]>0).length+' de '+DRG.length+'</small></h3></div><div class="leggrid">';
-    for(const x of DRG){const n=coll[x.id]||0;h+='<button type="button" class="legslot'+(n?'':' lock')+'" data-i="'+x.id+'"><img src="'+(n?G.plush(x.id).img:ovoImg(x))+'" alt=""><span>'+(n?G.plush(x.id).name:'???')+'</span>'+(n?'<u>NV '+G.lvOf(x.id)+'</u>':'')+'</button>'}}
+  // dragões (data/lendarios.json → dragoes): cada um numa linha com as 3 formas — 1 (inicial), 2 (evolução da 1), 3 (evolução da 2).
+  // Sem o dragão: o ovo e as formas trancadas. Com ele: as formas que já alcançou abrem; as outras mostram o nível (o admin abre todas).
+  if(DRG.length){if(G.atualizaDragoes)G.atualizaDragoes();h+='</div><div class="leghead"><h3>🐉 Dragões <small>'+DRG.filter(x=>coll[x.id]>0).length+' de '+DRG.length+'</small></h3></div><div class="leggrid drggrid">';
+    for(const x of DRG){const n=coll[x.id]||0,lv=G.lvOf(x.id),tem=G.formaIdx(lv),at=G.formaDoDrag(x.id),DF=G.DRF;
+      x.formas.forEach((f,k)=>{const ok=n&&(G.dev()||k<=tem),img=f.sprite.img,quando=k===0?'inicial':'Nv '+DF[k-1];
+        h+='<button type="button" class="legslot'+(ok?'':' lock')+(n&&k===at?' on':'')+'" data-i="'+x.id+'" data-f="'+k+'"><i class="drgn">'+(k+1)+'</i><img src="'+img+'" alt=""><span>'+f.nome+'</span><u>'+(!n?(k===0?'ovo':'🔒'):ok?(k===at?'NV '+lv:quando):'🔒 '+quando)+'</u></button>'})}}
   sec.innerHTML=h+'</div>';
   $('legNinho').addEventListener('click',()=>abrirNinho());
-  sec.querySelectorAll('.legslot').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;if(G.coll()[i]>0)G.abrir(i);else if(i>=G.LEG0+DRG0)abrirNinho('loja');else if(i>=G.LEG0+LS.length)G.banner&&G.banner('🔥 Épico','Pegue todos os normais, gigantes e lendários para abrir a máquina do épico');else abrirNinho('loja')}))}
+  sec.querySelectorAll('.legslot').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;
+    if(b.dataset.f!==undefined&&G.coll()[i]>0){const k=+b.dataset.f;if(G.dev()||k<=G.formaIdx(G.lvOf(i))){G.verForma(i,k);G.abrir(i)}else G.banner&&G.banner('🔒 '+(porId(i).formas[k]||{}).nome,'Chega no Nv '+G.DRF[k-1]+' — cuide e treine o seu dragão');return}
+    if(G.coll()[i]>0)G.abrir(i);else if(i>=G.LEG0+DRG0)abrirNinho('loja');else if(i>=G.LEG0+LS.length)G.banner&&G.banner('🔥 Épico','Pegue todos os normais, gigantes e lendários para abrir a máquina do épico');else abrirNinho('loja')}))}
 window.addEventListener('garro:estante',estante);
 
 // ---------- ninho (ovos) e loja de ovos ----------

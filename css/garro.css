@@ -82,7 +82,7 @@ button:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.marquee{animation:none}.banner{transition:none}}
 [hidden]{display:none!important}
 /* 3D viewer */
-.viewer{position:fixed;inset:0;z-index:30;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:8px;overflow:hidden;
+.viewer{position:fixed;inset:0;z-index:30;display:grid;grid-template-rows:auto minmax(240px,1fr) auto;overflow-y:auto;gap:8px;
   background:radial-gradient(90% 55% at 50% 48%,#4d2443 0%,#1d0f19 70%,#120a10 100%);
   padding:calc(env(safe-area-inset-top,0px) + 14px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 18px) max(16px,env(safe-area-inset-left,0px))}
 .vhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
@@ -574,3 +574,8 @@ style#btnMis{position:relative}
 .vfm.on{border-color:#c88aff;background:rgba(200,138,255,.22);box-shadow:0 0 0 2px rgba(200,138,255,.25)}
 .vfm.lock{cursor:default}.vfm.lock img{filter:grayscale(1) brightness(.35)}.vfm.lock b{opacity:.6}
 .vhead>div:first-child{flex:1;min-width:0}
+/* coleção: os dragões em linhas de 3 (forma 1 → 2 → 3) */
+.leggrid.drggrid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:420px;margin:0 auto}
+.drggrid .legslot .drgn{position:absolute;top:3px;left:6px;font-style:normal;font-size:9px;font-weight:900;color:#ffd25a;opacity:.85}
+.drggrid .legslot.on{box-shadow:inset 0 0 0 2px #c88aff}
+.drggrid .legslot.lock img{filter:grayscale(.35) brightness(.6);opacity:.9}

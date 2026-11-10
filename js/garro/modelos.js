@@ -126,7 +126,7 @@ function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img
     d[p]=Math.max(0,Math.min(255,r*255));d[p+1]=Math.max(0,Math.min(255,g*255));d[p+2]=Math.max(0,Math.min(255,b*255))}
   x.putImageData(D,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=map.flipY;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t.wrapS=map.wrapS;t.wrapT=map.wrapT;return EVT[i]=t}
 function applyEvoTex(i){const C=V.C;if(!C||!C.obj)return;C.obj.traverse(o=>{if(o.isMesh&&!o.userData.keep&&o.userData.baseMap){o.material.map=evoTex(i,o.userData.baseMap);o.material.needsUpdate=true}})}
-const ASSETV='86';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
+const ASSETV='87';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
 // lendários: mapa de brilho (partes que acendem: veias, runas, estrelas)
 // enfeite próprio de alguns lendários (auréola de ouro do Solaris), preso na cabeça do modelo
 function enfeiteLeg(obj,m){if(m.extraLeg!=='aureola')return;
@@ -178,7 +178,7 @@ function tiraModelos(){if(!V.spin)return;for(const c of V.spin.children.slice())
 // modo 'leve': se o modelo detalhado ainda não chegou, abre na hora com a versão leve (_lo) e troca pela detalhada quando ela carregar
 // modo 'troca': só troca o modelo, sem mexer no giro nem no estado do bichinho
 async function openGLB(i,modo){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir de novo antes de terminar, só o último vale
-  const evo=careStage(i)>0&&i<CH0;let m0=MODELS[i];let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;if(!initViewer())return false;
+  const evo=estVis(i)>0&&i<CH0;let m0=MODELS[i];let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;if(!initViewer())return false;
   const evoModel=m!==m0,mHi=m;let leve=false;
   if(modo==='leve'&&LEVES.has(m.file)&&!GLB[m.file]){leve=true;const lo=f=>f.replace(/\.glb$/,'_lo.glb');m=Object.assign({},m,{file:lo(m.file),key:m.key+'L'});if(!evoModel)m0=m}
   let src;try{src=await loadGLB(m)}catch(e){if(leve){m=mHi;leve=false;try{src=await loadGLB(m)}catch(e1){return false}}else{if(m===m0)return false;EVOFAIL[i]=1;delete GLB[m.file];m=m0;try{src=await loadGLB(m)}catch(e2){return false}}}
@@ -197,8 +197,8 @@ async function openGLB(i,modo){setDet(i);const tok=V.abre=(V.abre||0)+1;// se ab
   root.position.y=-1;tiraModelos();root.userData.modelo=1;V.spin.add(root);
   setFloor(i);castAll(root);
   V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts,plano:ehPlano(obj)};V.mode='glb';V.chibi=false;V.sp={};
-  {const st=careStage(i);V.C.gs=m.leg?GROW[1].gs*(m.escala||1):m.bol?.85:GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
-  V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(careStage(i)||m.leg)makeAura(i);
+  {const st=estVis(i);V.C.gs=m.leg?GROW[1].gs*(m.escala||1):m.bol?.85:GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
+  V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(estVis(i)||m.leg)makeAura(i);
   if(modo!=='troca')Object.assign(V,{ry:temVista(i)?vistaLeg(i):-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
     G:{hy:0,hp:0,hr:0,tail:0,wagA:.2,wagS:4,roll:0,crouch:0,bob:0,shake:0,lift:0}});
   return true;

@@ -243,7 +243,16 @@ addEventListener('keydown',e=>{if(!V.open)return;if(['Escape','ArrowLeft','Arrow
 
 // visualizador: 3 campos com as formas do dragão — 1 (inicial), 2 (evolução da 1) e 3 (evolução da 2). Toque para ver em 3D.
 // As que ainda não alcançou aparecem apagadas com o nível em que chegam (o admin pode ver todas).
-function formasDoDragao(i){const el=$('vFormas');if(!el)return;if(!isDrag(i)){el.hidden=true;el.innerHTML='';return}
+function campos(el,L){el.innerHTML=L.map((c,k)=>'<button class="vfm'+(c.on?' on':'')+(c.ok?'':' lock')+'"'+(c.ok?' onclick="'+c.acao+'"':' disabled')+' aria-label="Forma '+(k+1)+': '+c.nome+'">'
+    +'<span class="vfmn">'+(k+1)+'</span><img src="'+c.img+'" alt=""><b>'+c.nome+'</b><small>'+(c.ok?c.quando:'🔒 '+c.quando)+'</small></button>').join('<i class="vfmseta">›</i>');el.hidden=false}
+// pelúcias: bolinha (redondo 20+k) → grande k → grande k evoluído
+function formasDaPelucia(i,el){const k=ehBolinha(i)?i-CH0:i<CH0?i:-1;if(k<0||!PLUSH[k]){el.hidden=true;el.innerHTML='';return}
+  const b=CH0+k,temB=ehBolinha(b),ev=estVis(k),L=[];
+  if(temB)L.push({img:PLUSH[b].img,nome:PLUSH[b].name,quando:'bolinha',ok:DEV||coll[b]>0,on:i===b,acao:'vaiForma('+b+')'});
+  L.push({img:PLUSH[k].img,nome:evName(k,0),quando:'grande',ok:DEV||coll[k]>0,on:i===k&&ev===0,acao:'vaiForma('+k+',0)'});
+  L.push({img:EVOSPR[k]?EVOSPR[k].img:PLUSH[k].img,nome:evName(k,1),quando:'evoluído',ok:DEV||(coll[k]>0&&careStage(k)===1),on:i===k&&ev===1,acao:'vaiForma('+k+',1)'});
+  campos(el,L);if(i===k)$('vName').textContent=evName(k,ev)}
+function formasDoDragao(i){const el=$('vFormas');if(!el)return;if(!isDrag(i)){if(!isLeg(i))formasDaPelucia(i,el);else{el.hidden=true;el.innerHTML=''}return}
   const Dg=DRS[i-DRAG0],at=formaDoDrag(i),tem=formaIdx(lvOf(i));
   el.innerHTML=Dg.formas.map((f,k)=>{const ok=DEV||k<=tem,quando=k===0?'inicial':'Nv '+DRF[k-1];
     return '<button class="vfm'+(k===at?' on':'')+(ok?'':' lock')+'"'+(ok?' onclick="verForma('+i+','+k+')"':' disabled')+' aria-label="Forma '+(k+1)+': '+f.nome+'">'

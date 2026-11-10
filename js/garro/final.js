@@ -222,7 +222,7 @@ window.GARRO={
   stoneLocal:k=>{INV.st[k]=(INV.st[k]||0)+1;saveInv()},stone:k=>STONES[k],
   tone:(f,d,t,v)=>{audio();tone(f,d,t,v)},evento:(k,n)=>evento(k,n),hint:t=>{$('hint').textContent=t},
   // usados pelos Lendários (js/lendarios.js)
-  LEG0,fora:i=>FORA.has(i),isLeg:i=>isLeg(i),isDrag:i=>isDrag(i),tamForma:i=>isDrag(i)?(DRESC[formaDoDrag(i)]||1):1,atualizaDragoes:()=>atualizaDragoes(),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i),rbOf(i)),rbOf:i=>rbOf(i),isEvo,REB_B,
+  LEG0,fora:i=>FORA.has(i),isLeg:i=>isLeg(i),isDrag:i=>isDrag(i),formaIdx:lv=>formaIdx(lv),formaDoDrag:i=>formaDoDrag(i),verForma:(i,k)=>verForma(i,k),DRF,tamForma:i=>isDrag(i)?(DRESC[formaDoDrag(i)]||1):1,atualizaDragoes:()=>atualizaDragoes(),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i),rbOf(i)),rbOf:i=>rbOf(i),isEvo,REB_B,
   abrir:i=>openViewer(i),estante:()=>renderShelf(),collAdd:(i,n)=>{coll[i]=(coll[i]||0)+(n||1);saveX();renderShelf()},collSet:(i,n)=>{coll[i]=n;saveX()},
   hud:()=>hud(),maquina:()=>MACH,
   glb:f=>loadGLB({file:f}).then(g=>g.clone(true))

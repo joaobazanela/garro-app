@@ -45,6 +45,11 @@ function careXp(i){return careOf(i).xp}
 function xpPct(i){const lv=lvOf(i);if(lv>=capOf(i))return 100;const a=xpTotal(i,lv),b=xpTotal(i,lv+1);return Math.max(0,Math.min(100,(careOf(i).xp-a)/(b-a)*100))}
 function xpTxt(i){const lv=lvOf(i),a=xpTotal(i,lv),b=xpTotal(i,lv+1);return 'XP '+Math.max(0,careOf(i).xp-a)+'/'+(b-a)}
 function careStage(i){return isLeg(i)?0:i>=CH0?2:isEvo(i,lvOf(i),rbOf(i))?1:0}
+// aparência no visualizador: o grande pode ser visto normal ou evoluído (campos 2 e 3) sem mudar nada do bichinho;
+// o jogador só vê o evoluído se já evoluiu; o admin vê os dois
+let EVOVER={};
+const estVis=i=>{const r=careStage(i);return i<CH0&&EVOVER[i]!=null&&(DEV||EVOVER[i]<=r)?EVOVER[i]:r};
+function vaiForma(id,st){if(st!=null){if(st===careStage(id))delete EVOVER[id];else EVOVER[id]=st}if(V.open)closeViewer();openViewer(id)}
 function gsOf(i,st){return i>=CH0?1:GROW[st].gs}
 function refreshVStats(i){const p=PLUSH[i],st=careStage(i);$('vStats').textContent=Math.round(p.cm*gsOf(i,st))+' cm · '+p.g+' g · pego '+(coll[i]||0)+'x'+(i>=CH0?'':' · '+(st?'Evoluído':'Base'))+(GCOLL[i]?' · 🏆 gigante'+(GEVO[i]?' evoluído':'')+' ×'+GCOLL[i]:'');if(i<CH0)$('vName').textContent=evName(i,st);renderPow(i)}
 function renderCare(){
