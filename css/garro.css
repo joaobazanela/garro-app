@@ -563,6 +563,14 @@ style#btnMis{position:relative}
 .mochila .ivrow{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 /* barra de ações da mochila (classe própria: .mbar já era a barrinha de XP de 7px, por isso no iPhone ela ficava espremida) */
 
-/* admin: botões para ver as 3 formas do dragão */
-.vtags .vforma{font:900 12px/1 inherit;width:26px;height:24px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#ffe3ee;cursor:pointer}
-.vtags .vforma.on{background:#c88aff;color:#1a0630;border-color:#c88aff}
+/* visualizador: os 3 campos das formas do dragão (1 → 2 → 3) */
+.vformas{display:flex;align-items:center;gap:4px;margin-top:8px;max-width:100%}
+.vformas .vfmseta{font-style:normal;font-weight:900;color:#c88aff;opacity:.8}
+.vfm{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 4px 4px;border-radius:12px;border:1.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#ffe3ee;font:inherit;cursor:pointer}
+.vfm img{width:100%;max-width:64px;height:40px;object-fit:contain}
+.vfm b{font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.vfm small{font-size:10px;opacity:.75}
+.vfm .vfmn{position:absolute;top:3px;left:5px;font-size:10px;font-weight:900;opacity:.8}
+.vfm.on{border-color:#c88aff;background:rgba(200,138,255,.22);box-shadow:0 0 0 2px rgba(200,138,255,.25)}
+.vfm.lock{cursor:default}.vfm.lock img{filter:grayscale(1) brightness(.35)}.vfm.lock b{opacity:.6}
+.vhead>div:first-child{flex:1;min-width:0}

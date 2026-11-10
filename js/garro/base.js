@@ -21,9 +21,9 @@ const DRS=LEGD.dragoes||[],DRF=LEGD.dragao_formas||[50,80],DRAG0=DRS.length?DRS[
 for(const Dg of DRS){PLUSH[Dg.id]={i:Dg.id,leg:1,drag:1,slug:Dg.slug,name:Dg.nome,cm:Dg.cm,g:Dg.g,tex:.9,rare:0,desc:Dg.desc,...Dg.sprite};GD.pelucias.STAT[Dg.id]=Dg.stat;GD.pelucias.ELEM[Dg.id]=Dg.elemento}
 const DRESC=LEGD.dragao_tamanho||[1,1,1];// tamanho de cada forma (o filhote é menor, como na arte)
 const formaIdx=lv=>lv>=DRF[1]?2:lv>=DRF[0]?1:0;
-// admin: pode ver qualquer forma do dragão (1, 2 ou 3) sem mudar o nível — só a aparência, guardada neste aparelho
+// ver outra forma do dragão sem mudar o nível (só a aparência, guardada neste aparelho): o jogador vê as que já alcançou; o admin vê as 3
 let DFORCE={};try{DFORCE=JSON.parse(localStorage.getItem('garro-dforma')||'{}')||{}}catch(e){}
-const formaDoDrag=i=>(DEV&&DFORCE[i]!=null)?DFORCE[i]:formaIdx(lvOf(i)),formaDe=i=>{const Dg=DRS[i-DRAG0];return Dg?Dg.formas[formaDoDrag(i)]:null};
+const formaDoDrag=i=>{const f=DFORCE[i],n=formaIdx(lvOf(i));return f!=null&&(DEV||f<=n)?f:n},formaDe=i=>{const Dg=DRS[i-DRAG0];return Dg?Dg.formas[formaDoDrag(i)]:null};
 function verForma(i,k){if(k==null||k===formaIdx(lvOf(i)))delete DFORCE[i];else DFORCE[i]=k;try{localStorage.setItem('garro-dforma',JSON.stringify(DFORCE))}catch(e){}
   atualizaDragoes();try{renderShelf()}catch(e){}if(V.open&&V.cur===i){closeViewer();openViewer(i)}}
 // nome e imagem do dragão acompanham a forma do nível atual

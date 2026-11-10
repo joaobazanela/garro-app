@@ -232,10 +232,20 @@ const MOODS=GD.textos.MOODS;
 let moodT=0;
 function mood(txt){const el=$('vMood');if(!el)return;if(!txt){el.classList.remove('on');return}el.textContent=txt;el.classList.add('on');clearTimeout(moodT);moodT=setTimeout(()=>el.classList.remove('on'),2200)}
 function vTags(i){const p=PLUSH[i],r=p.rare<=2?3:p.rare<=4?2:1;
-  $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span>'+(p.leg?(isEpic(i)?'<span class="rL">🔥 Épico</span>':isDrag(i)?'<span class="rL">🐉 Dragão · forma '+(formaDoDrag(i)+1)+'/3</span>'+(DEV?[0,1,2].map(k=>'<button class="vforma'+(formaDoDrag(i)===k?' on':'')+'" onclick="verForma('+i+','+k+')" title="admin: ver a forma '+(k+1)+'">'+(k+1)+'</button>').join(''):''):'<span class="rL">✦ Lendário</span>'):'<span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>');
+  formasDoDragao(i);
+  $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span>'+(p.leg?(isEpic(i)?'<span class="rL">🔥 Épico</span>':isDrag(i)?'<span class="rL">🐉 Dragão · forma '+(formaDoDrag(i)+1)+'/3</span>':'<span class="rL">✦ Lendário</span>'):'<span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>');
   const own=PLUSH.filter(q=>coll[q.i]&&!q.fora).map(q=>q.i);V.cur=i;V.own=own;const many=own.length>1;$('vPrev').hidden=$('vNext').hidden=!many;
   if(many&&typeof preCarrega==='function'){const k=own.indexOf(i);preCarrega([own[(k+1)%own.length],own[(k-1+own.length)%own.length]],true)}}// os vizinhos já vão carregando
 function vStep(d){const o=V.own||[];if(o.length<2)return;let k=o.indexOf(V.cur);k=(k+d+o.length)%o.length;audio();click(700);openViewer(o[k])}
 $('vPrev').addEventListener('click',()=>vStep(-1));$('vNext').addEventListener('click',()=>vStep(1));
 $('vHelp').addEventListener('click',()=>{const g=$('gest'),open=g.hidden;g.hidden=!open;$('vHelp').setAttribute('aria-expanded',open)});
 addEventListener('keydown',e=>{if(!V.open)return;if(['Escape','ArrowLeft','ArrowRight',' ','ArrowDown'].includes(e.key))e.stopImmediatePropagation();if(e.key==='Escape')closeViewer();if(e.key==='ArrowLeft')vStep(-1);if(e.key==='ArrowRight')vStep(1)},true);
+
+// visualizador: 3 campos com as formas do dragão — 1 (inicial), 2 (evolução da 1) e 3 (evolução da 2). Toque para ver em 3D.
+// As que ainda não alcançou aparecem apagadas com o nível em que chegam (o admin pode ver todas).
+function formasDoDragao(i){const el=$('vFormas');if(!el)return;if(!isDrag(i)){el.hidden=true;el.innerHTML='';return}
+  const Dg=DRS[i-DRAG0],at=formaDoDrag(i),tem=formaIdx(lvOf(i));
+  el.innerHTML=Dg.formas.map((f,k)=>{const ok=DEV||k<=tem,quando=k===0?'inicial':'Nv '+DRF[k-1];
+    return '<button class="vfm'+(k===at?' on':'')+(ok?'':' lock')+'"'+(ok?' onclick="verForma('+i+','+k+')"':' disabled')+' aria-label="Forma '+(k+1)+': '+f.nome+'">'
+      +'<span class="vfmn">'+(k+1)+'</span><img src="'+f.sprite.img+'" alt=""><b>'+f.nome+'</b><small>'+(ok?quando:'🔒 '+quando)+'</small></button>'}).join('<i class="vfmseta">›</i>');
+  el.hidden=false}

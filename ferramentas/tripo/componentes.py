@@ -83,7 +83,7 @@ def rebake3(P,UV,I,img,cells,S,q,out,alvo=80000):
   lab,nl=ndimage.label(occ,structure=np.ones((3,3,3)));tl=lab[qv[:,0],qv[:,1],qv[:,2]];cnt=np.bincount(tl);cnt[0]=0;big=np.argmax(cnt)
   keep=np.isin(tl,[c for c in range(1,nl+1) if c==big or cnt[c]>.05*cnt[big]]);print('corpo: tirados',int((~keep).sum()),'triângulos soltos')
   I=I[keep];used=np.unique(I);rm=-np.ones(len(P),np.int64);rm[used]=np.arange(len(used));P,UV,I=P[used],UV[used],rm[I]
-  ch=charts(I,len(P));nP,nI=simplifica(P,I,alvo)
+  ch=charts(I,len(P));nP,nI=simplifica(P,I,min(alvo,len(I)))
   # tira pedacinhos soltos fora do corpo (fios do degrau do fundo, enfeites da folha)
   lab=charts(nI,len(nP));tl2=lab[nI[:,0]];cnt=np.bincount(tl2);big=np.argmax(cnt);vb=np.unique(nI[tl2==big]);mn,mx=nP[vb].min(0),nP[vb].max(0)
   fora=[c for c in np.nonzero(cnt)[0] if c!=big and cnt[c]<.02*cnt[big] and not np.all((nP[np.unique(nI[tl2==c])].mean(0)>mn)&(nP[np.unique(nI[tl2==c])].mean(0)<mx))]

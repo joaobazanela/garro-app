@@ -11,7 +11,8 @@ Uso:
   python3 ferramentas/separar_folha_tripo.py folha.glb receita.json pasta_saida [nome1,nome2,...]
 receita.json (exemplo em ferramentas/receitas/dragoes_luz.json):
   {"colunas": 3, "linhas": 6, "nomes": ["brasin", ...], "alvo": [14000,16000,20000], "giro": {"breumin": -45}}
-  'alvo' pode ser 1 número ou 1 por coluna. Para conferir, abra os .glb gerados de frente: a cara tem que aparecer.
+  'alvo' pode ser 1 número ou 1 por coluna. "giro_auto": {"nome": "-x"} vira sozinho uma criatura que está de lado na folha
+  (cabeça para a esquerda = "-x", para a direita = "+x"). Para conferir, abra os .glb gerados de frente: a cara tem que aparecer.
 Requer: numpy, scipy, Pillow (os módulos em ferramentas/tripo)."""
 import sys, os, json, numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tripo'))
@@ -22,6 +23,12 @@ def celulas(P, I, nc, nl):
     L = components(P, I); tl = L[I[:, 0]]; C = P[I].mean(1)
     u, inv, cnt = np.unique(tl, return_inverse=True, return_counts=True)
     cx = np.bincount(inv, C[:, 0])/cnt; cy = np.bincount(inv, C[:, 1])/cnt
+    if len(u) == nc*nl:  # um pedaço por criatura: ordena direto (linhas de cima para baixo, depois da esquerda para a direita)
+        ordem = np.argsort(-cy); a = np.zeros(len(u), int)
+        for r in range(nl):
+            lin = ordem[r*nc:(r+1)*nc]; lin = lin[np.argsort(cx[lin])]; a[lin] = r*nc+np.arange(nc)
+        print(len(u), 'pedaços = 1 por célula; triângulos por célula:', [int(cnt[a == k].sum()) for k in range(nc*nl)])
+        return a[inv]
     mn, mx = P.min(0), P.max(0)
     X = mn[0]+(np.arange(nc)+.5)/nc*(mx[0]-mn[0]); Y = mx[1]-(np.arange(nl)+.5)/nl*(mx[1]-mn[1])
     # refina os centros com k-médias (as linhas da folha nem sempre têm a mesma altura)
@@ -34,8 +41,16 @@ def celulas(P, I, nc, nl):
     print(len(u), 'pedaços na folha; triângulos por célula:', [int(cnt[a == k].sum()) for k in range(len(cent))])
     return a[inv]
 
+def giro_auto(P, lado):
+    """criatura de lado na folha: acha para onde a cabeça aponta (a ponta do corpo do lado '-x' ou '+x' da folha) e devolve o giro
+    (graus) que a vira para +z. A direção vai do centro do corpo ao centro da ponta da cabeça (20% da largura)."""
+    x = P[:, 0]; w = x.max()-x.min()
+    m = x < x.min()+.2*w if lado == '-x' else x > x.max()-.2*w
+    d = P[m][:, [0, 2]].mean(0)-P[:, [0, 2]].mean(0)
+    return float(np.degrees(np.arctan2(-d[0], d[1])))
+
 def main(src, receita, out, so=None):
-    R = json.load(open(receita)); nc, nl, nomes = R['colunas'], R['linhas'], R['nomes']; alvo = R.get('alvo', 16000); giro = R.get('giro', {})
+    R = json.load(open(receita)); nc, nl, nomes = R['colunas'], R['linhas'], R['nomes']; alvo = R.get('alvo', 16000); giro = R.get('giro', {}); gauto = R.get('giro_auto', {})
     os.makedirs(out, exist_ok=True)
     G = Q.read(src); P0 = G['P'].astype(np.float64); UV0 = G['UV'].astype(np.float64); I0 = G['I']
     cel = celulas(P0, I0, nc, nl)
@@ -44,8 +59,10 @@ def main(src, receita, out, so=None):
         Ic = I0[cel == k]
         if not len(Ic): print(nome, 'célula vazia'); continue
         used = np.unique(Ic); rm = -np.ones(len(P0), np.int64); rm[used] = np.arange(len(used)); P, UV, I = P0[used], UV0[used], rm[Ic]
-        nUV, img, s = Q.sep.reatlas(P, UV, I, G['img'], 1024); P = prep(P, None, None, giro.get(nome, 0))
-        a = alvo[k % nc] if isinstance(alvo, list) else alvo
+        g = giro.get(nome, 0)
+        if nome in gauto: g = giro_auto(P, gauto[nome])
+        nUV, img, s = Q.sep.reatlas(P, UV, I, G['img'], 1024); P = prep(P, None, None, g)
+        a = min(alvo[k % nc] if isinstance(alvo, list) else alvo, len(I))
         print(nome, len(I), 'triângulos →', K.rebake3(P, nUV, I, img, 150, 1024, 84, os.path.join(out, nome+'.glb'), alvo=a), flush=True)
 
 if __name__ == '__main__':
