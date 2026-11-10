@@ -562,3 +562,7 @@ style#btnMis{position:relative}
 .mochila .ivrow.off{opacity:.6}.mochila .ivrow button{white-space:nowrap}
 .mochila .ivrow{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 /* barra de ações da mochila (classe própria: .mbar já era a barrinha de XP de 7px, por isso no iPhone ela ficava espremida) */
+
+/* admin: botões para ver as 3 formas do dragão */
+.vtags .vforma{font:900 12px/1 inherit;width:26px;height:24px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#ffe3ee;cursor:pointer}
+.vtags .vforma.on{background:#c88aff;color:#1a0630;border-color:#c88aff}

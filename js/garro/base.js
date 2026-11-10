@@ -20,10 +20,15 @@ for(const E of EPS){const sp=Object.assign({w:200,h:200,hull:[[.12,.08],[.88,.08
 const DRS=LEGD.dragoes||[],DRF=LEGD.dragao_formas||[50,80],DRAG0=DRS.length?DRS[0].id:999,isDrag=i=>i>=DRAG0&&i<DRAG0+DRS.length;
 for(const Dg of DRS){PLUSH[Dg.id]={i:Dg.id,leg:1,drag:1,slug:Dg.slug,name:Dg.nome,cm:Dg.cm,g:Dg.g,tex:.9,rare:0,desc:Dg.desc,...Dg.sprite};GD.pelucias.STAT[Dg.id]=Dg.stat;GD.pelucias.ELEM[Dg.id]=Dg.elemento}
 const DRESC=LEGD.dragao_tamanho||[1,1,1];// tamanho de cada forma (o filhote é menor, como na arte)
-const formaIdx=lv=>lv>=DRF[1]?2:lv>=DRF[0]?1:0,formaDe=(i,lv)=>{const Dg=DRS[i-DRAG0];return Dg?Dg.formas[formaIdx(lv)]:null};
+const formaIdx=lv=>lv>=DRF[1]?2:lv>=DRF[0]?1:0;
+// admin: pode ver qualquer forma do dragão (1, 2 ou 3) sem mudar o nível — só a aparência, guardada neste aparelho
+let DFORCE={};try{DFORCE=JSON.parse(localStorage.getItem('garro-dforma')||'{}')||{}}catch(e){}
+const formaDoDrag=i=>(DEV&&DFORCE[i]!=null)?DFORCE[i]:formaIdx(lvOf(i)),formaDe=i=>{const Dg=DRS[i-DRAG0];return Dg?Dg.formas[formaDoDrag(i)]:null};
+function verForma(i,k){if(k==null||k===formaIdx(lvOf(i)))delete DFORCE[i];else DFORCE[i]=k;try{localStorage.setItem('garro-dforma',JSON.stringify(DFORCE))}catch(e){}
+  atualizaDragoes();try{renderShelf()}catch(e){}if(V.open&&V.cur===i){closeViewer();openViewer(i)}}
 // nome e imagem do dragão acompanham a forma do nível atual
-function atualizaDragoes(){if(typeof lvOf!=='function')return;for(const Dg of DRS){const f=formaDe(Dg.id,lvOf(Dg.id)),p=PLUSH[Dg.id];if(f&&p.img!==f.sprite.img){Object.assign(p,f.sprite,{name:f.nome});try{bakeP(p)}catch(e){}}
-    try{const M=MODELS[Dg.id],esc=(Dg.tamanho||1.15)*(DRESC[formaIdx(lvOf(Dg.id))]||1);if(f&&M&&(M.file!==f.modelo||M.escala!==esc))MODELS[Dg.id]=Object.assign({},M,{file:f.modelo,key:'D'+f.slug,escala:esc})}catch(e){}}}// modelo 3D da forma atual (coleção, visualizador e Aventura)
+function atualizaDragoes(){if(typeof lvOf!=='function')return;for(const Dg of DRS){const f=formaDe(Dg.id),p=PLUSH[Dg.id];if(f&&p.img!==f.sprite.img){Object.assign(p,f.sprite,{name:f.nome});try{bakeP(p)}catch(e){}}
+    try{const M=MODELS[Dg.id],esc=(Dg.tamanho||1.15)*(DRESC[formaDoDrag(Dg.id)]||1);if(f&&M&&(M.file!==f.modelo||M.escala!==esc))MODELS[Dg.id]=Object.assign({},M,{file:f.modelo,key:'D'+f.slug,escala:esc})}catch(e){}}}// modelo 3D da forma atual (coleção, visualizador e Aventura)
 function epicDia(){const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return EPS.length?EPS[Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%EPS.length].id:-1}
 
 const {Engine,Bodies,Body,Composite,Constraint,Query,Vertices}=Matter;

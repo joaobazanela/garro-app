@@ -50,7 +50,7 @@ function refreshVStats(i){const p=PLUSH[i],st=careStage(i);$('vStats').textConte
 function renderCare(){
   if(!V.open||V.cur===undefined)return;const i=V.cur;renderSell(i);renderPow(i);
   const c=careOf(i),lv=lvOf(i),cap=capOf(i),st=careStage(i),m=(c.f+c.l+c.p)/3;
-  if(isLeg(i)){$('cStage').textContent=(isEpic(i)?'🔥 Épico · ':isDrag(i)?'🐉 Dragão · forma '+(formaIdx(lv)+1)+'/3 · ':'✦ Lendário · ')+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(isEpic(i)?' · o mais forte de todos':' · mais forte que as pelúcias grandes')+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
+  if(isLeg(i)){$('cStage').textContent=(isEpic(i)?'🔥 Épico · ':isDrag(i)?'🐉 Dragão · forma '+(formaDoDrag(i)+1)+'/3 · ':'✦ Lendário · ')+(m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente');$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(isEpic(i)?' · o mais forte de todos':' · mais forte que as pelúcias grandes')+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
   else if(i>=CH0){$('cStage').textContent=m>60?'😊 Feliz':m>30?'🙂 Tranquilo':'😟 Carente';$('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(ehBolinha(i)?' · '+Math.min(coll[i]||0,BOL_N)+'/'+BOL_N+' para evoluir':' · 2 repetidas = 1 moeda')+(rbOf(i)?' · 🔄 '+rbOf(i)+'×':'');$('cXpBar').style.width=xpPct(i)+'%'}
   else{$('cStage').textContent=st?'★ '+evName(i,1):PLUSH[i].name;
     $('cXp').textContent='Nv '+lv+(lv>=cap?' (máx)':' · '+xpTxt(i))+(st?' · forma evoluída!':' · evolui no Nv '+EVO_LV+' com '+PEDRAS+' pedras')+' · cuidar hoje '+xpHoje(i)+'/'+XPDIA+' XP'+(rbOf(i)?' · 🔄 '+rbOf(i)+'× (+'+Math.round(REB_B*rbOf(i)*100)+'% força)':'');
