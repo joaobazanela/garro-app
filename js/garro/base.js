@@ -3,7 +3,9 @@
 const SPRITES=GD.sprites.SPRITES;
 const CH0=20;// first id of the round collectibles (no evolution)
 const DATA=GD.pelucias.DATA;
-const PLUSH=DATA.map((d,i)=>({i,name:d[0],cm:d[1],g:d[2],tex:d[3],rare:d[4],desc:d[5],...SPRITES[i]}));const NPL=PLUSH.length;
+const PLUSH=DATA.map((d,i)=>({i,name:d[0],cm:d[1],g:d[2],tex:d[3],rare:d[4],desc:d[5],...SPRITES[i]}));const NPL=PLUSH.length;const FORA=new Set(GD.pelucias.FORA||[]);PLUSH.forEach(p=>{if(FORA.has(p.i))p.fora=1});
+// bolinhas: BOL_N iguais + as pedras da evolução viram o grande evoluído (data/regras.json → EVOLUCAO.bolinhas)
+const BOL_N=((GD.regras||{}).EVOLUCAO||{}).bolinhas||10,ehBolinha=i=>i>=CH0&&i<CH0+20&&!(PLUSH[i]||{}).fora;// redondos antigos aposentados (fora da máquina e da coleção)
 // lendários (data/lendarios.json): ids depois das 43 pelúcias; não caem na máquina, nascem de ovos
 const LEGD=GD.lendarios||{lendarios:[]},LEG0=LEGD.id0||43,LEGS=LEGD.lendarios||[];
 const isLeg=i=>i>=LEG0,grande=i=>i<CH0||i>=LEG0;
@@ -14,6 +16,19 @@ for(const L of LEGS){const sp=L.sprite||{w:200,h:200,hull:[[.15,.1],[.85,.1],[.9
 const EPS=LEGD.epicos||[],EPM=LEGD.epico_maquina||{preco:500,segurar:.05},EPIC0=EPS.length?EPS[0].id:999,isEpic=i=>i>=EPIC0&&i<EPIC0+EPS.length;
 for(const E of EPS){const sp=Object.assign({w:200,h:200,hull:[[.12,.08],[.88,.08],[.96,.92],[.04,.92]]},E.sprite||{});
   PLUSH[E.id]={i:E.id,leg:1,epic:1,slug:E.slug,name:E.nome,cm:E.cm,g:E.g,tex:.9,rare:0,desc:E.desc,...sp};GD.pelucias.STAT[E.id]=E.stat;GD.pelucias.ELEM[E.id]=E.elemento}
+// dragões (data/lendarios.json → dragoes, ids 57 a 61): entre os lendários e os épicos; nascem de ovo e têm 3 formas (mudam pelo nível)
+const DRS=LEGD.dragoes||[],DRF=LEGD.dragao_formas||[50,80],DRAG0=DRS.length?DRS[0].id:999,isDrag=i=>i>=DRAG0&&i<DRAG0+DRS.length;
+for(const Dg of DRS){PLUSH[Dg.id]={i:Dg.id,leg:1,drag:1,slug:Dg.slug,name:Dg.nome,cm:Dg.cm,g:Dg.g,tex:.9,rare:0,desc:Dg.desc,...Dg.sprite};GD.pelucias.STAT[Dg.id]=Dg.stat;GD.pelucias.ELEM[Dg.id]=Dg.elemento}
+const DRESC=LEGD.dragao_tamanho||[1,1,1];// tamanho de cada forma (o filhote é menor, como na arte)
+const formaIdx=lv=>lv>=DRF[1]?2:lv>=DRF[0]?1:0;
+// ver outra forma do dragão sem mudar o nível (só a aparência, guardada neste aparelho): o jogador vê as que já alcançou; o admin vê as 3
+let DFORCE={};try{DFORCE=JSON.parse(localStorage.getItem('garro-dforma')||'{}')||{}}catch(e){}
+const formaDoDrag=i=>{const f=DFORCE[i],n=formaIdx(lvOf(i));return f!=null&&(DEV||f<=n)?f:n},formaDe=i=>{const Dg=DRS[i-DRAG0];return Dg?Dg.formas[formaDoDrag(i)]:null};
+function verForma(i,k){if(k==null||k===formaIdx(lvOf(i)))delete DFORCE[i];else DFORCE[i]=k;try{localStorage.setItem('garro-dforma',JSON.stringify(DFORCE))}catch(e){}
+  atualizaDragoes();try{renderShelf()}catch(e){}if(V.open&&V.cur===i){closeViewer();openViewer(i)}}
+// nome e imagem do dragão acompanham a forma do nível atual
+function atualizaDragoes(){if(typeof lvOf!=='function')return;for(const Dg of DRS){const f=formaDe(Dg.id),p=PLUSH[Dg.id];if(f&&p.img!==f.sprite.img){Object.assign(p,f.sprite,{name:f.nome});try{bakeP(p)}catch(e){}}
+    try{const M=MODELS[Dg.id],esc=(Dg.tamanho||1.15)*(DRESC[formaDoDrag(Dg.id)]||1);if(f&&M&&(M.file!==f.modelo||M.escala!==esc))MODELS[Dg.id]=Object.assign({},M,{file:f.modelo,key:'D'+f.slug,escala:esc})}catch(e){}}}// modelo 3D da forma atual (coleção, visualizador e Aventura)
 function epicDia(){const d=new Date(Date.now()-3*36e5).toISOString().slice(0,10);return EPS.length?EPS[Math.floor(Date.parse(d+'T00:00:00Z')/864e5)%EPS.length].id:-1}
 
 const {Engine,Bodies,Body,Composite,Constraint,Query,Vertices}=Matter;
@@ -48,6 +63,11 @@ function erroAmigavel(msg){
   banner(msg||'Ops! Algo deu errado.','Tente de novo em instantes');
 }
 addEventListener('error',e=>{logErro('window.onerror',e.error||e.message)});
+// versão de teste (artefato): mostra o erro na tela para o jogador mandar o print (no site de verdade só vai para o relatório)
+if(window.GARRO_OFFLINE){const mostra=(t)=>{try{let b=document.getElementById('erroTela');if(!b){b=document.createElement('div');b.id='erroTela';b.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#3a1020;color:#fff;font:600 12px system-ui;padding:8px 10px;border-radius:10px;max-height:30vh;overflow:auto';b.onclick=()=>b.remove();document.body.appendChild(b)}
+    const d=document.createElement('div');d.textContent='⚠️ '+t;b.appendChild(d)}catch(e){}};
+  addEventListener('error',e=>mostra((e.message||e.error)+' · '+String(e.filename||'').split('/').pop().split('?')[0]+':'+(e.lineno||'')));
+  addEventListener('unhandledrejection',e=>mostra('promessa: '+((e.reason&&e.reason.message)||e.reason)))}
 addEventListener('unhandledrejection',e=>{logErro('unhandledrejection',e.reason)});
 
 async function syncEstado(action,extra){
@@ -59,7 +79,7 @@ async function syncEstado(action,extra){
       headers:{'Authorization':'Bearer '+s.access_token,'Content-Type':'application/json'},
       body:JSON.stringify(Object.assign({action},extra||{}))
     });
-    if(!res.ok){let d='';try{const j=await res.clone().json();d=' '+(j.error||'')+(j.detail?' '+String(j.detail).slice(0,120):'')}catch(e){}logErro('syncEstado:'+action,'HTTP '+res.status+d);return null}
+    if(!res.ok){let d='';try{const j=await res.clone().json();d=' '+(j.error||'')+(j.detail?' '+String(j.detail).slice(0,120):'')}catch(e){}syncEstado.erro=d;logErro('syncEstado:'+action,'HTTP '+res.status+d);return null}
     return res.json();
   }catch(e){logErro('syncEstado:'+action,e);return null}
 }

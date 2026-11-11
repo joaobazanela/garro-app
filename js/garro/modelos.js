@@ -91,13 +91,19 @@ function weldNormals(g){const p=g.attributes.position,n=p.count,id=new Int32Arra
 const SKIN={};
 // forma evoluída: arquivo .glb próprio quando existir (ex.: 'models/petrun_evo.glb'); senão o mesmo corpo com a pele evoluída
 // modelos Tripo das formas evoluídas (cada arquivo veio com base+evolução; aqui só a evolução)
+const LEVES=new Set(GD.modelos.LEVES||[]);
 const EVOFILE=GD.modelos.EVOFILE,NBE=GD.modelos.NBE,EVOFAIL={};
 // lendários: modelo 3D próprio (Tripo), em models/lendarios/. O modelo inteiro se mexe (sem dobrar cabeça/cauda).
-for(const L of LEGS.concat(EPS)){if(!L.modelo)continue;
+for(const L of LEGS.concat(EPS,DRS)){if(!L.modelo)continue;
   MODELS[L.id]={file:L.modelo,skin:null,evoM:1,noDeform:1,wing:null,notail:false,hc:[0,.62,.3],hr:.16,hp:[0,.5,.2],tz:-.3,tp:[0,.3,-.3],spd:.8,wag:.25,
     glowCol:L.cor,escala:L.tamanho||1.15,leg:1,key:'L'+L.slug,extraLeg:L.extra||null,vista:L.vista??-.62,desliza:L.anda==='desliza',fileAnda:L.modelo_anda||null};NOEXTRA.add(L.id)}
 // ângulo em que o lendário aparece no visualizador (data/lendarios.json → vista; os da folha nova olham para outro lado)
 const vistaLeg=i=>(MODELS[i]&&MODELS[i].vista)??-.62;
+// bolinhas (20+k = mini do grande k): modelos 3D do Tripo (folha das 20 bolinhas separada em models/bolinhas/)
+for(let k=0;k<20;k++){const id=CH0+k;if(PLUSH[id]&&!PLUSH[id].fora)MODELS[id]={file:'models/bolinhas/'+PLUSH[k].name.toLowerCase()+'.glb',skin:null,evoM:1,noDeform:1,wing:null,notail:false,
+  hc:[0,.62,.25],hr:.2,hp:[0,.45,.2],tz:-.3,tp:[0,.3,-.3],spd:.9,wag:.2,key:'B'+k,bol:1,vista:-.35,
+  fileAnda:'models/bolinhas/'+PLUSH[k].name.toLowerCase()+'_lo.glb'}}// na Aventura: versão leve (~3,5 mil triângulos); na coleção: a detalhada
+const temVista=i=>isLeg(i)||!!(MODELS[i]&&MODELS[i].bol);
 const EVT={};
 function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img.width)return map;
   const S=Math.min(1024,img.width),cv=document.createElement('canvas');cv.width=cv.height=S;const x=cv.getContext('2d');x.drawImage(img,0,0,S,S);
@@ -120,7 +126,7 @@ function evoTex(i,map){if(EVT[i])return EVT[i];const img=map.image;if(!img||!img
     d[p]=Math.max(0,Math.min(255,r*255));d[p+1]=Math.max(0,Math.min(255,g*255));d[p+2]=Math.max(0,Math.min(255,b*255))}
   x.putImageData(D,0,0);const t=new THREE.CanvasTexture(cv);t.flipY=map.flipY;t.encoding=THREE.sRGBEncoding;t.anisotropy=4;t.wrapS=map.wrapS;t.wrapT=map.wrapT;return EVT[i]=t}
 function applyEvoTex(i){const C=V.C;if(!C||!C.obj)return;C.obj.traverse(o=>{if(o.isMesh&&!o.userData.keep&&o.userData.baseMap){o.material.map=evoTex(i,o.userData.baseMap);o.material.needsUpdate=true}})}
-const ASSETV='78';
+const ASSETV='89';// suba a cada troca de modelo 3D (senão o aparelho continua com o arquivo velho guardado)
 // lendários: mapa de brilho (partes que acendem: veias, runas, estrelas)
 // enfeite próprio de alguns lendários (auréola de ouro do Solaris), preso na cabeça do modelo
 function enfeiteLeg(obj,m){if(m.extraLeg!=='aureola')return;
@@ -153,25 +159,31 @@ function attachParts(obj,i,m){const sp0=SPEC[i],sp=Object.assign({},sp0,{x:sp0.x
 // modelo 3D pronto para outras telas (Aventura): grandes = GLB (o evoluído quando houver), redondos = montados em código.
 // Volta um grupo com altura 1, pés em y=0 e olhando para +z. Não mexe no visualizador.
 async function montaModelo(i,evo){
-  if(i>=CH0&&!isLeg(i)){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
+  if(isDrag(i))atualizaDragoes();// dragão: o modelo da forma do nível atual
+  if(i>=CH0&&!isLeg(i)&&!MODELS[i]){const C=buildChibi(CH[i-CH0],2),g=new THREE.Group();g.add(C.root);C.root.updateMatrixWorld(true);
     const b=new THREE.Box3().setFromObject(C.root),h=b.max.y-b.min.y||1;C.root.scale.setScalar(1/h);C.root.position.y=-b.min.y/h;return g}
   let m0=MODELS[i];if(!m0)throw new Error('sem modelo '+i);
   if(m0.fileAnda)m0=Object.assign({},m0,{file:m0.fileAnda,key:m0.key+'A'});// Aventura: pose de andar (ex.: serpente deitada); a coleção usa o modelo normal
   let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;
+  if(LEVES.has(m.file)){const ml=Object.assign({},m,{file:m.file.replace(/\.glb$/,'_lo.glb'),key:m.key+'L'});if(m===m0)m0=ml;m=ml}// Aventura: versão leve do modelo (data/modelos.json → LEVES)
   let src;try{src=await loadGLB(m)}catch(e){if(m===m0)throw e;m=m0;src=await loadGLB(m)}
   const obj=src.clone(true),skin=m.skin?await loadSkin(m.skin):null,glow=m.glow?await loadSkin(m.glow):null;
   obj.traverse(o=>{if(o.isMesh){if(m.notail)o.geometry=dropTail(o.geometry,m);if(!o.geometry.attributes.normal)weldNormals(o.geometry);
     const mm=o.material.clone();if(skin)mm.map=skin;if(mm.map)mm.map.encoding=THREE.sRGBEncoding;mm.roughness=.92;mm.metalness=0;brilhoLeg(mm,m,glow);o.material=mm}});
   if(!m.evoM){try{if(m.HC)attachParts(obj,i,m);else attachExtras(obj,i,m)}catch(e){}}enfeiteLeg(obj,m);
   obj.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(obj),h=Math.max(b.max.y-b.min.y,m.desliza?Math.max(b.max.z-b.min.z,b.max.x-b.min.x)*.45:0)||1,g=new THREE.Group();// serpente deitada: escala pelo comprimento, não pela altura
-  obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);return g}
+  obj.scale.setScalar(1/h);obj.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(obj);g.userData.bol=!!m.bol;g.userData.plano=ehPlano(obj);return g}
 // tira da cena qualquer modelo que tenha ficado de uma abertura anterior (evita dois bichinhos na tela)
 function tiraModelos(){if(!V.spin)return;for(const c of V.spin.children.slice())if(c.userData.modelo)V.spin.remove(c)}
-async function openGLB(i){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir de novo antes de terminar, só o último vale
-  const evo=careStage(i)>0&&i<CH0,m0=MODELS[i];let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;if(!initViewer())return false;
-  let src;try{src=await loadGLB(m)}catch(e){if(m===m0)return false;EVOFAIL[i]=1;delete GLB[m.file];m=m0;try{src=await loadGLB(m)}catch(e2){return false}}
+// modo 'leve': se o modelo detalhado ainda não chegou, abre na hora com a versão leve (_lo) e troca pela detalhada quando ela carregar
+// modo 'troca': só troca o modelo, sem mexer no giro nem no estado do bichinho
+async function openGLB(i,modo){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir de novo antes de terminar, só o último vale
+  const evo=estVis(i)>0&&i<CH0;let m0=MODELS[i];let m=evo&&EVOFILE[i]&&!EVOFAIL[i]?Object.assign({},m0,NBE[i]||{},{file:EVOFILE[i],skin:null,key:m0.key+'E',remote:1,evoM:1,wing:null,notail:false,noDeform:1}):m0;if(!initViewer())return false;
+  const evoModel=m!==m0,mHi=m;let leve=false;
+  if(modo==='leve'&&LEVES.has(m.file)&&!GLB[m.file]){leve=true;const lo=f=>f.replace(/\.glb$/,'_lo.glb');m=Object.assign({},m,{file:lo(m.file),key:m.key+'L'});if(!evoModel)m0=m}
+  let src;try{src=await loadGLB(m)}catch(e){if(leve){m=mHi;leve=false;try{src=await loadGLB(m)}catch(e1){return false}}else{if(m===m0)return false;EVOFAIL[i]=1;delete GLB[m.file];m=m0;try{src=await loadGLB(m)}catch(e2){return false}}}
   if(tok!==V.abre)return false;
-  const evoModel=m!==m0;
+  if(leve)loadGLB(mHi).then(()=>{if(V.open&&V.cur===i&&V.abre===tok)openGLB(i,'troca')},()=>{});
   if(V.C)V.spin.remove(V.C.root);if(V.T){V.spin.remove(V.T.root);V.T=null}
   const U={uHY:{value:0},uHP:{value:0},uHR:{value:0},uTail:{value:0},uT:{value:0},uWing:{value:0}};
   const obj=src.clone(true);
@@ -184,13 +196,19 @@ async function openGLB(i){setDet(i);const tok=V.abre=(V.abre||0)+1;// se abrir d
   const roll=new THREE.Group(),root=new THREE.Group();obj.scale.setScalar(k);obj.position.y=-sz.y*k/2;roll.add(obj);roll.position.y=sz.y*k/2;root.add(roll);
   root.position.y=-1;tiraModelos();root.userData.modelo=1;V.spin.add(root);
   setFloor(i);castAll(root);
-  V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts};V.mode='glb';V.chibi=false;V.sp={};
-  {const st=careStage(i);V.C.gs=m.leg?GROW[1].gs*(m.escala||1):GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
-  V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(careStage(i)||m.leg)makeAura(i);
-  Object.assign(V,{ry:isLeg(i)?vistaLeg(i):-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
+  V.C={root,roll,obj,U,m,h:sz.y*k,wx:sz.x*k,parts,plano:ehPlano(obj)};V.mode='glb';V.chibi=false;V.sp={};
+  {const st=estVis(i);V.C.gs=m.leg?GROW[1].gs*(m.escala||1):m.bol?.85:GROW[st].gs;root.scale.setScalar(V.C.gs);killAura()}
+  V.size={xz:Math.max(sz.x,sz.z)*k,y:sz.y*k};if(estVis(i)||m.leg)makeAura(i);
+  if(modo!=='troca')Object.assign(V,{ry:temVista(i)?vistaLeg(i):-.6,rx:.1,vy:0,st:'idle',until:0,taps:[],t0:performance.now(),wag:0,side:1,
     G:{hy:0,hp:0,hr:0,tail:0,wagA:.2,wagS:4,roll:0,crouch:0,bob:0,shake:0,lift:0}});
   return true;
 }
+// carrega antes (sem pressa, um por vez) os modelos detalhados que o jogador deve abrir: vizinhos no visualizador e a coleção
+const PRE=[];let preOn=false;
+function arqDe(i){const m0=MODELS[i];if(!m0)return null;try{if(careStage(i)>0&&i<CH0&&EVOFILE[i]&&!EVOFAIL[i])return Object.assign({},m0,{file:EVOFILE[i],remote:1,evoM:1})}catch(e){}return m0}
+function preCarrega(ids,frente){for(const i of ids){const m=arqDe(i);if(m&&!GLB[m.file]&&!PRE.some(q=>q.file===m.file))frente?PRE.unshift(m):PRE.push(m)}
+  if(preOn)return;preOn=true;const vez=()=>{const m=PRE.shift();if(!m){preOn=false;return}if(GLB[m.file]){vez();return}
+    const segue=()=>setTimeout(()=>(window.requestIdleCallback||setTimeout)(vez,{timeout:1500}),250);loadGLB(m).then(segue,segue)};setTimeout(vez,600)}
 function hitGLB(e){
   const r=$('v3d').getBoundingClientRect();V.ray.setFromCamera({x:(e.clientX-r.left)/r.width*2-1,y:-(e.clientY-r.top)/r.height*2+1},V.cam);
   const h=V.ray.intersectObject(V.C.root,true)[0];if(!h)return null;
@@ -223,7 +241,7 @@ function gloop(now){
   if(st==='tired')Object.assign(X,{hy:.1,hp:.32,hr:.2,wagA:m.wag*.25,wagS:2,roll:Math.PI*.46,crouch:.6,wing:0,wingS:1,bob:0});
   if(st==='shake'&&el>.45)X.shake=1;
   if(st==='run')Object.assign(X,{hy:0,hp:-.12,hr:0,wagA:m.wag*2.6,wagS:16,wing:.55,wingS:13});
-  if(st==='eat'){Object.assign(X,{hy:0,hp:.1+Math.sin(t*16)*.12,wagA:m.wag*2,wagS:9*sp,byaw:0,bob:.5,wing:.25,wingS:7});V.ry+=((isLeg(V.cur)?vistaLeg(V.cur):-.18)-V.ry)*Math.min(1,dt*3)}
+  if(st==='eat'){Object.assign(X,{hy:0,hp:.1+Math.sin(t*16)*.12,wagA:m.wag*2,wagS:9*sp,byaw:0,bob:.5,wing:.25,wingS:7});V.ry+=((temVista(V.cur)?vistaLeg(V.cur):-.18)-V.ry)*Math.min(1,dt*3)}
   const k=Math.min(1,dt*6*sp),kr=Math.min(1,dt*(st==='run'?7:2.5*sp)),kf=Math.min(1,dt*9);
   for(const n of['hy','hp','hr','wagA','wagS','crouch','bob','shake','lean','pitch','wing','wingS','byaw'])G[n]=(G[n]||0)+(X[n]-(G[n]||0))*k;
   G.back=(G.back||0)+(X.back-(G.back||0))*kf;G.hop=(G.hop||0)+(X.hop-(G.hop||0))*kf;G.roll+=(X.roll-G.roll)*kr;
@@ -236,12 +254,14 @@ function gloop(now){
   // squash keeps the feet on the floor (scale is taken around the middle of the body)
   const br=Math.sin(t*2.2*sp)*.015,sy=1+br-G.crouch*.1;
   C.roll.scale.set(1+G.crouch*.05,sy,1+G.crouch*.03);
-  C.roll.rotation.z=G.roll+shk+G.lean*(1-G.roll/Math.PI);C.roll.rotation.x=G.pitch;C.roll.rotation.y=G.byaw*(1-G.roll/Math.PI);
+  C.roll.rotation.z=G.roll+shk+G.lean*(1-G.roll/Math.PI);C.roll.rotation.x=G.pitch;C.roll.rotation.y=G.byaw*(1-G.roll/Math.PI)*(C.plano?.4:1);
   const desl=!!(MODELS[V.cur]&&MODELS[V.cur].desliza),hopY=act==='hop'&&!desl?Math.abs(Math.sin(ae*Math.PI*1.6))*.16*G.hop:0;// serpente desliza: sem pulinhos
   C.roll.position.y=C.h/2*sy+(st==='belly'?.04:0)+(desl?0:G.bob*Math.abs(Math.sin(t*7))*.05)+hopY+Math.abs(G.pitch)*C.h*.25+(C.wx?(C.wx/2-C.h/2*sy)*Math.max(0,Math.sin(Math.min(G.roll,Math.PI/2))):0)+(st==='tired'?Math.sin(t*2.4)*.008:0);
-  V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
-  if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
+  V.ry+=V.vy;V.vy*=.92;if(C.plano&&Math.abs(V.vy)<.003){const x=V.ry-Math.round(V.ry/Math.PI)*Math.PI;if(Math.abs(x)>.35)V.ry-=Math.sign(x)*(Math.abs(x)-.35)*.08}
+  V.spin.rotation.y=C.plano?yawPlano(V.ry):V.ry;V.spin.rotation.x=V.rx*.6;
+  if(st==='run'){const r=runPose(el,V.until-V.stT);C.root.position.x=r.x;C.root.position.z=r.z;C.root.rotation.y=C.plano?0:r.yaw;C.roll.position.y+=Math.abs(Math.sin(t*14))*.1*r.sp;C.roll.rotation.x=Math.sin(t*14)*.07*r.sp}
   else{C.root.position.x*=.8;C.root.position.z+=(-G.back-C.root.position.z)*.25;C.root.rotation.y*=.8}
+  pisaNoChao(C,hopY+(st==='run'?Math.abs(Math.sin(t*14))*.1:0)+(st==='belly'?.04:0));
   popTick(C);stage(t);
   V.renderer.render(V.scene,V.cam);
   if(V.open&&V.mode==='glb')V.raf=requestAnimationFrame(gloop);
@@ -364,10 +384,25 @@ function openFoxViewer(i){if(!openFox(i)){detail(i);return}const p=PLUSH[i];$('g
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
 function openChibiViewer(i){killAura();if(!openChibi(i,2)){detail(i);return}const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
   $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(vloop)}
-function openViewer(i){
-  vTags(i);if(i>=CH0&&!isLeg(i)){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
+// lendários, épicos e dragões são compridos: ao inclinar/rolar, a conta de altura (feita para os bichinhos redondinhos)
+// levantava ou afundava as patas. Aqui o ponto mais baixo do modelo é medido de verdade e encostado no chão (+ pulinho).
+// modelo 'plano' (dragões novos: a arte em relevo, frente e costas, quase sem espessura): de lado vira um palito.
+// Então o giro do palco nunca para de lado: perto da frente (0) ou das costas (π) gira normal; passando disso vira rápido para o outro lado.
+function ehPlano(obj){const b=new THREE.Box3().setFromObject(obj),s=b.getSize(new THREE.Vector3());return s.z<Math.max(s.x,s.y)*.25}
+function yawPlano(a){const P=Math.PI,k=Math.round(a/P)*P,x=a-k,ax=Math.abs(x);if(ax<=.35)return a;const q=(ax-.35)/(P/2-.35);return k+Math.sign(x)*(.35+(P/2-.35)*q*q*q*q)}
+function pisaNoChao(C,alvo){const m=MODELS[V.cur];if(!m||!m.leg||!C.roll)return;
+  if(!C._pts){const pts=[],inv=new THREE.Matrix4();C.roll.updateMatrixWorld(true);inv.copy(C.roll.matrixWorld).invert();const v=new THREE.Vector3();
+    C.roll.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const pa=o.geometry.attributes.position,M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld),st=Math.max(1,Math.floor(pa.count/1500));
+      for(let k=0;k<pa.count;k+=st){v.fromBufferAttribute(pa,k).applyMatrix4(M);pts.push(v.x,v.y,v.z)}});C._pts=new Float32Array(pts)}
+  // mede no mundo (o palco inclina quando o jogador arrasta para cima/baixo, o chão não): encosta o ponto mais baixo no chão
+  if(V.ground===undefined)return;V.spin.updateMatrixWorld(true);const e=C.roll.matrixWorld.elements,P=C._pts;let mn=1e9;
+  for(let k=0;k<P.length;k+=3){const y=e[1]*P[k]+e[5]*P[k+1]+e[9]*P[k+2]+e[13];if(y<mn)mn=y}
+  const esc=(V.k||1)*(V.spin.scale.y/(V.k||1))*(C.root.scale.y||1);// unidades do mundo por unidade do 'roll'
+  if(mn<1e8&&esc>0)C.roll.position.y+=(V.ground+alvo*esc-mn)/esc}
+function openViewer(i){atualizaDragoes();
+  vTags(i);if(i>=CH0&&!isLeg(i)&&!MODELS[i]){openChibiViewer(i);return}if(PROC[i]){openFoxViewer(i);return}try{if(!localStorage.getItem('garro-help')){$('gest').hidden=false;$('vHelp').setAttribute('aria-expanded',true);localStorage.setItem('garro-help','1')}}catch(e){}
   if(MODELS[i]){const rq=V.rq=(V.rq|0)+1;// o corpo antigo (em código) nunca aparece: se o modelo 3D não carregar, tenta de novo e avisa
-    const tenta=n=>openGLB(i).then(ok=>{if(V.rq!==rq)return;if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
+    const tenta=n=>openGLB(i,'leve').then(ok=>{if(V.rq!==rq)return;if(ok){const p=PLUSH[i];$('gest').innerHTML=GEST0;$('vName').textContent=p.name;refreshVStats(i);$('vDesc').textContent=p.desc;
       $('viewer').hidden=false;V.open=true;document.body.style.overflow='hidden';fit();renderCare();cancelAnimationFrame(V.raf);V.last=performance.now();V.raf=requestAnimationFrame(gloop)}
       else if(n<8){if(n===0)banner('Carregando '+PLUSH[i].name+'…','um instante');EVOFAIL[i]=0;setTimeout(()=>{if(V.rq===rq)tenta(n+1)},1200+n*500)}
       else{logErro('viewer:'+PLUSH[i].name,'modelo 3D não carregou depois de 8 tentativas');banner('Não carregou','Confira a internet e toque no bichinho de novo')}});
@@ -426,12 +461,12 @@ function vloop(now){
   if(st==='belly')Object.assign(T,{lid:.88,ear:-.7,tailX:-.3,wagA:.85,wagS:11,tongue:1,hx:-.25,hy:.35,hz:.2,roll:Math.PI,paddle:1,flap:0});
   if(st==='shake'){Object.assign(T,{lid:.3,ear:0,tailX:.3,wagA:.5,wagS:9,tongue:.5});if(el>.45)T.shake=1}
   if(st==='run')Object.assign(T,{lid:.1,ear:-.5,tailX:.4,wagA:0,wagS:5,tongue:1,hx:-.15,hy:0,hz:0});
-  if(st==='eat'){Object.assign(T,{lid:.3,ear:.15+Math.sin(t*16)*.1,tailX:.2,wagA:.7,wagS:12,tongue:.6+.4*Math.sin(t*15),hx:.1+Math.sin(t*16)*.2,hy:0,hz:0,crouch:.1});V.ry+=((isLeg(V.cur)?vistaLeg(V.cur):-.18)-V.ry)*Math.min(1,dt*3)}
+  if(st==='eat'){Object.assign(T,{lid:.3,ear:.15+Math.sin(t*16)*.1,tailX:.2,wagA:.7,wagS:12,tongue:.6+.4*Math.sin(t*15),hx:.1+Math.sin(t*16)*.2,hy:0,hz:0,crouch:.1});V.ry+=((temVista(V.cur)?vistaLeg(V.cur):-.18)-V.ry)*Math.min(1,dt*3)}
   const k=Math.min(1,dt*7),k2=Math.min(1,dt*(st==='belly'||st==='shake'?3.2:7));
   for(const n in S)S[n]+=(T[n]-S[n])*(n==='roll'?k2:k);
   V.wag+=dt*S.wagS;
   // turntable
-  if(st==='pet'||st==='scratch')V.ry+=((isLeg(V.cur)?vistaLeg(V.cur):-.35)-V.ry)*dt*2;
+  if(st==='pet'||st==='scratch')V.ry+=((temVista(V.cur)?vistaLeg(V.cur):-.35)-V.ry)*dt*2;
   V.ry+=V.vy;V.vy*=.92;V.spin.rotation.y=V.ry;V.spin.rotation.x=V.rx*.6;
   // body
   const shakeOsc=S.shake*Math.sin(el*30)*.45*Math.max(0,1-(el-.45)/1);

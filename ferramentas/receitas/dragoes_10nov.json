@@ -1,0 +1,113 @@
+{
+ "_nota": "Folha do Tripo enviada em 10/11 (dragon_3d_model__1__1.glb): 5 linhas (fogo, água, terra, céu, sombra) x 6 colunas = cada dragão (inicial, evolução 2, final) aparece de frente e de lado. No jogo: os sem asas usam a figura de lado (cauda inteira, virada para +z pelo giro_auto); os com asas (brasarok, venturi, tempestral, breumin, umbraz, noctarion) usam a de frente, porque na de lado a asa vira uma folha só.",
+ "colunas": 6,
+ "linhas": 5,
+ "nomes": [
+  "brasin_frente",
+  "brasin_lado",
+  "brasor_frente",
+  "brasor_lado",
+  "brasarok_frente",
+  "brasarok_lado",
+  "gotim_frente",
+  "gotim_lado",
+  "ondar_frente",
+  "ondar_lado",
+  "abissor_frente",
+  "abissor_lado",
+  "pedrim_frente",
+  "pedrim_lado",
+  "rochedo_frente",
+  "rochedo_lado",
+  "terrabruto_frente",
+  "terrabruto_lado",
+  "soprim_frente",
+  "soprim_lado",
+  "venturi_frente",
+  "venturi_lado",
+  "tempestral_frente",
+  "tempestral_lado",
+  "breumin_frente",
+  "breumin_lado",
+  "umbraz_frente",
+  "umbraz_lado",
+  "noctarion_frente",
+  "noctarion_lado"
+ ],
+ "alvo": 30000,
+ "giro": {},
+ "giro_auto": {
+  "brasin_lado": "-x",
+  "brasor_lado": "-x",
+  "brasarok_lado": "-x",
+  "gotim_lado": "-x",
+  "ondar_lado": "-x",
+  "abissor_lado": "-x",
+  "pedrim_lado": "-x",
+  "rochedo_lado": "-x",
+  "terrabruto_lado": "-x",
+  "soprim_lado": "-x",
+  "venturi_lado": "-x",
+  "tempestral_lado": "-x",
+  "breumin_lado": "-x",
+  "umbraz_lado": "-x",
+  "noctarion_lado": "-x"
+ },
+ "cauda_caixa": {
+  "brasarok": [
+   -0.12,
+   0.27
+  ],
+  "tempestral": [
+   -0.2,
+   0.22
+  ],
+  "breumin": [
+   -0.22,
+   0.24
+  ],
+  "umbraz": [
+   -0.22,
+   0.27
+  ],
+  "noctarion": [
+   -0.18,
+   0.27
+  ],
+  "brasin": [
+   -0.2,
+   1
+  ],
+  "brasor": [
+   -0.2,
+   1
+  ],
+  "gotim": [
+   -0.2,
+   1
+  ],
+  "ondar": [
+   -0.2,
+   1,
+   "K=1.1"
+  ],
+  "abissor": [
+   -0.22,
+   1,
+   "K=1.0"
+  ],
+  "terrabruto": [
+   -0.3,
+   1
+  ],
+  "rochedo": [
+   -0.32,
+   1
+  ],
+  "soprim": [
+   -0.25,
+   0.3
+  ]
+ },
+ "_nota_cauda": "No jogo: figura de FRENTE (corpo e cabeça como a arte) + a cauda da figura de lado (ferramentas/junta_cauda.py com CAIXA=zmax,ymax da cauda na figura de lado; a cauda vai para o meio do corpo, na altura do quadril, com a base enterrada). Só a figura de frente: pedrim (já tem cauda) e venturi (a cauda de lado não presta)."
+}

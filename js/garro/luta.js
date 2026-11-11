@@ -2,7 +2,7 @@
 /* ---------- batalha: cada bichinho com nível, ataque e defesa ---------- */
 let BT=null;
 function bStats(f){const S=statsAt(f.i,f.lv,f.rb);if(f.giant){const k=GEVO[f.i]?FORCA.gigante_evoluido:FORCA.gigante;S.atk=Math.round(S.atk*k);S.def=Math.round(S.def*k);S.hp=Math.round(S.hp*k)}return Object.assign({},f,S)}
-function pickOpp(my){const myLv=lvOf(my);const same=Math.random()<.75;let j;do{j=Math.floor(Math.random()*NPL)}while(j===my||(same&&(j<CH0)!==grande(my)));const lv=Math.max(1,Math.min(capOf(j),Math.round(myLv*(.75+Math.random()*.5))));return bStats({i:j,lv,giant:j<CH0&&Math.random()<.12?1:0})}
+function pickOpp(my){const myLv=lvOf(my);const same=Math.random()<.75;let j;do{j=Math.floor(Math.random()*NPL)}while(j===my||!PLUSH[j]||PLUSH[j].fora||(same&&(j<CH0)!==grande(my)));const lv=Math.max(1,Math.min(capOf(j),Math.round(myLv*(.75+Math.random()*.5))));return bStats({i:j,lv,giant:j<CH0&&Math.random()<.12?1:0})}
 function bName(f){return (f.giant?'🏆 '+(GEVO[f.i]?'Gigante★ ':'Gigante '):'')+evName(f.i,f.i<CH0&&(isEvo(f.i,f.lv,f.rb)||(f.giant&&GEVO[f.i]))?1:0)}
 // imagens da luta: todos desenhados de perfil OLHANDO PARA A DIREITA. O da esquerda fica como está, o da direita é espelhado: sempre cara a cara.
 const BSPR=GD.sprites_luta.BSPR,BSPRE=GD.sprites_luta.BSPRE;const EVOSPR=BSPRE;// coleção usa as mesmas imagens evoluídas
@@ -81,7 +81,7 @@ function fightBattle(){if(!BT||BT.busy)return;if(BT.fought){BT.fought=0;BT.op=pi
     $('bRes').innerHTML=line;$('bGo').textContent='⚔️ Lutar de novo';$('bGo').disabled=$('bOther').disabled=$('bClose').disabled=false;BT.busy=false;
     // depois de ganhar XP o nível pode ter mudado: atualiza o meu lado e sorteia outro adversário
     BT.me=bStats({i:my,lv:lvOf(my),giant:BT.me.giant});$('bMeSt').textContent=(ELNAME[ELEM[my]]||'')+' · Nv '+BT.me.lv+' · ⚔️ '+BT.me.atk+' · 🛡️ '+BT.me.def+' · ❤️ '+BT.me.hp;BT.fought=1},R.log.length*850+700)}
-$('cBat').addEventListener('click',openBattle);
+$('cBat').addEventListener('click',()=>{const i=V.cur;if(i===undefined)return;escolheCopia(i,'Batalhar com qual?',g=>openBattle(g))});
 $('bGo').addEventListener('click',fightBattle);
 $('bOther').addEventListener('click',()=>{if(!BT||BT.busy)return;BT.op=pickOpp(BT.me.i);BT.fought=0;bFill('Me',BT.me);bFill('Op',BT.op);bIdle();$('bRes').textContent='Novo adversário!';click(700)});
 $('bClose').addEventListener('click',()=>{if(BT&&BT.busy)return;$('battle').hidden=true;if(window.GARRO_SOM)GARRO_SOM.parar();if(V.open&&V.cur!==undefined){renderCare();refreshVStats(V.cur)}});
@@ -138,7 +138,7 @@ function feedPet(){
   INV.food--;saveInv();updFood();
   const k=Math.floor(Math.random()*FOODS.length),g=foodMesh(k);castAll(g);V.scene.add(g);
   const from=V.cam.position.clone().add(new THREE.Vector3(1.1*V.k,.9*V.k+.4,-3.6));
-  setState('eat',2.6);V.ry=isLeg(i)?vistaLeg(i):-.15;V.vy=0;
+  setState('eat',2.6);V.ry=temVista(i)?vistaLeg(i):-.15;V.vy=0;
   FOOD={g,k,t0:performance.now(),from,done:0,i};mood('Que cheirinho! '+FOODS[k].e)}
 function tickFood(){if(!FOOD)return;const F=FOOD,u=(performance.now()-F.t0)/1000,to=mouthWorld();
   const s=V.k*.9+.18;F.g.scale.setScalar(s);
@@ -232,9 +232,29 @@ const MOODS=GD.textos.MOODS;
 let moodT=0;
 function mood(txt){const el=$('vMood');if(!el)return;if(!txt){el.classList.remove('on');return}el.textContent=txt;el.classList.add('on');clearTimeout(moodT);moodT=setTimeout(()=>el.classList.remove('on'),2200)}
 function vTags(i){const p=PLUSH[i],r=p.rare<=2?3:p.rare<=4?2:1;
-  $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span>'+(p.leg?(isEpic(i)?'<span class="rL">🔥 Épico</span>':'<span class="rL">✦ Lendário</span>'):'<span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>');
-  const own=PLUSH.filter(q=>coll[q.i]).map(q=>q.i);V.cur=i;V.own=own;const many=own.length>1;$('vPrev').hidden=$('vNext').hidden=!many}
+  formasDoDragao(i);
+  $('vTags').innerHTML='<span>'+(ELNAME[ELEM[i]]||'')+'</span>'+(p.leg?(isEpic(i)?'<span class="rL">🔥 Épico</span>':isDrag(i)?'<span class="rL">🐉 Dragão · forma '+(formaDoDrag(i)+1)+'/3</span>':'<span class="rL">✦ Lendário</span>'):'<span class="r'+r+'">'+['','Comum ★','Rara ★★','Lendária ★★★'][r]+'</span>');
+  const own=PLUSH.filter(q=>coll[q.i]&&!q.fora).map(q=>q.i);V.cur=i;V.own=own;const many=own.length>1;$('vPrev').hidden=$('vNext').hidden=!many;
+  if(many&&typeof preCarrega==='function'){const k=own.indexOf(i);preCarrega([own[(k+1)%own.length],own[(k-1+own.length)%own.length]],true)}}// os vizinhos já vão carregando
 function vStep(d){const o=V.own||[];if(o.length<2)return;let k=o.indexOf(V.cur);k=(k+d+o.length)%o.length;audio();click(700);openViewer(o[k])}
 $('vPrev').addEventListener('click',()=>vStep(-1));$('vNext').addEventListener('click',()=>vStep(1));
 $('vHelp').addEventListener('click',()=>{const g=$('gest'),open=g.hidden;g.hidden=!open;$('vHelp').setAttribute('aria-expanded',open)});
 addEventListener('keydown',e=>{if(!V.open)return;if(['Escape','ArrowLeft','ArrowRight',' ','ArrowDown'].includes(e.key))e.stopImmediatePropagation();if(e.key==='Escape')closeViewer();if(e.key==='ArrowLeft')vStep(-1);if(e.key==='ArrowRight')vStep(1)},true);
+
+// visualizador: 3 campos com as formas do dragão — 1 (inicial), 2 (evolução da 1) e 3 (evolução da 2). Toque para ver em 3D.
+// As que ainda não alcançou aparecem apagadas com o nível em que chegam (o admin pode ver todas).
+function campos(el,L){el.innerHTML=L.map((c,k)=>'<button class="vfm'+(c.on?' on':'')+(c.ok?'':' lock')+'"'+(c.ok?' onclick="'+c.acao+'"':' disabled')+' aria-label="Forma '+(k+1)+': '+c.nome+'">'
+    +'<span class="vfmn">'+(k+1)+'</span><img src="'+c.img+'" alt=""><b>'+c.nome+'</b><small>'+(c.ok?c.quando:'🔒 '+c.quando)+'</small></button>').join('<i class="vfmseta">›</i>');el.hidden=false}
+// pelúcias: bolinha (redondo 20+k) → grande k → grande k evoluído
+function formasDaPelucia(i,el){const k=ehBolinha(i)?i-CH0:i<CH0?i:-1;if(k<0||!PLUSH[k]){el.hidden=true;el.innerHTML='';return}
+  const b=CH0+k,temB=ehBolinha(b),ev=estVis(k),L=[];
+  if(temB)L.push({img:PLUSH[b].img,nome:PLUSH[b].name,quando:'bolinha',ok:DEV||coll[b]>0,on:i===b,acao:'vaiForma('+b+')'});
+  L.push({img:PLUSH[k].img,nome:evName(k,0),quando:'grande',ok:DEV||coll[k]>0,on:i===k&&ev===0,acao:'vaiForma('+k+',0)'});
+  L.push({img:EVOSPR[k]?EVOSPR[k].img:PLUSH[k].img,nome:evName(k,1),quando:'evoluído',ok:DEV||(coll[k]>0&&careStage(k)===1),on:i===k&&ev===1,acao:'vaiForma('+k+',1)'});
+  campos(el,L);if(i===k)$('vName').textContent=evName(k,ev)}
+function formasDoDragao(i){const el=$('vFormas');if(!el)return;if(!isDrag(i)){if(!isLeg(i))formasDaPelucia(i,el);else{el.hidden=true;el.innerHTML=''}return}
+  const Dg=DRS[i-DRAG0],at=formaDoDrag(i),tem=formaIdx(lvOf(i));
+  el.innerHTML=Dg.formas.map((f,k)=>{const ok=DEV||k<=tem,quando=k===0?'inicial':'Nv '+DRF[k-1];
+    return '<button class="vfm'+(k===at?' on':'')+(ok?'':' lock')+'"'+(ok?' onclick="verForma('+i+','+k+')"':' disabled')+' aria-label="Forma '+(k+1)+': '+f.nome+'">'
+      +'<span class="vfmn">'+(k+1)+'</span><img src="'+f.sprite.img+'" alt=""><b>'+f.nome+'</b><small>'+(ok?quando:'🔒 '+quando)+'</small></button>'}).join('<i class="vfmseta">›</i>');
+  el.hidden=false}

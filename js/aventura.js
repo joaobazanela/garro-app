@@ -11,7 +11,18 @@ const $=id=>document.getElementById(id);
 const LT=D.luta,EN=D.energia,STAT=PD.STAT,ELEM=PD.ELEM,ECOL=PD.ECOL,ELNAME=PD.ELNAME,BFX=(GD.modelos&&GD.modelos.BFX)||{};
 const FASES=[];D.mundos.forEach(m=>m.fases.forEach(f=>FASES.push(Object.assign({mundo:m},f))));
 // lendários (js/lendarios.js, ids a partir de G.LEG0): contam como bichinhos grandes
-const LEG0=G.LEG0||43,NLEG=((GD.lendarios||{}).lendarios||[]).length,grande=i=>i<G.CH0||(NLEG>0&&i>=LEG0),redondo=i=>!grande(i);
+// criaturas da Aventura (data/aventura.json → criaturas; modelos em js/criaturas.js): ids 1000+, não são bichinhos da coleção
+const CRI={};for(const c of (D.criaturas||[]))CRI[c.id]=c;const ehCri=i=>!!CRI[i];
+const LEG0=G.LEG0||43,NLEG=((GD.lendarios||{}).lendarios||[]).length,grande=i=>ehCri(i)?CRI[i].tipo!=='basico':i<G.CH0||(NLEG>0&&i>=LEG0),redondo=i=>!grande(i);
+const statDe=i=>ehCri(i)?CRI[i].stat:STAT[i],elemDe=i=>ehCri(i)?CRI[i].elemento:ELEM[i];
+const sprDe=(j,lv)=>ehCri(j)?'img/criaturas/'+CRI[j].slug+'.webp':G.sprite(j,lv),nomeInim=(j,chefe)=>ehCri(j)?CRI[j].nome:chefe?G.evName(j):G.name(j);
+// modelo 3D da criatura: o arquivo do Tripo (criaturas[].modelo) ou, sem arquivo, a forma montada em js/criaturas.js; 1 de altura, olhando para +z
+async function modeloDe(j,chefe){if(ehCri(j)){const C=CRI[j];
+    if(C.modelo){try{const o=await G.glb(C.modelo),T=G.THREE();o.traverse(m=>{if(m.isMesh&&m.material){m.material=m.material.clone();m.material.roughness=.85;m.material.metalness=0;if(m.material.map)m.material.map.encoding=T.sRGBEncoding}});
+        o.updateMatrixWorld(true);const b=new T.Box3().setFromObject(o),h=Math.max(b.max.y-b.min.y,(b.max.x-b.min.x)*.6,(b.max.z-b.min.z)*.6)||1,g=new T.Group();
+        o.scale.setScalar(1/h);o.position.set(-(b.min.x+b.max.x)/2/h,-b.min.y/h,-(b.min.z+b.max.z)/2/h);g.add(o);return g}catch(e){console.warn('criatura',C.slug,e)}}
+    if(window.GARRO_CRIATURAS){const m=GARRO_CRIATURAS.modelo(C.slug);if(m)return m}}
+  return G.modelo(ehCri(j)?(CRI[j].tipo==='basico'?22:0):j,chefe)}
 const DESLIZA=new Set(((GD.lendarios||{}).lendarios||[]).concat((GD.lendarios||{}).epicos||[]).filter(L=>L.anda==='desliza').map(L=>+L.id)),cobra=i=>DESLIZA.has(i);
 // Desafio Lendário: fase extra depois do chefão do mundo; o chefão é o lendário do dia (troca à meia-noite de Brasília, igual ao servidor)
 function legDoDia(){const h=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);return Math.floor(Date.parse(h+'T00:00:00Z')/864e5)%10}
@@ -23,11 +34,12 @@ const LKEY='garro-aventura';
 const media=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const MB=media(STAT.slice(0,G.CH0).map(s=>(s[0]+s[1])/2)),MS=media(STAT.slice(G.CH0,G.LEG0||43).map(s=>(s[0]+s[1])/2));
 // o nível pesa muito: ataque, defesa e vida crescem juntos; bichinhos redondos são equiparados aos grandes
-function lutador(i,lv,o){o=o||{};const s=STAT[i],M=grande(i)?MB:MS,k=MB/M,a=(s[0]+M)/2*k,d=(s[1]+M)/2*k;
-  const P=1+LT.nivel_k*(lv-1),ev=G.isEvo(i,lv,o.rb)?LT.evoluido:1,RB=1+G.REB_B*(o.rb|0);
+function lutador(i,lv,o){o=o||{};const s=statDe(i),M=grande(i)?MB:MS,k=MB/M,a=(s[0]+M)/2*k,d=(s[1]+M)/2*k;
+  const P=1+LT.nivel_k*(lv-1),ev=!ehCri(i)&&G.isEvo(i,lv,o.rb)?LT.evoluido:1,RB=1+G.REB_B*(o.rb|0);
   let atk=a*P*ev*RB,def=d*P*ev*RB,hp=(a+d)*P*ev*RB*LT.vida_k*(o.heroi?LT.heroi_vida:1);
   if(o.chefe){hp*=LT.chefe_vida;atk*=LT.chefe_ataque}
-  hp=Math.round(hp);return{i,lv,rb:o.rb|0,atk,def,hp,max:hp,el:ELEM[i],cd:0,defesa:false,chefe:!!o.chefe}}
+  if(o.gig){const F=(GD.regras&&GD.regras.FORCA)||{},g=o.gigEvo?(F.gigante_evoluido||1.35):(F.gigante||1.2);atk*=g;def*=g;hp*=g}// gigante: mais forte (data/regras.json → FORCA)
+  hp=Math.round(hp);return{i,lv,rb:o.rb|0,atk,def,hp,max:hp,el:elemDe(i),cd:0,defesa:false,chefe:!!o.chefe}}
 const grupo=el=>(D.grupos&&D.grupos[el])||el;
 function elemMult(A,B){const a=grupo(A.el),b=grupo(B.el);if((D.vantagens[a]||[]).includes(b))return LT.vantagem;if((D.vantagens[b]||[]).includes(a))return LT.desvantagem;return 1}
 function dano(A,B,mult){const em=elemMult(A,B);let d=A.atk*mult*(1-LT.variacao+Math.random()*2*LT.variacao)*60/(60+B.def)*em;
@@ -103,7 +115,7 @@ function mapa(){limpa3D();TELA='mapa';RUN=null;moedas();$('advTitle').textConten
     for(let q=0;q<10;q++)h+='<span class="advdeco" style="left:'+((q*37+9)%90+5)+'%;top:'+((q*71+30)%(H-30))+'px">'+dc[q%dc.length]+'</span>';
     o.ks.forEach((k,q)=>{const f=FASES[k],P=PJ(q),ok=liberada(k),st=pr[f.id]||0,cls=st?'feita':ok?'atual':'bloq';
       h+='<button type="button" class="advnode '+cls+(f.chefe?' chefe':'')+(f.desafio?' lenda':'')+'" data-k="'+k+'" style="left:'+P.x+'%;top:'+P.y+'px"'+(ok?'':' disabled')+'>'+
-        (f.chefe?'<img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt="">':'<b>'+numDe(k)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(f.desafio?'👑 '+f.nome:st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>'});
+        (f.chefe?'<img src="'+(ehCri(f.chefe[0])?sprDe(f.chefe[0]):G.sprite(f.chefe[0],G.EVO_LV,1))+'" alt="">':'<b>'+numDe(k)+'</b>')+(ok?'':'<em>🔒</em>')+'<i>'+(f.desafio?'👑 '+f.nome:st?estrelas(st):f.chefe?'Chefão':'')+'</i><s class="cav" aria-label="Dificuldade '+(f.caveiras||1)+' de 5">'+caveiras(f)+'</s></button>'});
     h+='</div>'+(o.ok?'':'<p class="advjbloq">Vença o chefão do mundo anterior para abrir.</p>')+'</section>'});
   h+='</div>'+(G.dev()?'<p class="advnote">🛠 Modo teste (admin): todas as fases liberadas, sem cansaço e sem nível mínimo.</p>':'')+'<p class="advnote">Arraste para o lado ou toque numa ilha do mapa para trocar de mundo. Cada fase cansa um pouco o bichinho (⚡).</p>';
   $('advBody').innerHTML=h;$('advBody').scrollTop=0;
@@ -115,13 +127,13 @@ function irJan(k){const J=$('advJan');if(!J)return;JAN=Math.max(0,Math.min(D.mun
 // escolher o bichinho
 function pips(e){let s='';for(let k=0;k<EN.max;k++)s+='<i class="'+(k<e?'on':'')+'"></i>';return '<span class="advpips">'+s+'</span>'}
 function escolha(k){limpa3D();TELA='escolha';FK=k;const f=FASES[k];moedas();$('advTitle').textContent=f.desafio?f.nome:(D.mundos.length>1?f.mundo.nome+' · ':'')+'Fase '+numDe(k);
-  const coll=G.coll(),meus=Object.keys(coll).map(Number).filter(i=>coll[i]>0).sort((a,b)=>G.lvOf(b)-G.lvOf(a));
+  const coll=G.coll(),meus=Object.keys(coll).map(Number).filter(i=>coll[i]>0&&!(G.fora&&G.fora(i))).sort((a,b)=>G.lvOf(b)-G.lvOf(a));
   if(SEL===null||!meus.includes(SEL))SEL=meus[0]??null;
   const LG=f.desafio&&window.GARRO_LEND?window.GARRO_LEND.porId(f.chefe[0]):null;
-  let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b><small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
+  let h='<div class="advfase'+(f.desafio?' lenda':'')+'"><b>'+f.nome+'</b>'+(!f.desafio&&vezesDe(f.id)?'<small class="advvez">🔁 '+vezesDe(f.id)+(vezesDe(f.id)===1?' vez jogada':' vezes jogadas')+' · cada vez muda o mapa e a quantidade de inimigos</small>':'')+'<small>'+(f.desafio?'👑 Hoje: <b>'+(LG?LG.nome:G.name(f.chefe[0]))+'</b> · '+Math.round((f.chance_ovo||0)*100)+'% de chance do ovo dele (na 1ª vitória do dia) · troca todo dia':box().prog[f.id]?'Já vencida '+estrelas(box().prog[f.id])+' · repetir dá só XP':'1ª vitória: +'+f.premio+' 🪙'+(f.chefe?' · chance de pedra de evolução · 💎 na 1ª vitória':''))+'</small>';
   const meuLv=SEL!==null?G.lvOf(SEL):1,tps=tiposDa(f);
   h+='<div class="advdif"><span class="cav">'+caveiras(f)+'</span>'+Object.keys(tps).map(t=>TP[t]?'<span class="tp">'+TP[t].icone+' '+TP[t].nome+(tps[t]>1?' ×'+tps[t]:'')+'</span>':'').join('')+'</div>';
-  h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+G.sprite(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+G.sprite(f.chefe[0],G.EVO_LV,1)+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
+  h+='<div class="advfoes">'+f.inimigos.map(([j,lv])=>'<span><img src="'+sprDe(j,lv)+'" alt=""><small class="'+corNv(lv,meuLv)+'">Nv '+lv+'</small></span>').join('')+(f.chefe?'<span class="chefe"><img src="'+(ehCri(f.chefe[0])?sprDe(f.chefe[0]):G.sprite(f.chefe[0],G.EVO_LV,1))+'" alt=""><small class="'+corNv(f.chefe[1],meuLv)+'">👑 Nv '+f.chefe[1]+'</small></span>':'')+'</div>';
   h+='<small class="advrec">Recomendado: Nv '+recomendado(f)+' ou mais</small></div>';
   if(!meus.length)h+='<p class="advnote">Pegue uma pelúcia na máquina para começar a aventura.</p>';
   h+='<div class="advpets">'+meus.map(i=>{const lv=G.lvOf(i),E=energia(i),el=ELEM[i];return '<button type="button" class="advpet'+(i===SEL?' sel':'')+(lv<recomendado(f)-4?' fraco':'')+'" data-i="'+i+'"><img src="'+G.sprite(i,lv,0,G.rbOf(i))+'" alt=""><b>'+(lv>=G.EVO_LV&&i<G.CH0?G.evName(i):G.name(i))+'</b><small>Nv '+lv+' · '+(ELNAME[el]||'')+'</small>'+pips(E.e)+(E.e<EN.max?'<small class="advwait">+1 ⚡ em '+tempo(E.falta)+'</small>':'')+'</button>'}).join('')+'</div>';
@@ -148,7 +160,17 @@ async function descansar(i){if(G.coins()<EN.descanso_preco){msg('Faltam moedas p
 const ERROS={sem_moedas:'Faltam moedas para jogar.',cansado:'Seu bichinho está cansado. Descanse ou espere a energia voltar.',fase_bloqueada:'Vença a fase anterior primeiro.',nao_tem:'Você não tem esse bichinho.'};
 // cada partida custa moedas (data/aventura.json → custo_moedas); o servidor cobra no adv_start; admin (dev) joga de graça
 const CUSTO=D.custo_moedas||0;
-async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=energia(i);if(E.e<1||G.lvOf(i)<nivelMin(f)){escolha(k);return}
+// cada vez que você entra na mesma fase (ganhando ou perdendo), ela muda inteira (data/aventura.json → repeticao): semente nova pelo número de vezes
+// e a quantidade de inimigos segue a lista repeticao.extra. O nível dos inimigos continua o da fase (sobe de uma fase para a outra).
+function vezesDe(id){return (L.vezes&&L.vezes[id])|0}
+function mapaDaVez(f){const n=f.desafio?11:f.mundo.fases.findIndex(x=>x.id===f.id)+1,W=f.desafio?{}:(f.mundo.dif||{});
+  if(f.desafio)return GARRO_MAPAS.novo(n,{inimigos:f.inimigos,chefe:f.chefe},true,D.mapa_variacao,null);
+  const RP=D.repeticao||{},v=vezesDe(f.id),lista=RP.extra||[0],ex=Math.min(RP.extra_max??4,lista[v%lista.length]|0);
+  let h=7;for(const ch of f.id)h=(h*31+ch.charCodeAt(0))>>>0;const seed=(Math.imul(h^Math.imul(v+1,0x9E3779B1),0x85EBCA6B)^(v*40503))>>>0||1;// bem espalhada: cada vez um percurso bem diferente
+  L.vezes=L.vezes||{};L.vezes[f.id]=v+1;saveL();// cada vez que entra (ganhando ou não) a próxima vem com outro mapa
+  return GARRO_MAPAS.gera(n,{inimigos:f.inimigos,chefe:f.chefe},seed,false,ex+(W.extra|0),W)}
+async function comecar(k,i,gig){const f=FASES[k];if(!liberada(k))return;
+  if(gig===undefined&&G.copias){const c=G.copias(i);if(c.n+c.g>1){G.escolheCopia(i,'Levar qual para a aventura?',g=>comecar(k,i,g));return}gig=c.g>0&&!c.n}const E=energia(i);if(E.e<1||G.lvOf(i)<nivelMin(f)){escolha(k);return}
   if(CUSTO&&!G.dev()&&G.coins()<CUSTO){msg('Cada partida custa '+CUSTO+' 🪙. Faltam '+(CUSTO-G.coins())+' moedas.');return}
   const b=$('advStart');if(b)b.disabled=true;G.click(820);
   if(G.online()){const r=await G.sync('adv_start',{plushId:i,stage:f.id});
@@ -157,9 +179,9 @@ async function comecar(k,i){const f=FASES[k];if(!liberada(k))return;const E=ener
   else{L.en[i]={e:E.e-1,s:E.e>=EN.max?Date.now():E.s};saveL();if(CUSTO&&!G.dev())G.addCoinsLocal(-CUSTO)}
   const lv=admLv(i,f);
   // mapa novo a cada partida (js/mapas.js): percurso e quantidade de bichinhos mudam; sem o gerador usa o mapa reserva do JSON
-  let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=GARRO_MAPAS.novo(f.desafio?11:f.mundo.fases.findIndex(x=>x.id===f.id)+1,{inimigos:f.inimigos,chefe:f.chefe},!!f.desafio,D.mapa_variacao,f.desafio?null:f.mundo.dif)}catch(e){console.warn('mapa',e)}
+  let M3=f.mapa3d;try{if(window.GARRO_MAPAS)M3=mapaDaVez(f)}catch(e){console.warn('mapa',e)}
   if(M3&&!f.desafio&&f.mundo.tema)M3.tema=f.mundo.tema;
-  RUN={k,f,i,M:M3,hero:lutador(i,lv,{heroi:1,rb:G.rbOf(i)}),fim:false,quit:0,leaves:0,dif:difDe(k)};
+  RUN={k,f,i,gig:!!gig,M:M3,hero:lutador(i,lv,{heroi:1,rb:G.rbOf(i),gig:!!gig,gigEvo:!!(gig&&G.copias&&G.copias(i).gevo)}),fim:false,quit:0,leaves:0,dif:difDe(k)};
   luta()}
 
 // ---------- a fase: mapa 3D visto de cima (joystick, luta em tempo real, habilidades) ----------
@@ -188,7 +210,7 @@ function luta(){TELA='luta';msg('');const R=RUN,f=R.f,h=R.hero;$('advTitle').tex
     '<div class="advhud"><div class="advme"><span class="foto"><img src="'+G.sprite(R.i,h.lv,0,h.rb)+'" alt=""><small>'+h.lv+'</small></span><div class="info"><b>'+nomeDe(R.i,h.lv,h.rb)+'</b>'+
       '<div class="hp"><i id="advHpMe"></i><span id="advHpTxt"></span></div><div class="advobj"><span id="advObjE"></span><span class="advleaf" id="advLeaf"></span><span class="cav">'+caveiras(f)+'</span></div></div></div>'+
       '<div class="advdir"><canvas class="advmini" id="advMini" width="192" height="192"></canvas><button type="button" class="advpausa" id="advPausa" aria-label="Pausar">⏸</button></div></div>'+
-    '<div class="advboss" id="advBoss" hidden><b>👑 '+(f.chefe?G.evName(f.chefe[0]):'')+' <small>Nv '+(f.chefe?f.chefe[1]:'')+'</small><span id="advHpBossTxt"></span></b><div class="hp"><i id="advHpBoss"></i></div></div>'+
+    '<div class="advboss" id="advBoss" hidden><b>👑 '+(f.chefe?nomeInim(f.chefe[0],true):'')+' <small>Nv '+(f.chefe?f.chefe[1]:'')+'</small><span id="advHpBossTxt"></span></b><div class="hp"><i id="advHpBoss"></i></div></div>'+
     '<div class="advfx" id="advFx"></div><div class="advaviso" id="advAviso"></div><div class="advload" id="advLoad"><i></i>Entrando na floresta…</div>'+
     '<div class="advjoy" id="advJoy"><i id="advJoyK"></i></div>'+
     '<div class="advskills"><button type="button" data-k="A" class="atk">⚔️<span>Atacar</span></button>'+
@@ -203,6 +225,13 @@ function luta(){TELA='luta';msg('');const R=RUN,f=R.f,h=R.hero;$('advTitle').tex
 
 // ---- pernas andando no próprio modelo 3D (passo diagonal, a pata de apoio fica no chão) ----
 // cobra=true (data/lendarios.json → anda: "desliza", ex.: Astrakai): o corpo todo ondula de lado e desliza, sem passos
+// ponto ao lado do caminho (fração t do comprimento do caminho), afastado d dele e longe de outros trechos; devolve [x,z,giro de frente para o caminho]
+function lugarAoLado(M,t,d){const C=M.caminho;if(!C||C.length<2)return null;const seg=[];let tot=0;for(let k=0;k<C.length-1;k++){const l=Math.hypot(C[k+1][0]-C[k][0],C[k+1][1]-C[k][1]);seg.push(l);tot+=l}
+  const distC=(x,z)=>{let m=1e9;for(let k=0;k<C.length-1;k++){const [ax,az]=C[k],[bx,bz]=C[k+1],vx=bx-ax,vz=bz-az,L2=vx*vx+vz*vz||1,u=Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/L2));m=Math.min(m,Math.hypot(ax+vx*u-x,az+vz*u-z))}return m};
+  for(const dt of [0,.04,-.04,.08,-.08,.12,-.12]){let alvo=Math.max(0,Math.min(1,t+dt))*tot,k=0;while(k<seg.length-1&&alvo>seg[k]){alvo-=seg[k];k++}
+    const [ax,az]=C[k],[bx,bz]=C[k+1],l=seg[k]||1,ux=(bx-ax)/l,uz=(bz-az)/l,px=ax+ux*Math.min(alvo,l),pz=az+uz*Math.min(alvo,l);
+    for(const lado of [1,-1]){const x=px-uz*d*lado,z=pz+ux*d*lado;if(Math.abs(x)<M.largura/2+2&&distC(x,z)>d*.85)return[x,z,Math.atan2(px-x,pz-z)]}}
+  return null}
 function prepAndar(g,mini,cobra){const T=G.THREE(),inv=new T.Matrix4(),v=new T.Vector3();g.updateMatrixWorld(true);inv.copy(g.matrixWorld).invert();
   const ms=[],mn=new T.Vector3(1e9,1e9,1e9),mx=new T.Vector3(-1e9,-1e9,-1e9),low=[];
   g.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const M=new T.Matrix4().multiplyMatrices(inv,o.matrixWorld),p=o.geometry.attributes.position;
@@ -253,9 +282,13 @@ let SOMBRA=null;function sombra(r){const T=G.THREE();if(!SOMBRA){const c=documen
 const C3C={};const cfgDe=TT=>Object.assign({},D.cenario3d||{},(TT&&TT.cenario3d)||{});
 function props3d(TT){const CF=cfgDe(TT);if(!D.cenario3d||!G.glb)return Promise.resolve(null);const ck=JSON.stringify(CF);if(C3C[ck])return C3C[ck];
   const malha=g=>{let m=null;g.traverse(o=>{if(o.isMesh&&!m)m=o});if(!m)throw new Error('sem malha');const mat=m.material;mat.roughness=.9;mat.metalness=0;if(mat.map)mat.map.encoding=G.THREE().sRGBEncoding;return{geo:m.geometry,mat}};
+  // extras (opcionais): pedras_modelos = modelos no lugar das pedras do mapa; marcos = cenários grandes fora do caminho (castelo, masmorra…)
+  const PM=CF.pedras_modelos||[],MK=CF.marcos||[],ok=f=>G.glb(f).catch(e=>{console.warn('cenario 3d',f,e);return null});
+  const fixa=o=>{o.traverse(q=>{if(q.isMesh&&q.material){q.material.roughness=.9;q.material.metalness=0;if(q.material.map)q.material.map.encoding=G.THREE().sRGBEncoding}});return o};
   return C3C[ck]=Promise.all([G.glb(CF.portal),...CF.arvores.map(f=>G.glb(f)),G.glb(CF.cogumelos),CF.lanterna?G.glb(CF.lanterna).catch(()=>null):null]).then(([por,...r])=>{const lan=r.pop(),cog=r.pop();
-    por.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=.9;o.material.metalness=0;if(o.material.map)o.material.map.encoding=G.THREE().sRGBEncoding}});
-    return{portal:por,arv:r.map(malha),cog:malha(cog),lan:lan?malha(lan):null}}).catch(e=>{console.warn('cenario 3d',e);delete C3C[ck];return null})}
+    fixa(por);
+    return Promise.all([Promise.all(PM.map(ok)),Promise.all(MK.map(m=>ok(m.modelo)))]).then(([ped,mk])=>
+      ({portal:por,arv:r.map(malha),cog:malha(cog),lan:lan?malha(lan):null,ped:ped.filter(Boolean).map(malha),marcos:MK.map((m,k)=>mk[k]?Object.assign({},m,{obj:fixa(mk[k])}):null).filter(Boolean)}))}).catch(e=>{console.warn('cenario 3d',e);delete C3C[ck];return null})}
 // Texturas PBR reais (512px, tiling). O cache mantém uma única cópia por caminho.
 // 'map' usa sRGB; normal, rugosidade e emissivo são mapas de dados lineares.
 const TEX_PBR={};
@@ -374,11 +407,19 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   const cores=['#2e6b4a','#3a7d4e','#2a5e52','#4a8a4a','#365f3a'];
   inst(new T.IcosahedronGeometry(1,0),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,1.9*s,z);o.scale.set(.95*s,1.05*s,.95*s);o.rotation.set(0,(x*7+z)%6,0);c.set(cores[Math.abs(Math.round(x*3+z))%5])});
   inst(new T.IcosahedronGeometry(1,0),lam(),M.arvores,(o,[x,z,s],c)=>{o.position.set(x,2.7*s,z);o.scale.set(.6*s,.7*s,.6*s);o.rotation.set(0,(x+z*5)%6,0);c.set(cores[Math.abs(Math.round(x+z*3))%5]).offsetHSL(0,0,.05)})}
-  if(!E2)inst(new T.DodecahedronGeometry(.5,0),lam(),M.pedras,(o,[x,z,s],c)=>{o.position.set(x,.2*s,z);o.scale.set(s,.65*s,s*1.1);o.rotation.set(0,(x*3+z)%6,0);c.set(TT.pedra||'#8a8a7e')});
+  if(!E2&&C3&&C3.ped&&C3.ped.length)emBlocos(C3.ped,M.pedras,(o,[x,z,s])=>{const k=(CF.pedra_tamanho||1.6)*s;o.position.set(x,-.04*k,z);o.scale.setScalar(k);o.rotation.set(0,(x*4.3+z*6.1)%6.283,0)});
+  else if(!E2)inst(new T.DodecahedronGeometry(.5,0),lam(),M.pedras,(o,[x,z,s],c)=>{o.position.set(x,.2*s,z);o.scale.set(s,.65*s,s*1.1);o.rotation.set(0,(x*3+z)%6,0);c.set(TT.pedra||'#8a8a7e')});
   if(E2){}else if(C3)emBlocos(tinge([C3.cog],TT.cogumelo),M.cogumelos,(o,[x,z,s])=>{const k=(CF.cogumelo_tamanho||1.5)*s;o.position.set(x,-.12*k,z);o.scale.setScalar(k);o.rotation.set(0,(x*5.1+z*9.7)%6.283,0)});
   else{inst(new T.CylinderGeometry(.09,.12,1,6),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.3*s,z);o.scale.set(s,.6*s,s);o.rotation.set(0,0,0);c.set('#efe6d8')});
   inst(new T.SphereGeometry(.42,10,6,0,Math.PI*2,0,Math.PI/2),lam(),M.cogumelos,(o,[x,z,s],c)=>{o.position.set(x,.58*s,z);o.scale.set(s,.8*s,s);o.rotation.set(0,0,0);c.set(['#e86a8a','#b46ae8','#f2a04a'][Math.abs(Math.round(x+z))%3])})}
   const mec=decorMundo(S,M,C3,inst,rnd);
+  // marcos: cenários grandes fora do caminho; x em meias-larguras do mapa (|x|>1 = fora das paredes), z em fração do comprimento (>1 = depois do portal)
+  // ou "ao_lado": fração do caminho; fica a "afasta" do caminho (do lado livre), de frente para ele, e "solido" vira obstáculo
+  const marcoObs=[];
+  if(C3&&C3.marcos)for(const mk of C3.marcos){const o=mk.obj.clone();o.scale.setScalar(mk.tamanho||10);let x=(mk.x||0)*M.largura/2,z=(mk.z??.5)*M.comprimento,giro=mk.giro||0;
+    if(mk.ao_lado!==undefined){const L=lugarAoLado(M,mk.ao_lado,mk.afasta||5);if(!L)continue;[x,z,giro]=L}
+    if(mk.de_frente)giro=Math.PI+(mk.giro||0);// aberto para a câmera (que olha para +z)
+    o.position.set(x,mk.y||0,z);o.rotation.set(0,giro,0);S.add(o);if(mk.solido)marcoObs.push([x,z,mk.solido])}
   if(E2){try{const m3=window.GARRO_MUNDOS3D.monta({T,S,M,blocos,texPBR,matLava:mec.matLava,cam:[AR.cam_altura||11.5,AR.cam_tras||8.5]});if(m3){mec.anim=m3.anim;mec.obs3d=m3.obs}}catch(e){console.warn('mundos3d',e)}}
   // sombras das árvores
   if(!E2)for(const [x,z,s] of M.arvores){if(z<-1||z>M.comprimento+1)continue;const sh=sombra(1.1*s);sh.position.set(x+.25,.015,z+.25);S.add(sh)}
@@ -403,7 +444,7 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
   // vagalumes (no mar: peixinhos e bolhas; na caverna: esporos brilhando)
   const VG=TT.voadores||['✨'],vg=[];for(let k=0;k<(E2?(E2.voadores??0):40);k++){const s=sprEmoji(VG[k%VG.length],TT.voadores?.45:.25);s.position.set((rnd()-.5)*M.largura,1+rnd()*2.5,rnd()*M.comprimento);S.add(s);vg.push({s,y:s.position.y,f:rnd()*6})}
   // obstáculos para colisão
-  const obs=obsP.slice().concat(mec.obs3d||[]);const rP=E2?(E2.parede_raio??.85):C3?.45:.38;for(const [x,z,s] of M.arvores)obs.push([x,z,rP*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
+  const obs=obsP.slice().concat(mec.obs3d||[],marcoObs);const rP=E2?(E2.parede_raio??.85):C3?.45:.38;for(const [x,z,s] of M.arvores)obs.push([x,z,rP*s]);for(const [x,z,s] of M.pedras)obs.push([x,z,.5*s]);for(const [x,z,s] of M.cogumelos)obs.push([x,z,(C3?.55:.3)*s]);
   // área secreta: baú escondido no canto do mapa (cura tudo) e o bichinho raro que o guarda (acampamento secreto do mapa)
   if(M.secreto){const [sx,sz]=M.secreto,b=new T.Group(),mad=new T.MeshLambertMaterial({color:'#7a4a22'}),our=new T.MeshStandardMaterial({color:'#ffd04a',emissive:'#a07000',emissiveIntensity:.6});
     const c1=new T.Mesh(new T.BoxGeometry(.9,.55,.6),mad);c1.position.y=.28;const t1=new T.Mesh(new T.BoxGeometry(.95,.18,.65),our);t1.position.y=.62;b.add(c1,t1);b.position.set(sx,0,sz);S.add(b);
@@ -412,15 +453,17 @@ function cenario(S,M,C3){const T=G.THREE(),rnd=semente(M.comprimento*13+1),CF=cf
 
 // ---- montar a fase ----
 async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||!M)throw new Error('sem 3d');
-  const cv=$('advCv'),rd=new T.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));rd.outputEncoding=T.sRGBEncoding;
+  const cv=$('advCv'),rd=new T.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));rd.outputEncoding=T.sRGBEncoding;
   const S=new T.Scene();const TMA=(R.M&&R.M.tema)||{},LZ=TMA.luz||{};S.background=new T.Color(LZ.ceu||TMA.ceu||'#2c3a52');S.fog=new T.Fog(LZ.cor||TMA.neblina||TMA.ceu||'#2c3a52',(LZ.neblina||[])[0]??(TMA.escuro?9:26),(LZ.neblina||[])[1]??(TMA.escuro?26:52));
   S.add(LZ.hemi?new T.HemisphereLight(LZ.hemi[0],LZ.hemi[1],LZ.hemi[2]):new T.HemisphereLight(0xfff2e0,0x2f4a32,TMA.escuro?.35:1.05));const sol=LZ.sol?new T.DirectionalLight(LZ.sol[0],LZ.sol[1]):new T.DirectionalLight(0xffe2c4,TMA.escuro?.25:.95);sol.position.set(6,12,-5);S.add(sol);
   const cam=new T.PerspectiveCamera(42,1,.1,120);R.r3={rd,S,cam,T};const C3=await props3d(R.M&&R.M.tema);if(RUN!==R)return;R.w={M,...cenario(S,M,C3),ents:[],tiros:[],efeitos:[],nums:[]};
   // modelos: o bichinho e um de cada tipo de inimigo (cada inimigo é uma cópia)
   const heroEvo=G.isEvo(R.i,R.hero.lv,R.hero.rb);
-  const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1);hg.scale.setScalar(Hs);
-  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));const hroot=new T.Group();hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
-  R.p={g:hroot,m:hg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
+  const hg=await G.modelo(R.i,heroEvo);if(RUN!==R)return;const Hs=(redondo(R.i)?(AR.tam_redondo||.95):(AR.tam_heroi||1.3)*(R.i>=LEG0?1.12:1))*(R.gig?1.3:1)*(G.tamForma?G.tamForma(R.i):1);// gigante fica maiorhg.scale.setScalar(Hs);
+  const hU=prepAndar(hg,redondo(R.i),cobra(R.i));const hroot=new T.Group();let yg=null;
+  if(hg.userData.plano){const tilt=new T.Group();yg=new T.Group();yg.add(hg);tilt.add(yg);tilt.rotation.x=AR.tilt_plano||.6;hroot.add(tilt)}// dragão em relevo: deita um pouco para trás, de frente para a câmera alta (a sombra fica no chão)
+  else hroot.add(hg);hroot.add(sombra(.6*Hs));S.add(hroot);
+  R.p={g:hroot,m:hg,yg,U:hU,x:M.inicio[0],z:M.inicio[1],ang:0,r:.42*Hs,inv:0,cd:{A:0,P:0,E:0,D:0},dash:0,dx:0,dz:0,venceu:0,morto:0,lunge:0,raiz:0};
   for(const c of M.acampamentos)for(const [j,lv,x,z,tp] of c.inimigos)R.w.ents.push(await novoInimigo(j,lv,x,z,c,false,tp));R.total=R.w.ents.length+(f.chefe&&M.arena?1:0);
   R.minMobs=((M.acampamentos[0]&&M.acampamentos[0].inimigos.length)||0)+5;// portal só abre depois de matar pelo menos os bichinhos do acampamento inicial (+5)
   if(f.chefe&&M.arena){const b=await novoInimigo(f.chefe[0],f.chefe[1],M.arena.x,M.arena.z+2,{x:M.arena.x,z:M.arena.z},true);R.w.ents.push(b);R.w.boss=b}
@@ -431,13 +474,13 @@ async function iniciar3D(){const R=RUN,f=R.f,M=R.M||f.mapa3d,T=G.THREE();if(!T||
   R.last=performance.now();R.acc=0;R.raf=requestAnimationFrame(passo)}
 async function novoInimigo(j,lv,x,z,camp,chefe,tipo){const R=RUN,T=G.THREE(),L_=lutador(j,lv,{chefe}),Tp=(tipo&&TP[tipo])||{};const k=(chefe?(AR.chefe_vida||1.6):(AR.inimigo_vida||.45))*(Tp.vida||1);L_.hp=L_.max=Math.max(10,Math.round(L_.hp*k));
   if(Tp.dano)L_.atk*=Tp.dano;const esc=Tp.escudo?Math.round(L_.max*Tp.escudo):0;
-  const g=await G.modelo(j,chefe),s=(chefe?(AR.tam_chefe||3):redondo(j)?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
+  const g=await modeloDe(j,chefe),s=(chefe?(AR.tam_chefe||3):redondo(j)?(AR.tam_redondo_inimigo||.8):(AR.tam_inimigo||1.1))*(Tp.tamanho||1);g.scale.setScalar(s);
   const U=prepAndar(g,redondo(j),cobra(j)),root=new T.Group();root.add(g);root.add(sombra(.55*s));root.position.set(x,0,z);R.r3.S.add(root);
   const bar=document.createElement('div');bar.className='advebar'+(chefe?' chefe':'')+(tipo?' '+tipo:'');bar.innerHTML='<small class="'+corNv(lv,R.hero.lv)+'">'+(Tp.icone?Tp.icone+' ':'')+'Nv '+lv+'</small>'+(esc?'<i class="esc"><b></b></i>':'')+'<i><b></b></i>';bar.hidden=true;$('advFx').appendChild(bar);
   if(tipo==='elite'){const a=new T.Mesh(new T.RingGeometry(.55*s,.68*s,32),new T.MeshBasicMaterial({color:'#7ad0ff',transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide}));a.rotation.x=-Math.PI/2;a.position.y=.04;root.add(a)}
   if(tipo==='curandeiro'){const a=sprEmoji('💚',.45);a.position.y=1.55*s;root.add(a)}
   return Object.assign(L_,{j,lv,g:root,m:g,U,x,z,cx:camp.x,cz:camp.z,ang:Math.PI,r:(chefe?.95:.4)*s/1.1,s,chefe:!!chefe,vivo:true,estado:'parado',t:0,cdA:1+Math.random(),cdT:2+Math.random()*2,
-    aviso:0,lento:0,preso:0,veneno:0,morre:0,bar,nome:chefe?G.evName(j):G.name(j),tipo:tipo||'',Tp,esc,escMax:esc,longe:tipo==='atirador'||tipo==='curandeiro',cdC:2+Math.random()*2,
+    aviso:0,lento:0,preso:0,veneno:0,morre:0,bar,nome:nomeInim(j,chefe),tipo:tipo||'',Tp,esc,escMax:esc,longe:tipo==='atirador'||tipo==='curandeiro',cdC:2+Math.random()*2,
     pancada:chefe?{r:2.6,av:.9,m:1.5,rec:2}:tipo==='elite'?{r:Tp.pancada_raio||1.9,av:Tp.pancada_aviso||.75,m:1.2,rec:Tp.recarga||2.2}:null,ph:Math.random()*6})}
 function tamanho3D(){const R=RUN;if(!R||!R.r3)return;const cv=$('advCv'),r=cv.getBoundingClientRect();R.r3.rd.setSize(r.width,r.height,false);R.r3.cam.aspect=r.width/Math.max(1,r.height);R.r3.cam.updateProjectionMatrix()}
 window.addEventListener('resize',()=>{if(RUN&&TELA==='luta'&&RUN.r3)tamanho3D()});
@@ -624,8 +667,14 @@ function desistir(){const R=RUN;if(!R||(R.fim&&!R.fimPend)){limpa3D();mapa();ret
 
 // ---- desenho ----
 const V3=()=>new (G.THREE().Vector3)();
+// dragão 'plano' (arte em relevo): a câmera vem de trás, então ele fica de costas para ela (0) ou de frente (π),
+// virando para o lado em que anda (a cabeça da arte aponta para -x); a virada é rápida, como uma carta
+function viraPlano(p){const sx=Math.sin(p.ang);if(sx<-.2)p.lado=0;else if(sx>.2)p.lado=Math.PI;if(p.lado==null)p.lado=Math.PI;p.yv=(p.yv==null?p.lado:p.yv)+(p.lado-(p.yv==null?p.lado:p.yv))*.4;return p.yv}
 function desenha(){const R=RUN;if(!R||!R.r3||!R.p)return;const {rd,S,cam}=R.r3,p=R.p,w=R.w;
-  p.g.position.set(p.x+Math.sin(p.ang)*p.lunge*1.5,0,p.z+Math.cos(p.ang)*p.lunge*1.5);p.g.rotation.y=p.ang;p.g.visible=!(p.inv>0&&!p.dash&&Math.floor(p.inv*16)%2);
+  // resolução que se ajusta: se o aparelho não dá conta (quadro > 24 ms), baixa a resolução; se sobra, sobe de volta
+  {const q=R.r3,ag=performance.now(),dq=ag-(q.tl||ag);q.tl=ag;if(dq>0&&dq<250)q.ema=(q.ema||16)*.94+dq*.06;q.prMax=q.prMax||rd.getPixelRatio();
+    if(!q.tq)q.tq=ag;else if(ag-q.tq>1500){q.tq=ag;const pr=rd.getPixelRatio();if(q.ema>24&&pr>1)rd.setPixelRatio(Math.max(1,pr-.25));else if(q.ema<15&&pr<q.prMax)rd.setPixelRatio(Math.min(q.prMax,pr+.25))}}
+  p.g.position.set(p.x+Math.sin(p.ang)*p.lunge*1.5,0,p.z+Math.cos(p.ang)*p.lunge*1.5);if(p.yg){p.g.rotation.y=0;p.yg.rotation.y=viraPlano(p)}else p.g.rotation.y=p.ang;p.g.visible=!(p.inv>0&&!p.dash&&Math.floor(p.inv*16)%2);
   for(const e of w.ents){if(!e.g.visible)continue;e.lunge=Math.max(0,(e.lunge||0)-1/60);e.g.position.x=e.x+Math.sin(e.ang)*e.lunge*1.2;e.g.position.z=e.z+Math.cos(e.ang)*e.lunge*1.2;e.g.rotation.y=e.ang;
     const tr=e.aviso>0&&!e.chefe?1+Math.sin(R.t*40)*.06:1;e.m.scale.setScalar(e.s*tr);e.pisca=Math.max(0,(e.pisca||0)-1/60);e.m.position.y=e.pisca>0?.08:0}
   for(const it of w.itens)if(!it.ok)it.g.rotation.y+=.03;

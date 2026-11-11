@@ -1,0 +1,5 @@
+{"_nota": "Folha do Tripo enviada em 06/11 (tripo_convert_959c4b7d…glb): 5 linhas de dragões (inicial, evolução 2, final) + a linha da Luz (Lumisco, Prismar, Ofuscor). Saída: dragões em models/dragoes, Luz em models/criaturas.",
+ "colunas": 3, "linhas": 6,
+ "nomes": ["brasin","brasor","brasarok","gotim","ondar","abissor","pedrim","rochedo","terrabruto","soprim","venturi","tempestral","breumin","umbraz","noctarion","lumisco","prismar","ofuscor"],
+ "alvo": [14000, 16000, 20000],
+ "giro": {"breumin": -45, "noctarion": -50, "umbraz": 45, "brasin": 30, "brasor": 30, "ondar": 35, "abissor": 35, "venturi": 35, "tempestral": 30}}

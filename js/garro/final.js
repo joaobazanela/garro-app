@@ -20,9 +20,12 @@
     if(!leaving){spin.rotation.y=Math.sin(t*.35)*.55;const fit=Math.max(1,.62/cam.aspect);cam.position.set(Math.sin(t*.2)*.15,.95,2.9*fit);cam.lookAt(0,.62,0)}
     else{const u=Math.min(1,(now-leaving)/900);spin.rotation.y*=.88;cam.position.lerp(target,.12);cam.lookAt(0,.78,0);if(u>=1){end();return}}
     fl.material.emissiveIntensity=.5+Math.sin(t*2)*.15;pk.intensity=1+Math.sin(t*3)*.3;
-    R.render(sc,cam);raf=requestAnimationFrame(loop)}
-  function end(){cancelAnimationFrame(raf);el.classList.add('out');setTimeout(()=>{el.hidden=true;try{R.dispose();R.forceContextLoss&&R.forceContextLoss()}catch(e){}},520)}
-  $('play').addEventListener('click',()=>{audio();if(leaving)return;leaving=performance.now();[392,523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,.12,'triangle',.1),i*80));if(!ok)end()});
+    try{R.render(sc,cam)}catch(e){if(leaving){end();return}}raf=requestAnimationFrame(loop)}
+  let fim=false;
+  function end(){if(fim)return;fim=true;cancelAnimationFrame(raf);el.classList.add('out');setTimeout(()=>{el.hidden=true;try{R.dispose();R.forceContextLoss&&R.forceContextLoss()}catch(e){}},520)}
+  // JOGAR sempre entra: o som e a animação são extras (se falharem no celular, entra assim mesmo)
+  $('play').addEventListener('click',()=>{if(leaving)return;leaving=performance.now();try{audio();[392,523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,.12,'triangle',.1),i*80))}catch(e){}
+    if(!ok)end();setTimeout(end,1300)});
   raf=requestAnimationFrame(loop);
 })();
 /* ---------- Flarion: raposa de fogo montada em código, igual à folha de referência ---------- */
@@ -213,12 +216,13 @@ window.GARRO={
   ac:()=>{audio();return ac},coll:()=>coll,lvOf:i=>lvOf(i),CH0,banner:(t,s,w)=>banner(t,s,w),fanfare:()=>fanfare(),click:f=>{audio();click(f||600)},
   // usados pela Aventura (js/aventura.js)
   modelo:(i,evo)=>montaModelo(i,evo),THREE:()=>window.THREE,
+  copias:i=>({n:coll[i]||0,g:i<CH0?GCOLL[i]||0:0,gevo:!!GEVO[i]}),escolheCopia:(i,t,f)=>escolheCopia(i,t,f),
   name:i=>PLUSH[i].name,evName:i=>evName(i,1),sprite:(i,lv,giant,rb)=>bSrc({i,lv,rb:rb|0,giant:giant?1:0}),EVO_LV,
   xpLocal:(i,n)=>gainXp(i,n),xpSet:(i,x)=>{careOf(i).xp=x;saveCare()},xpTotal,lvFromXp,xp:i=>careOf(i).xp,xpBar:i=>({pct:xpPct(i),txt:lvOf(i)>=capOf(i)?'Nível máximo':'Nv '+lvOf(i)+' · '+xpTxt(i)}),
   stoneLocal:k=>{INV.st[k]=(INV.st[k]||0)+1;saveInv()},stone:k=>STONES[k],
   tone:(f,d,t,v)=>{audio();tone(f,d,t,v)},evento:(k,n)=>evento(k,n),hint:t=>{$('hint').textContent=t},
   // usados pelos Lendários (js/lendarios.js)
-  LEG0,isLeg:i=>isLeg(i),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i),rbOf(i)),rbOf:i=>rbOf(i),isEvo,REB_B,
+  LEG0,fora:i=>FORA.has(i),isLeg:i=>isLeg(i),isDrag:i=>isDrag(i),formaIdx:lv=>formaIdx(lv),formaDoDrag:i=>formaDoDrag(i),verForma:(i,k)=>verForma(i,k),DRF,tamForma:i=>isDrag(i)?(DRESC[formaDoDrag(i)]||1):1,atualizaDragoes:()=>atualizaDragoes(),grande:i=>grande(i),dev:()=>DEV,plush:i=>PLUSH[i],stats:i=>statsAt(i,lvOf(i),rbOf(i)),rbOf:i=>rbOf(i),isEvo,REB_B,
   abrir:i=>openViewer(i),estante:()=>renderShelf(),collAdd:(i,n)=>{coll[i]=(coll[i]||0)+(n||1);saveX();renderShelf()},collSet:(i,n)=>{coll[i]=n;saveX()},
   hud:()=>hud(),maquina:()=>MACH,
   glb:f=>loadGLB({file:f}).then(g=>g.clone(true))
@@ -238,5 +242,6 @@ $('btnRetryLogin').addEventListener('click',()=>showAuthState('Default'));
   if(s)await iniciarAposLogin();
 })();
 /* admin (DEV): já começa com um bichinho de cada, só na memória do jogo (não vai para o servidor) */
-function devTudo(){if(!DEV)return;for(const p of PLUSH)if(!(coll[p.i]>0))coll[p.i]=1;try{renderShelf();hud()}catch(e){}}
+function devTudo(){if(!DEV)return;for(const p of PLUSH)if(p&&!p.fora&&!(coll[p.i]>0))coll[p.i]=1;// (os redondos antigos aposentados não entram)
+ try{renderShelf();hud()}catch(e){}}
 setTimeout(devTudo,150);

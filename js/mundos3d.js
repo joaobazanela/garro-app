@@ -39,11 +39,11 @@ function geoCristais(seed,n){const r=rng(seed),L=[];for(let k=0;k<n;k++){const h
     const pr=new T.CylinderGeometry(rad,rad*1.1,h,6),pt=new T.ConeGeometry(rad,rad*2.2,6);pt.translate(0,h/2+rad*1.1,0);pr.translate(0,h/2,0);pt.translate(0,h/2,0);
     const m=mt(Math.sin(a)*d,0,Math.cos(a)*d,Math.cos(a)*inc,r()*6,-Math.sin(a)*inc);L.push([pr,m],[pt,m])}return junta(L)}
 // coral de galhos (ramos que se dividem, pontas arredondadas)
-function geoCoral(seed){const r=rng(seed),L=[];function ramo(x,y,z,dx,dy,dz,len,rad,nv){const ex=x+dx*len,ey=y+dy*len,ez=z+dz*len,c=new T.CylinderGeometry(rad*.8,rad,len,6);c.translate(0,len/2,0);
+function geoCoral(seed){const r=rng(seed),L=[];function ramo(x,y,z,dx,dy,dz,len,rad,nv){const ex=x+dx*len,ey=y+dy*len,ez=z+dz*len,c=new T.CylinderGeometry(rad*.8,rad,len,5,1,true);c.translate(0,len/2,0);// sem tampas e 5 lados: o coral tem ~70 galhos e aparece mais de 100 vezes no Mar
     const q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(dx,dy,dz).normalize()),m=M4().compose(new T.Vector3(x,y,z),q,new T.Vector3(1,1,1));L.push([c,m]);
-    if(nv<=0||len<.12){const s=new T.SphereGeometry(rad*1.05,6,4);s.translate(ex,ey,ez);L.push([s,null]);return}
+    if(nv<=0||len<.12){const s=new T.SphereGeometry(rad*1.05,5,3);s.translate(ex,ey,ez);L.push([s,null]);return}
     const nf=2+(r()<.4?1:0);for(let k=0;k<nf;k++){const a=r()*6.28,sp=.35+r()*.45;let ndx=dx+Math.cos(a)*sp,ndy=dy+.15,ndz=dz+Math.sin(a)*sp;const l=Math.hypot(ndx,ndy,ndz);ramo(ex,ey,ez,ndx/l,ndy/l,ndz/l,len*(.62+r()*.2),rad*.72,nv-1)}}
-  for(let k=0;k<3;k++){const a=k*2.1+r(),sp=k?.35:.05;ramo(Math.cos(a)*.06,0,Math.sin(a)*.06,Math.cos(a)*sp,1,Math.sin(a)*sp,.32+r()*.12,.07,3)}return junta(L)}
+  for(let k=0;k<3;k++){const a=k*2.1+r(),sp=k?.35:.05;ramo(Math.cos(a)*.06,0,Math.sin(a)*.06,Math.cos(a)*sp,1,Math.sin(a)*sp,.4+r()*.14,.075,2)}return junta(L)}
 // coral cérebro (bola enrugada) e coral tubo
 function geoCerebro(seed){const g=new T.SphereGeometry(.45,18,10,0,6.283,0,Math.PI*.55),p=g.attributes.position,v=new T.Vector3();
   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const s=1+.08*Math.sin(v.x*28+Math.sin(v.z*22)*2.2)*Math.cos(v.z*24);v.multiplyScalar(s);v.y*=.8;p.setXYZ(i,v.x,v.y,v.z)}g.computeVertexNormals();return g}
@@ -106,7 +106,7 @@ function geoBalaustre(){const L=[],pf=[[0,0],[.09,0],[.09,.06],[.05,.12],[.1,.3]
   for(let k=0;k<4;k++){const b=new T.LatheGeometry(pf,8);b.translate(-.39+k*.26,.12,0);L.push([b,null])}const base=new T.BoxGeometry(1.08,.12,.34);base.translate(0,.06,0);L.push([base,null]);
   const top=new T.BoxGeometry(1.1,.1,.3);top.translate(0,.69,0);L.push([top,null,'#e8c050']);return junta(L)}
 // nuvem (bolas fofas)
-function geoNuvem(seed){const r=rng(seed),L=[];for(let k=0;k<7;k++){const s=.5+r()*.6,g=new T.SphereGeometry(s,10,7);g.translate((r()-.5)*2.4,s*.4+r()*.3,(r()-.5)*1.4);L.push([g,null])}return junta(L)}
+function geoNuvem(seed){const r=rng(seed),L=[];for(let k=0;k<7;k++){const s=.5+r()*.6,g=new T.SphereGeometry(s,8,5);g.translate((r()-.5)*2.4,s*.4+r()*.3,(r()-.5)*1.4);L.push([g,null])}return junta(L)}
 // peixinho (corpo + rabo)
 function geoPeixe(){const c=new T.SphereGeometry(.12,8,6);c.scale(1,.7,2);const r=new T.ConeGeometry(.09,.16,4);r.rotateX(-Math.PI/2);r.scale(.3,1,1);r.translate(0,0,-.3);return junta([[c,null],[r,null]])}
 // água-viva: cúpula + tentáculos

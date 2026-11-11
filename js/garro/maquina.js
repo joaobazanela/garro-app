@@ -31,7 +31,7 @@ function addPlush(p,x,y){
 }
 const PILE=30;// pilha baixa: nada pode passar da linha do topo da divisória (DIVTOP)
 function pickPlush(cnt){
-  const round=MQR.so_redondos!==false||Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
+  const round=MQR.so_redondos!==false||Math.random()<.86,BASE=PLUSH.filter(p=>!p.leg&&!p.fora);let pool=BASE.filter(p=>(p.i>=CH0)===round&&(cnt[p.i]||0)<(round?3:1));if(!pool.length)pool=BASE.filter(p=>(cnt[p.i]||0)<1);if(!pool.length)pool=BASE;
   let t=0;pool.forEach(p=>t+=p.rare);let r=Math.random()*t;for(const p of pool){r-=p.rare;if(r<0)return p}return pool[0];
 }
 // onde a pilha está mais baixa (sorteia alguns pontos e fica com o mais vazio): assim preenche toda a área, inclusive junto da divisória
@@ -67,7 +67,15 @@ function settleEggs(){fill0();const n=MQ.ovos_comuns||11,perto=Math.min(4,n);
 function tiraDaBorda(){const lim=DIV+EDGE_FREE+8;for(const b of bodies){if(b===claw.held||b.plush.won||b.plush.giant)continue;const x=b.position.x,e=b.plush.dw*.42;
     if(x>DIV+4&&x-e<lim&&b.position.y<DIVTOP+30){Body.setPosition(b,{x:x+3,y:b.position.y-.6});Body.setVelocity(b,{x:Math.max(b.velocity.x,.8),y:Math.min(b.velocity.y,0)})}}}
 function fill0(){for(const b of bodies)Composite.remove(world,b);bodies.length=0}
-function restock(){if(MACH===4){if(!bodies.length)placeEpic();return}if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}abaixaPilha();const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60)}
+// reposição: o bichinho que cai de cima (_repo) não pode ficar acima da linha nem cair no buraco do prêmio.
+// O que o jogador tirou do lugar com a garra pode ficar onde parar (a garra limpa a marca _repo).
+function cuidaReposicao(){for(let i=bodies.length-1;i>=0;i--){const b=bodies[i];if(!b._repo||b===claw.held)continue;
+    if(b.position.x<DIV-4){Composite.remove(world,b);bodies.splice(i,1);continue}// passou para o lado do prêmio: sai sem contar
+    if(Math.hypot(b.velocity.x,b.velocity.y)<.3&&(b._parado=(b._parado|0)+1)>20){
+      if(b.bounds.min.y<DIVTOP-LIM_EXTRA){if((b._desce|0)<3){b._desce=(b._desce|0)+1;b._parado=0;Body.setPosition(b,{x:xBaixo(),y:-40});Body.setVelocity(b,{x:0,y:1})}else{Composite.remove(world,b);bodies.splice(i,1)}}
+      else b._repo=0}
+    else if(Math.hypot(b.velocity.x,b.velocity.y)>=.3)b._parado=0}}
+function restock(){if(MACH===4){if(!bodies.length)placeEpic();return}if(MACH===2){if(!bodies.length)placeGiant();return}if(MACH===3){if(legNaMaquina()<(MQ.lendarios_na_maquina||1))addLegEgg(-80);if(bodies.length<(MQ.ovos_comuns||11)-3)fillEggs(2,-60);return}const n0=bodies.length;const topo=Math.min(DIVTOP+200,...bodies.filter(b=>b.position.x>DIV&&!b.plush.won).map(b=>b.bounds.min.y));if(topo>DIVTOP-LIM_EXTRA+60&&bodies.length<30)fill(topo>DIVTOP+80?2:1,-60);for(let k=n0;k<bodies.length;k++)bodies[k]._repo=1}
 const SWAP_COST=10,ECOST=(LEGD.maquina&&LEGD.maquina.preco)||200;
 /* ---------- segunda máquina: um bichinho gigante ---------- */
 let MACH=1;const GCOST=50,GK=2.4;
@@ -92,10 +100,10 @@ function giantOf(i,K){K=K||GK;const p=PLUSH[i],G=Object.create(p);G.giant=1;G.dw
   if(p.image&&p.image.complete&&p.image.naturalWidth){const pad=16,c=document.createElement('canvas');c.width=Math.ceil((G.dw+pad*2)*dpr);c.height=Math.ceil((G.dh+pad*2)*dpr);const x=c.getContext('2d');x.scale(dpr,dpr);x.imageSmoothingQuality='high';x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=14;x.shadowOffsetY=7;x.drawImage(p.image,pad,pad,G.dw,G.dh);G.baked=c;G.pad=pad}
   else Object.defineProperty(G,'pad',{get:()=>(p.pad||10)*K});return G}
 function placeGiant(){const i=Math.floor(Math.random()*CH0),G=giantOf(i);G.landed=false;const gb=addPlush(G,(DIV+W)/2+12+(Math.random()-.5)*30,-G.dh*.6);Body.setAngle(gb,0);gb.frictionAir=.02;
-  const rs=[];while(rs.length<3){const r=CH0+Math.floor(Math.random()*(NPL-CH0));if(!rs.includes(r))rs.push(r)}DECOR=[{i:rs[0],x:DIV+24},{i:rs[1],x:W-58},{i:rs[2],x:W-28}];
+  const rs=[];while(rs.length<3){const r=CH0+Math.floor(Math.random()*(LEG0-CH0));if(!rs.includes(r)&&!PLUSH[r].fora)rs.push(r)}DECOR=[{i:rs[0],x:DIV+24},{i:rs[1],x:W-58},{i:rs[2],x:W-28}];
   $('who').innerHTML='Gigante da vez: <b>'+G.name+'</b> <em>· '+G.cm+' cm</em>'}
 // travas: gigante só com todos os normais; ovos com normais + gigantes; épico com normais + gigantes + lendários (o servidor confere igual)
-function faltas(){let n=0,g=0,l=0;for(let i=0;i<LEG0;i++)if(!(coll[i]>0))n++;for(let i=0;i<CH0;i++)if(!(GCOLL[i]>0))g++;for(const L of LEGS)if(!(coll[L.id]>0))l++;return{n,g,l}}
+function faltas(){let n=0,g=0,l=0;for(let i=0;i<LEG0;i++)if(!PLUSH[i].fora&&!(coll[i]>0))n++;for(let i=0;i<CH0;i++)if(!(GCOLL[i]>0))g++;for(const L of LEGS)if(!(coll[L.id]>0))l++;return{n,g,l}}
 function travaMaq(m){if(DEV)return '';const f=faltas();
   if(m===2&&f.n)return 'Pegue todos os bichinhos normais primeiro (faltam '+f.n+')';
   if(m===3&&(f.n||f.g))return 'Pegue todos os normais e todos os gigantes (faltam '+(f.n+f.g)+')';
@@ -135,7 +143,7 @@ function beginClose(){
   for(let oy=0;oy<=60&&!c.target;oy+=4){const h=Query.point(bodies,{x:c.x,y:c.y+(12+oy)*CS});if(h.length)c.target=h[0]}
   if(!c.target)for(const s of[-1,1]){const h=Query.point(bodies,tip(s,s<0?c.oL:c.oR));if(h.length){c.target=h[0];break}}
   let n=0;for(const b of bodies)if(b!==c.target&&Math.abs(b.position.x-c.x)<60&&b.bounds.min.y<c.y+50)n++;
-  c.bsnag=Math.random()<Math.min(.5,n*.12);
+  c.bsnag=HAB.ativo?false:Math.random()<Math.min(.5,n*.12);if(HAB.ativo&&c.habF==null)c.habF=habForca();c.habDx=c.target?Math.abs(c.target.position.x-c.x)/(c.target.plush.dw/2):9;// mira medida quando a garra começa a fechar (o que o jogador controla)// HABILIDADE: não travou → vale a força do momento em que fechou
 }
 /* ---------- static art, pre-rendered ---------- */
 function layer(fn){const c=document.createElement('canvas');c.width=W*dpr;c.height=H*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);fn(x);return c}
